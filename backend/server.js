@@ -25,14 +25,16 @@ app.get('/api/auth/google', passport.authenticate('google', {
   session: false 
 }));
 
+const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:5173';
+
 app.get('/api/auth/callback', 
   passport.authenticate('google', { 
     session: false, 
-    failureRedirect: 'http://localhost:5173/login?error=auth_failed' 
+    failureRedirect: `${CLIENT_URL}/login?error=auth_failed` 
   }), 
   (req, res) => {
     const token = jwt.sign({ id: req.user.id }, process.env.JWT_SECRET, { expiresIn: '1d' });
-    res.redirect(`http://localhost:5173/auth-callback?token=${token}`);
+    res.redirect(`${CLIENT_URL}/auth-callback?token=${token}`);
   }
 );
 
