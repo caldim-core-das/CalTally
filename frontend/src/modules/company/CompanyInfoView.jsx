@@ -5,6 +5,7 @@ import {
   Globe, Mail, Phone, ExternalLink, Plus, Trash2, X, Maximize2
 } from 'lucide-react';
 import { companyAPI } from '../../services/api';
+import { INDIAN_STATES } from '../../utils/indianStates';
 
 const InputRow = ({ label, keyName, value, onChange, type = "text", placeholder = "", required = false, help = false }) => (
   <div className="flex flex-col gap-1.5 py-3 border-b border-gray-50 last:border-0 lg:flex-row lg:items-center">
@@ -203,9 +204,12 @@ const CompanyInfoView = () => {
           className="fixed inset-0 z-[1000] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 cursor-zoom-out"
           onClick={() => setIsImageZoomed(false)}
         >
-          <div className="bg-white rounded-lg p-2 max-w-4xl max-h-[90vh] shadow-2xl animate-in zoom-in-95 duration-200">
+          <div className="bg-white rounded-lg p-2 max-w-4xl max-h-[90vh] shadow-2xl animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
             <img src={formData.logoUrl} alt="Logo Enlarged" className="w-full h-full object-contain rounded" />
-            <button className="absolute top-6 right-8 text-white hover:text-red-400 transition-colors">
+            <button 
+              className="absolute top-6 right-8 text-white hover:text-red-400 transition-colors"
+              onClick={() => setIsImageZoomed(false)}
+            >
               <X size={32} />
             </button>
           </div>
@@ -302,7 +306,7 @@ const CompanyInfoView = () => {
               )}
             </div>
             
-            {/* INSTRUCTIONS (Only shown when NO image is chosen, OR clearly linked to upload process) */}
+            {/* INSTRUCTIONS */}
             {!formData.logoUrl && (
               <div className="flex-1 text-[12px] text-gray-500 space-y-1.5 pt-2 leading-relaxed animate-in fade-in duration-500">
                 <p className="font-medium text-gray-700">This logo will be displayed in transaction PDFs and email notifications.</p>
@@ -337,11 +341,7 @@ const CompanyInfoView = () => {
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <select value={formData.state || ''} onChange={e => handleUpdateField('state', e.target.value)} className="h-9 border border-gray-300 rounded px-3 text-[13px] outline-none focus:border-blue-500 bg-white">
-                  <option>Tamil Nadu</option>
-                  <option>Karnataka</option>
-                  <option>Maharashtra</option>
-                  <option>Delhi</option>
-                  <option>Gujarat</option>
+                  {INDIAN_STATES.map(s => <option key={s} value={s}>{s}</option>)}
                 </select>
                 <input type="text" placeholder="Phone" value={formData.phone || ''} onChange={e => handleUpdateField('phone', e.target.value)} className="h-9 border border-gray-300 rounded px-3 text-[13px] outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/10 placeholder:text-gray-300" />
               </div>
@@ -402,37 +402,6 @@ const CompanyInfoView = () => {
                 <option value="yyyy-MM-dd">yyyy-MM-dd</option>
                 <option value="dd-MMM-yyyy">dd-MMM-yyyy</option>
               </select>
-              <div className="px-4 py-1.5 bg-gray-50 border border-gray-200 rounded text-[11px] text-gray-400 font-bold uppercase tracking-widest italic flex items-center gap-2">
-                Preview <span className="text-gray-600 NOT-italic">
-                  [{(() => {
-                    let iana = 'UTC';
-                    if (formData.timezone?.includes('Asia/Calcutta')) iana = 'Asia/Kolkata';
-                    else if (formData.timezone?.includes('Dublin')) iana = 'Europe/Dublin';
-                    else if (formData.timezone?.includes('Eastern Time')) iana = 'America/New_York';
-                    else if (formData.timezone?.includes('Abu Dhabi')) iana = 'Asia/Dubai';
-
-                    const d = new Date();
-                    try {
-                      const options = { timeZone: iana, day: 'numeric', month: 'numeric', year: 'numeric' };
-                      const formatter = new Intl.DateTimeFormat('en-US', options);
-                      const parts = formatter.formatToParts(d);
-                      const day = parts.find(p => p.type === 'day').value.padStart(2, '0');
-                      const month = parts.find(p => p.type === 'month').value.padStart(2, '0');
-                      const year = parts.find(p => p.type === 'year').value;
-                      const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-                      
-                      switch(formData.dateFormat) {
-                        case 'MM/dd/yyyy': return `${month}/${day}/${year}`;
-                        case 'yyyy-MM-dd': return `${year}-${month}-${day}`;
-                        case 'dd-MMM-yyyy': return `${day}-${months[parseInt(month)-1]}-${year}`;
-                        default: return `${day}/${month}/${year}`;
-                      }
-                    } catch(e) {
-                      return d.toLocaleDateString();
-                    }
-                  })()}]
-                </span>
-              </div>
             </div>
           </div>
 
@@ -493,14 +462,6 @@ const CompanyInfoView = () => {
           >
             <Plus size={16} /> New Field
           </button>
-
-          <div className="bg-blue-50/50 border border-blue-100 rounded-lg p-5 flex items-start gap-4 max-w-2xl mt-12">
-            <AlertCircle size={20} className="text-blue-500 shrink-0 mt-0.5" />
-            <p className="text-[12px] text-blue-700 leading-relaxed italic font-medium">
-              You can include the <span className="font-bold">Company ID</span> and additional fields in your organization address which will be displayed in your transaction PDFs. 
-              Configure this by selecting the required placeholders in your <span className="text-blue-600 underline cursor-pointer NOT-italic">Organization Address Format</span>.
-            </p>
-          </div>
         </div>
       </div>
 
@@ -519,11 +480,6 @@ const CompanyInfoView = () => {
         >
           Cancel
         </button>
-        <div className="ml-auto flex items-center gap-5 text-[11px] text-gray-400 font-bold uppercase tracking-widest">
-          <span className="flex items-center gap-2 cursor-pointer hover:text-blue-600 transition-colors">
-            <Globe size={14} /> Privacy Policy
-          </span>
-        </div>
       </footer>
     </div>
   );
