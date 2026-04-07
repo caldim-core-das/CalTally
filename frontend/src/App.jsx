@@ -328,7 +328,7 @@ function AuthenticatedApp() {
 
   const shell = (Component, props = {}) => (
     <AppShell onLogout={handleLogout}>
-      <Component {...props} />
+      <Component companyId={companyId} {...props} />
     </AppShell>
   );
 
@@ -338,7 +338,7 @@ function AuthenticatedApp() {
 
       <Route path="/dashboard" element={
         <AppShell onLogout={handleLogout}>
-          <DashboardView stats={stats} vouchers={vouchers} />
+          <DashboardView companyId={companyId} stats={stats} vouchers={vouchers} />
         </AppShell>
       } />
 
