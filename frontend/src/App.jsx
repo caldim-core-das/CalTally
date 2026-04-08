@@ -137,7 +137,7 @@ const NAV = [
 // SIDEBAR GROUP
 // ═══════════════════════════════════════════════════════════════════
 const NavGroup = ({ group, icon: Icon, items, collapsed, pathname, navigate }) => {
-  const [expanded, setExpanded] = useState(pathname.startsWith('/customers') || pathname.startsWith('/quotes') || pathname.startsWith('/sales') || pathname.startsWith('/retainer') || pathname.startsWith('/recurring') || pathname.startsWith('/delivery') || pathname.startsWith('/payments') || pathname.startsWith('/credit'));
+  const [expanded, setExpanded] = useState(pathname.startsWith('/customers') || pathname.startsWith('/quotes') || pathname.startsWith('/sales') || pathname.startsWith('/retainer') || pathname.startsWith('/recurring') || pathname.startsWith('/delivery') || pathname.startsWith('/payments') || pathname.startsWith('/credit') || pathname.startsWith('/inventory') || pathname.startsWith('/price-lists'));
 
   const isActive = items.some(item => pathname === item.path || (item.path !== '/dashboard' && pathname.startsWith(item.path)));
 
@@ -188,9 +188,9 @@ const NavGroup = ({ group, icon: Icon, items, collapsed, pathname, navigate }) =
                 >
                   {item.label}
                 </button>
-                {item.addPath && (
+                {(item.addPath || item.plusPath || item.showPlus) && (
                    <button 
-                     onClick={(e) => { e.stopPropagation(); navigate(item.addPath); }}
+                     onClick={(e) => { e.stopPropagation(); navigate(item.addPath || item.plusPath); }}
                      className="hidden group-hover/item:flex items-center justify-center w-5 h-5 rounded-md bg-blue-500 text-white shrink-0 shadow-sm transition-all hover:bg-blue-600"
                    >
                      <Plus size={12} strokeWidth={3} />
@@ -293,7 +293,7 @@ const AppShell = ({ children, onLogout, companies = [], currentCompanyId, onComp
             if (role === 'DATA_ENTRY') return ['Home', 'Items', 'Banking', 'Sales', 'Purchases', 'Accountant', 'Payroll'].includes(section.group);
             return true; // ADMIN, MANAGER, ACCOUNTANT see all
           }).map(section => {
-            if (section.group === 'Sales' && !collapsed) {
+            if (section.group !== 'Home' && !collapsed) {
               return (
                 <NavGroup
                   key={section.group}
