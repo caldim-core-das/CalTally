@@ -40,7 +40,7 @@ const FormSelect = ({ label, value, onChange, options, placeholder, required = f
   </div>
 );
 
-const SalesOrdersView = () => {
+const SalesOrdersView = ({ companyId }) => {
   const [view, setView] = useState('list'); // 'list' or 'form'
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -50,8 +50,6 @@ const SalesOrdersView = () => {
   const [items, setItems] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   
-  const companyId = localStorage.getItem('companyId');
-
   // Form State
   const [formData, setFormData] = useState({
     id: null,
@@ -60,11 +58,7 @@ const SalesOrdersView = () => {
     referenceNumber: '',
     date: new Date().toISOString().split('T')[0],
     expectedShipmentDate: '',
-    paymentTerms: 'Due on Receipt',
-    deliveryMethod: '',
-    salesperson: '',
-    customerNotes: '',
-    termsConditions: '',
+    group: 'Draft',
     items: [{ id: Date.now(), itemId: '', detail: '', quantity: 1, rate: 0, amount: 0 }],
     subTotal: 0,
     discount: 0,
@@ -74,25 +68,51 @@ const SalesOrdersView = () => {
     status: 'Draft'
   });
 
-  const fetchData = async () => {
+  const fetchData = async (cid) => {
+    const targetCid = cid || companyId;
+    if (!targetCid || targetCid === 'null' || targetCid === 'undefined') {
+      setLoading(false);
+      return;
+    }
+    
     setLoading(true);
     try {
       const [oRes, cRes, iRes] = await Promise.all([
-        salesAPI.getOrders(companyId),
-        ledgerAPI.getByCompany(companyId),
-        inventoryAPI.getByCompany(companyId)
+        salesAPI.getOrders(targetCid),
+        ledgerAPI.getByCompany(targetCid),
+        inventoryAPI.getByCompany(targetCid)
       ]);
-      setOrders(oRes.data);
-      setCustomers(cRes.data.filter(l => l.Group?.name?.toLowerCase().includes('debtor') || l.Group?.name?.toLowerCase().includes('customer')));
-      setItems(iRes.data);
+
+      const safeOrders = Array.isArray(oRes.data) ? oRes.data : [];
+      setOrders(safeOrders);
+
+      const safeLedgers = Array.isArray(cRes.data) ? cRes.data : [];
+      setCustomers(safeLedgers.filter(l => {
+        const groupName = l.Group?.name;
+        if (typeof groupName !== 'string') return false;
+        const lowered = groupName.toLowerCase();
+        return lowered.includes('debtor') || lowered.includes('customer');
+      }));
+
+      setItems(Array.isArray(iRes.data) ? iRes.data : []);
     } catch (err) {
       console.error('Fetch error:', err);
+      setStatus({ type: 'error', message: 'Failed to connect to sales server. Please try refreshing.' });
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   useEffect(() => {
-    if (companyId) fetchData();
+    if (companyId && companyId !== 'null' && companyId !== 'undefined') {
+      fetchData(companyId);
+    } else {
+      // Small delay to wait for App.jsx to resolve company if it's currently null
+      const timer = setTimeout(() => {
+        if (!companyId) setLoading(false);
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
   }, [companyId]);
 
   // --- Calculations ---
