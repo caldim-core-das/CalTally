@@ -325,7 +325,9 @@ const AppShell = ({ children, onLogout, companies = [], currentCompanyId, onComp
                         label={item.label}
                         active={active}
                         onClick={() => navigate(item.path)}
+                        onPlusClick={item.plusPath ? () => navigate(item.plusPath) : null}
                         collapsed={collapsed}
+                        showPlus={item.showPlus}
                       />
                     );
                   })}
