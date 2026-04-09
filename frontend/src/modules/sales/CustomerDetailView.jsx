@@ -43,6 +43,22 @@ const CustomerDetailView = ({ companyId }) => {
   const [openingBalance, setOpeningBalance] = useState('0');
   const [openSections, setOpenSections] = useState(['Invoices', 'Customer Payments', 'Quotes', 'Retainer Invoices', 'Sales Orders']);
 
+  const [isAddressDrawerOpen, setIsAddressDrawerOpen] = useState(false);
+  const [addressType, setAddressType] = useState('billing'); // 'billing' or 'shipping'
+  const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
+  const [quickAddForm, setQuickAddForm] = useState({ name: '', email: '', mobile: '', salutation: 'Mr.' });
+  const [addressForm, setAddressForm] = useState({
+    attention: '',
+    country: 'India',
+    address1: '',
+    address2: '',
+    city: '',
+    state: '',
+    zip: '',
+    phone: '',
+    fax: ''
+  });
+  
   const fileInputRef = useRef(null);
   const settingsRef = useRef(null);
 
@@ -170,6 +186,31 @@ const CustomerDetailView = ({ companyId }) => {
     navigate(`/customers/view/${customerId}`);
   };
 
+  const handleQuickAdd = async () => {
+    if (!quickAddForm.name) return;
+    setLoading(true);
+    try {
+        const payload = {
+            ...quickAddForm,
+            companyId: activeCompanyId,
+            groupName: 'Sundry Debtors',
+            openingBalance: 0,
+            currentBalance: 0
+        };
+        const res = await ledgerAPI.create(payload);
+        const newCustomer = res.data.ledger || res.data;
+        setCustomers(prev => [...prev, newCustomer]);
+        setSelectedId(String(newCustomer.id));
+        navigate(`/customers/view/${newCustomer.id}`);
+        setIsQuickAddOpen(false);
+        setQuickAddForm({ name: '', email: '', mobile: '', salutation: 'Mr.' });
+    } catch (err) {
+        alert('Failed to register customer');
+    } finally {
+        setLoading(false);
+    }
+  };
+
   const handleAddComment = () => {
     if (!newComment.trim()) return;
     const comment = {
@@ -232,7 +273,7 @@ const CustomerDetailView = ({ companyId }) => {
         <div className="p-4 border-b border-slate-100 space-y-3">
           <div className="flex items-center justify-between">
             <h2 className={`${id ? 'text-[14px]' : 'text-[24px]'} font-bold text-slate-900 transition-all`}>Active Customers</h2>
-            <button onClick={() => navigate('/customers/new')} className={`${id ? 'w-7 h-7' : 'px-4 py-2'} flex items-center justify-center rounded bg-blue-600 text-white font-bold transition-all`}>
+            <button onClick={() => setIsQuickAddOpen(true)} className={`${id ? 'w-7 h-7' : 'px-4 py-2'} flex items-center justify-center rounded bg-blue-600 text-white font-bold transition-all shadow-lg shadow-blue-100 hover:scale-105 active:scale-95`}>
               <Plus size={id ? 16 : 18} className={id ? '' : 'mr-2'}/> {!id && 'New Customer'}
             </button>
           </div>
@@ -252,7 +293,7 @@ const CustomerDetailView = ({ companyId }) => {
               </div>
               <div className="flex items-center gap-2">
                  <div className={`w-2 h-2 rounded-full ${parseFloat(c.currentBalance || 0) > 0 ? 'bg-orange-400' : 'bg-green-400'}`}></div>
-                 <div className="text-[11px] text-slate-400 font-bold uppercase tracking-widest truncate">{c.email || 'NO_EMAIL_ID'}</div>
+                 <div className="text-[11px] text-slate-400 font-bold tracking-widest truncate">{c.email || 'NO_EMAIL_ID'}</div>
               </div>
             </div>
           ))}
@@ -547,11 +588,11 @@ const CustomerDetailView = ({ companyId }) => {
                        <div className="grid grid-cols-2 gap-10 pt-2">
                           <div className="space-y-3">
                              <p className="text-[13px] font-black text-slate-800 uppercase tracking-tighter">Billing Address</p>
-                             <p className="text-[12px] text-slate-400 italic leading-relaxed">No Billing Address - <span className="text-blue-600 not-italic font-bold hover:underline cursor-pointer">New Address</span></p>
+                             <p className="text-[12px] text-slate-400 italic leading-relaxed">No Billing Address - <span className="text-blue-600 not-italic font-bold hover:underline cursor-pointer" onClick={() => { setAddressType('billing'); setIsAddressDrawerOpen(true); }}>New Address</span></p>
                           </div>
                           <div className="space-y-3">
                              <p className="text-[13px] font-black text-slate-800 uppercase tracking-tighter">Shipping Address</p>
-                             <p className="text-[12px] text-slate-400 italic leading-relaxed">No Shipping Address - <span className="text-blue-600 not-italic font-bold hover:underline cursor-pointer">New Address</span></p>
+                             <p className="text-[12px] text-slate-400 italic leading-relaxed">No Shipping Address - <span className="text-blue-600 not-italic font-bold hover:underline cursor-pointer" onClick={() => { setAddressType('shipping'); setIsAddressDrawerOpen(true); }}>New Address</span></p>
                           </div>
                        </div>
                     </div>
@@ -629,13 +670,143 @@ const CustomerDetailView = ({ companyId }) => {
             </div>
           </>
         ) : (
-          <div className="flex-1 flex flex-col items-center justify-center p-20 animate-fade-in text-center opacity-40">
-             <div className="w-32 h-32 bg-slate-50 rounded-3xl flex items-center justify-center text-slate-200 mb-8 border border-slate-100 shadow-inner rotate-6"><Users size={64} strokeWidth={1}/></div>
-             <h3 className="text-[24px] font-black text-slate-900 mb-3 tracking-tighter">Select a Customer</h3>
-             <p className="text-[15px] text-slate-500 max-w-sm mx-auto font-medium">Click on a name in the list to reveal their hidden details.</p>
-          </div>
-        )}
+           <div className="flex-1 flex flex-col items-center justify-center p-20 animate-fade-in text-center opacity-40">
+              <div className="w-32 h-32 bg-slate-50 rounded-3xl flex items-center justify-center text-slate-200 mb-8 border border-slate-100 shadow-inner rotate-6"><Users size={64} strokeWidth={1}/></div>
+              <h3 className="text-[24px] font-black text-slate-900 mb-3 tracking-tighter">Select a Customer</h3>
+              <p className="text-[15px] text-slate-500 max-w-sm mx-auto font-medium">Click on a name in the list to reveal their hidden details.</p>
+           </div>
+         )}
       </div>
+
+      {/* ─── ADDRESS DRAWER ───────────────────────────────── */}
+      {isAddressDrawerOpen && (
+        <div className="fixed inset-0 z-[100] flex justify-end">
+          <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm animate-fade-in" onClick={() => setIsAddressDrawerOpen(false)} />
+          <div className="relative w-[500px] bg-white h-full shadow-2xl animate-slide-left flex flex-col">
+            <header className="p-8 border-b border-slate-100 flex items-center justify-between bg-slate-50/20">
+              <div>
+                <h3 className="text-2xl font-black text-slate-900 tracking-tight uppercase italic">{addressType} Address</h3>
+                <p className="text-[13px] text-slate-400 font-bold uppercase tracking-widest mt-1">FOR {customer.name}</p>
+              </div>
+              <button onClick={() => setIsAddressDrawerOpen(false)} className="p-2 hover:bg-white rounded-full transition-colors text-slate-400 hover:text-slate-900 shadow-sm"><X size={24}/></button>
+            </header>
+            
+            <div className="flex-1 overflow-y-auto p-10 space-y-8 no-scrollbar">
+               <div className="space-y-3">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Attention</label>
+                  <input type="text" value={addressForm.attention} onChange={e => setAddressForm({...addressForm, attention: e.target.value})} className="w-full p-4 bg-slate-50 border-none rounded-xl font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-600 transition-all" />
+               </div>
+
+               <div className="space-y-3">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Street Address 1</label>
+                  <input type="text" value={addressForm.address1} onChange={e => setAddressForm({...addressForm, address1: e.target.value})} className="w-full p-4 bg-slate-50 border-none rounded-xl font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-600 transition-all" />
+               </div>
+
+               <div className="space-y-3">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Street Address 2</label>
+                  <input type="text" value={addressForm.address2} onChange={e => setAddressForm({...addressForm, address2: e.target.value})} className="w-full p-4 bg-slate-50 border-none rounded-xl font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-600 transition-all" />
+               </div>
+
+               <div className="grid grid-cols-2 gap-6">
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">City</label>
+                    <input type="text" value={addressForm.city} onChange={e => setAddressForm({...addressForm, city: e.target.value})} className="w-full p-4 bg-slate-50 border-none rounded-xl font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-600 transition-all" />
+                  </div>
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">State</label>
+                    <input type="text" value={addressForm.state} onChange={e => setAddressForm({...addressForm, state: e.target.value})} className="w-full p-4 bg-slate-50 border-none rounded-xl font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-600 transition-all" />
+                  </div>
+               </div>
+
+               <div className="grid grid-cols-2 gap-6">
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Zip Code</label>
+                    <input type="text" value={addressForm.zip} onChange={e => setAddressForm({...addressForm, zip: e.target.value})} className="w-full p-4 bg-slate-50 border-none rounded-xl font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-600 transition-all" />
+                  </div>
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Phone</label>
+                    <input type="text" value={addressForm.phone} onChange={e => setAddressForm({...addressForm, phone: e.target.value})} className="w-full p-4 bg-slate-50 border-none rounded-xl font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-600 transition-all" />
+                  </div>
+               </div>
+            </div>
+
+            <footer className="p-8 border-t border-slate-100 flex items-center gap-4 bg-slate-50/30">
+               <button onClick={() => setIsAddressDrawerOpen(false)} className="px-8 py-3 bg-white border border-slate-200 text-slate-600 rounded-xl text-[13px] font-black hover:bg-slate-100 transition-all uppercase tracking-widest">Discard</button>
+               <button 
+                  onClick={() => {
+                    handleUpdateField(addressType === 'billing' ? 'billingAddress' : 'shippingAddress', JSON.stringify(addressForm));
+                    setIsAddressDrawerOpen(false);
+                  }}
+                  className="flex-1 py-3 bg-blue-600 text-white rounded-xl text-[13px] font-black hover:bg-blue-700 shadow-xl shadow-blue-100 transition-all uppercase tracking-widest"
+               >
+                 Save Address
+               </button>
+            </footer>
+          </div>
+        </div>
+      )}
+      {/* ─── QUICK ADD DRAWER ──────────────────────────────── */}
+      {isQuickAddOpen && (
+        <div className="fixed inset-0 z-[200] flex justify-end">
+          <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm animate-fade-in" onClick={() => setIsQuickAddOpen(false)} />
+          <div className="relative w-[500px] bg-white h-full shadow-2xl animate-slide-left flex flex-col">
+            <header className="p-8 border-b border-slate-100 flex items-center justify-between bg-slate-50/20">
+              <div>
+                <h3 className="text-2xl font-black text-slate-900 tracking-tight uppercase italic">Register New Customer</h3>
+                <p className="text-[13px] text-slate-400 font-bold uppercase tracking-widest mt-1">QUICK ONBOARDING</p>
+              </div>
+              <button onClick={() => setIsQuickAddOpen(false)} className="p-2 hover:bg-white rounded-full transition-colors text-slate-400 hover:text-slate-900 shadow-sm"><X size={24}/></button>
+            </header>
+            
+            <div className="flex-1 overflow-y-auto p-10 space-y-8 no-scrollbar">
+               <div className="grid grid-cols-4 gap-4">
+                  <div className="col-span-1 space-y-3">
+                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Salutation</label>
+                     <select value={quickAddForm.salutation} onChange={e => setQuickAddForm({...quickAddForm, salutation: e.target.value})} className="w-full p-4 bg-slate-50 border-none rounded-xl font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-600 transition-all">
+                        <option>Mr.</option><option>Ms.</option><option>Mrs.</option><option>Dr.</option>
+                     </select>
+                  </div>
+                  <div className="col-span-3 space-y-3">
+                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Primary Name*</label>
+                     <input type="text" value={quickAddForm.name} onChange={e => setQuickAddForm({...quickAddForm, name: e.target.value})} className="w-full p-4 bg-slate-50 border-none rounded-xl font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-600 transition-all" placeholder="Enter full name or business name" />
+                  </div>
+               </div>
+
+               <div className="space-y-3">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Customer Email</label>
+                  <div className="relative">
+                     <Mail size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" />
+                     <input type="email" value={quickAddForm.email} onChange={e => setQuickAddForm({...quickAddForm, email: e.target.value})} className="w-full pl-12 pr-4 py-4 bg-slate-50 border-none rounded-xl font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-600 transition-all" placeholder="example@business.com" />
+                  </div>
+               </div>
+
+               <div className="space-y-3">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking_widest block">Mobile Number</label>
+                  <div className="relative">
+                     <Phone size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" />
+                     <input type="text" value={quickAddForm.mobile} onChange={e => setQuickAddForm({...quickAddForm, mobile: e.target.value})} className="w-full pl-12 pr-4 py-4 bg-slate-50 border-none rounded-xl font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-600 transition-all" placeholder="+91 XXXXX XXXXX" />
+                  </div>
+               </div>
+
+               <div className="p-6 bg-blue-50/50 rounded-2xl border border-blue-100/50 flex items-start gap-4">
+                  <Info size={18} className="text-blue-500 mt-0.5" />
+                  <p className="text-[12px] text-blue-600 font-medium leading-relaxed">You can always update additional information like GSTIN, Billing Address, and Payment Terms later.</p>
+               </div>
+            </div>
+
+            <footer className="p-8 border-t border-slate-100 flex items-center gap-4 bg-slate-50/30">
+               <button onClick={() => setIsQuickAddOpen(false)} className="px-8 py-3 bg-white border border-slate-200 text-slate-600 rounded-xl text-[13px] font-black hover:bg-slate-100 transition-all uppercase tracking-widest">Cancel</button>
+               <button 
+                  onClick={handleQuickAdd}
+                  disabled={loading || !quickAddForm.name}
+                  className="flex-1 py-4 bg-slate-900 text-white rounded-xl text-[13px] font-black hover:bg-black shadow-xl shadow-slate-200 transition-all uppercase tracking-widest disabled:opacity-50"
+               >
+                  {loading ? <Loader2 size={18} className="animate-spin mx-auto" /> : 'REGISTER CUSTOMER'}
+               </button>
+            </footer>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

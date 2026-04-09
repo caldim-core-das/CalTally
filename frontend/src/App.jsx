@@ -300,7 +300,7 @@ const AppShell = ({ children, onLogout, companies = [], currentCompanyId, onComp
         </div>
 
         {/* Nav */}
-        <nav className={`flex-1 overflow-y-auto py-6 space-y-6 ${collapsed ? 'px-1' : 'px-4'}`}>
+        <nav className={`flex-1 py-6 space-y-6 ${collapsed ? 'px-1 overflow-y-visible' : 'px-4 overflow-y-auto'}`}>
           {NAV.filter(section => {
             // RBAC FILTERING LOGIC
             const role = user.role || 'VIEWER';
@@ -532,18 +532,14 @@ function AuthenticatedApp() {
           />
         </AppShell>
       } />
-      <Route path="/vouchers/new" element={
-        <VoucherEntryView
-          onSaveSuccess={() => navigate('/vouchers')}
-          onCancel={() => navigate('/vouchers')}
-        />
-      } />
-      <Route path="/vouchers/edit/:id" element={
-        <VoucherEntryView
-          onSaveSuccess={() => navigate('/vouchers')}
-          onCancel={() => navigate('/vouchers')}
-        />
-      } />
+      <Route path="/vouchers/new" element={shell(VoucherEntryView, {
+        onSaveSuccess: () => navigate('/vouchers'),
+        onCancel: () => navigate('/vouchers')
+      })} />
+      <Route path="/vouchers/edit/:id" element={shell(VoucherEntryView, {
+        onSaveSuccess: () => navigate('/vouchers'),
+        onCancel: () => navigate('/vouchers')
+      })} />
       <Route path="/ledgers"              element={shell(LedgersView)} />
       <Route path="/ledger-statement/:id" element={shell(LedgerStatementView)} />
       <Route path="/cost-centers"          element={shell(CostCenterView)} />

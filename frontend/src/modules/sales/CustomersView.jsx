@@ -302,7 +302,10 @@ const CustomersView = () => {
         </div>
 
         {/* Fixed Footer with Save Action */}
-        <footer className="fixed bottom-0 right-0 left-0 bg-white border-t border-slate-200 px-12 py-4 flex justify-between items-center z-50">
+        <footer 
+          style={{ left: 'var(--sidebar-width)' }}
+          className="fixed bottom-0 right-0 bg-white border-t border-slate-200 px-12 py-4 flex justify-between items-center z-50 transition-all duration-300"
+        >
            <div className="flex items-center gap-2 text-slate-400 text-[12px] font-bold">
               <AlertCircle size={14} className="text-orange-400" /> All required fields marked with * must be filled to save.
            </div>
