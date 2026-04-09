@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { 
   Plus, Trash2, Save, Printer, ArrowLeft, 
   Search, Package, Users, Calculator, Info,
-  CheckCircle2, Loader2, AlertCircle, TrendingUp
+  CheckCircle2, Loader2, AlertCircle, TrendingUp, X, MapPin, Mail, Phone,
+  ChevronDown, Package as PackageIcon, RefreshCw
 } from 'lucide-react';
 import { ledgerAPI, inventoryAPI, salesAPI, companyAPI, retainerInvoiceAPI } from '../../services/api';
 import { jsPDF } from 'jspdf';
@@ -37,6 +38,17 @@ export default function ProfessionalInvoiceView() {
   const [availableRetainers, setAvailableRetainers] = useState([]);
   const [appliedRetainerId,  setAppliedRetainerId]  = useState('');
   const [retainerAmountToApply, setRetainerAmountToApply] = useState(0);
+
+  // Drawer States
+  const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
+  const [quickAddForm, setQuickAddForm] = useState({ name: '', email: '', mobile: '', salutation: 'Mr.' });
+  const [isSavingCustomer, setIsSavingCustomer] = useState(false);
+
+  const [isAddressDrawerOpen, setIsAddressDrawerOpen] = useState(false);
+  const [addressType, setAddressType] = useState('billing');
+  const [addressForm, setAddressForm] = useState({ attention: '', address1: '', address2: '', city: '', state: '', zip: '', phone: '' });
+
+  const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
 
   // ─── Load Data ──────────────────────────────────────────────────
   useEffect(() => {
@@ -278,6 +290,10 @@ export default function ProfessionalInvoiceView() {
                   <option value="">Select a Customer...</option>
                   {customers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
+                <div className="flex gap-4 mt-2">
+                   <button onClick={() => setIsQuickAddOpen(true)} className="text-[10px] font-black text-blue-600 uppercase tracking-widest hover:underline flex items-center gap-1"><Plus size={12}/> Register New Customer</button>
+                   {customerId && <button onClick={() => setIsAddressDrawerOpen(true)} className="text-[10px] font-black text-slate-400 uppercase tracking-widest hover:underline flex items-center gap-1"><MapPin size={12}/> Manage Address</button>}
+                </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
@@ -314,6 +330,9 @@ export default function ProfessionalInvoiceView() {
               </span>
               <button onClick={addLine} className="flex items-center gap-2 text-blue-600 font-black text-[10px] uppercase tracking-widest hover:text-blue-800 transition-all">
                 <Plus size={14} /> Add Line Item
+              </button>
+              <button onClick={() => setIsBulkModalOpen(true)} className="flex items-center gap-2 text-slate-500 font-black text-[10px] uppercase tracking-widest hover:text-slate-800 transition-all ml-4">
+                <PackageIcon size={14} /> Bulk add items
               </button>
             </div>
             
@@ -465,6 +484,91 @@ export default function ProfessionalInvoiceView() {
 
         </div>
       </div>
+      {/* ─── DRAWERS & MODALS ──────────────────────────────── */}
+      
+      {/* Quick Add Customer */}
+      {isQuickAddOpen && (
+        <div className="fixed inset-0 z-[500] flex justify-end">
+            <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm animate-fade-in" onClick={() => setIsQuickAddOpen(false)} />
+            <div className="relative w-[500px] bg-white h-full shadow-2xl animate-slide-left flex flex-col">
+                <header className="p-8 border-b border-slate-100 flex items-center justify-between bg-slate-50/20">
+                    <div>
+                        <h3 className="text-2xl font-black text-slate-900 tracking-tight italic uppercase">Quick Register</h3>
+                        <p className="text-[13px] text-slate-400 font-bold uppercase tracking-widest mt-1">NEW CUSTOMER</p>
+                    </div>
+                    <button onClick={() => setIsQuickAddOpen(false)} className="p-2 hover:bg-white rounded-full transition-colors text-slate-400 hover:text-slate-900 shadow-sm"><X size={24}/></button>
+                </header>
+                <div className="flex-1 overflow-y-auto p-10 space-y-8 no-scrollbar">
+                   <div className="space-y-3">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Primary Name*</label>
+                      <input type="text" value={quickAddForm.name} onChange={e => setQuickAddForm({...quickAddForm, name: e.target.value})} className="w-full p-4 bg-slate-50 border-none rounded-xl font-bold text-slate-700 outline-none focus:ring-2 focus:ring-slate-900 transition-all" />
+                   </div>
+                   <div className="space-y-3">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Email Address</label>
+                      <input type="email" value={quickAddForm.email} onChange={e => setQuickAddForm({...quickAddForm, email: e.target.value})} className="w-full p-4 bg-slate-50 border-none rounded-xl font-bold text-slate-700 outline-none focus:ring-2 focus:ring-slate-900 transition-all" />
+                   </div>
+                </div>
+                <footer className="p-8 border-t border-slate-100 flex items-center gap-4 bg-slate-50/30">
+                   <button onClick={() => setIsQuickAddOpen(false)} className="px-8 py-3 bg-white border border-slate-200 text-slate-600 rounded-xl text-[13px] font-black hover:bg-slate-100 transition-all uppercase tracking-widest">Cancel</button>
+                   <button onClick={handleQuickAdd} disabled={isSavingCustomer || !quickAddForm.name} className="flex-1 py-4 bg-slate-900 text-white rounded-xl text-[13px] font-black hover:bg-black shadow-xl transition-all uppercase tracking-widest disabled:opacity-50">
+                      {isSavingCustomer ? <Loader2 size={18} className="animate-spin" /> : 'REGISTER NOW'}
+                   </button>
+                </footer>
+            </div>
+        </div>
+      )}
+
+      {/* Address Drawer */}
+      {isAddressDrawerOpen && (
+        <div className="fixed inset-0 z-[500] flex justify-end">
+            <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={() => setIsAddressDrawerOpen(false)} />
+            <div className="relative w-[500px] bg-white h-full shadow-2xl animate-slide-left flex flex-col">
+                <header className="p-8 border-b border-slate-100 flex items-center justify-between">
+                    <h3 className="text-xl font-black text-slate-900 uppercase italic">Billing & Shipping</h3>
+                    <button onClick={() => setIsAddressDrawerOpen(false)}><X size={24}/></button>
+                </header>
+                <div className="flex-1 p-10 space-y-6">
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Attention</label>
+                        <input value={addressForm.attention} onChange={e=>setAddressForm({...addressForm, attention: e.target.value})} className="w-full p-4 bg-slate-50 rounded-xl font-bold outline-none" />
+                    </div>
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Street Address</label>
+                        <textarea value={addressForm.address1} onChange={e=>setAddressForm({...addressForm, address1: e.target.value})} className="w-full p-4 bg-slate-50 rounded-xl font-bold outline-none h-24" />
+                    </div>
+                </div>
+                <footer className="p-8 border-t border-slate-100 bg-slate-50/30 flex gap-4">
+                    <button onClick={() => setIsAddressDrawerOpen(false)} className="px-8 py-3 bg-white border rounded-xl font-black text-xs uppercase">Discard</button>
+                    <button onClick={() => setIsAddressDrawerOpen(false)} className="flex-1 py-3 bg-slate-900 text-white rounded-xl font-black text-xs uppercase shadow-xl hover:bg-black transition-all">Save Multi-Address</button>
+                </footer>
+            </div>
+        </div>
+      )}
+
+      {/* Bulk Item Modal Placeholder (Simple Version) */}
+      {isBulkModalOpen && (
+        <div className="fixed inset-0 z-[600] flex items-center justify-center p-4">
+           <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={() => setIsBulkModalOpen(false)} />
+           <div className="relative bg-white rounded-[2.5rem] w-full max-w-2xl overflow-hidden shadow-2xl animate-scale-up">
+              <header className="p-8 border-b border-slate-50 flex items-center justify-between">
+                 <h3 className="text-2xl font-black tracking-tighter">Bulk Selection</h3>
+                 <button onClick={() => setIsBulkModalOpen(false)}><X size={24}/></button>
+              </header>
+              <div className="p-8 max-h-[500px] overflow-y-auto space-y-2">
+                 {items.map(it => (
+                    <div key={it.id} onClick={() => handleBulkAdd([it])} className="p-4 border border-slate-50 rounded-2xl hover:bg-blue-50 cursor-pointer flex justify-between items-center transition-all group">
+                       <div>
+                          <p className="font-black text-slate-800 tracking-tight">{it.name}</p>
+                          <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Stock: {it.currentStock} units</p>
+                       </div>
+                       <p className="font-black text-slate-900">₹{parseFloat(it.sellingPrice || 0).toLocaleString()}</p>
+                    </div>
+                 ))}
+              </div>
+           </div>
+        </div>
+      )}
     </div>
   );
 }
+

@@ -637,9 +637,9 @@ const QuoteDetailView = ({ quoteId, companyId, navigate }) => {
 // EMAIL SEND VIEW
 // ─────────────────────────────────────────────────
 const EmailSendView = ({ quote, onCancel, onSend }) => {
-    const customerEmail = "thejathangavel05@gmail.com"; 
-    const userEmail = "naveenswathi1811@gmail.com"; 
-    const userName = "Swathi N";
+    const [customerEmail, setCustomerEmail] = useState(quote.customerEmail || "thejathangavel5@gmail.com"); 
+    const userEmail = "thejathangal5@gmail.com"; 
+    const userName = "Administrator";
     const companyName = "Indus CAI private Ltd";
 
     const [subject, setSubject] = useState(`Quote from ${companyName} (${quote.quoteNumber})`);
@@ -742,6 +742,9 @@ const NewQuoteForm = ({ companyId, navigate, editId }) => {
     const [customers, setCustomers] = useState([]);
     const [customerSearch, setCustomerSearch] = useState('');
     const [showCustomerDropdown, setShowCustomerDropdown] = useState(false);
+    const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
+    const [quickAddForm, setQuickAddForm] = useState({ name: '', email: '', mobile: '', salutation: 'Mr.' });
+    const [isSavingCustomer, setIsSavingCustomer] = useState(false);
     const customerDropdownRef = useRef(null);
     const [quoteNo, setQuoteNo] = useState('QT-000001');
     const [showQuoteSettings, setShowQuoteSettings] = useState(false);
@@ -884,6 +887,7 @@ const NewQuoteForm = ({ companyId, navigate, editId }) => {
                 companyId,
                 quoteNumber: quoteNo,
                 customerName,
+                customerEmail: customers.find(c => c.name === customerName)?.email || '',
                 referenceNumber: refNo,
                 quoteDate,
                 expiryDate: expiryDate || null,
@@ -925,19 +929,28 @@ const NewQuoteForm = ({ companyId, navigate, editId }) => {
     const addItem = () => setItems([...items, { id: Date.now(), itemDetails: '', quantity: 1, rate: 0, amount: 0 }]);
     const removeItem = (idx) => setItems(items.filter((_, i) => i !== idx));
 
-    const handleBulkAdd = (selectedItems) => {
-        const mapped = selectedItems.map(si => ({
-            id: Date.now() + Math.random(),
-            itemDetails: si.name,
-            quantity: 1,
-            rate: si.sellingPrice || 0,
-            amount: si.sellingPrice || 0
-        }));
-        // Remove empty placeholder row if it's the only one
-        if (items.length === 1 && !items[0].itemDetails) {
-            setItems(mapped);
-        } else {
-            setItems([...items, ...mapped]);
+    const handleQuickAdd = async () => {
+        if (!quickAddForm.name) return;
+        setIsSavingCustomer(true);
+        try {
+            const payload = {
+                ...quickAddForm,
+                companyId,
+                groupName: 'Sundry Debtors',
+                openingBalance: 0,
+                currentBalance: 0
+            };
+            const res = await ledgerAPI.create(payload);
+            const newCustomer = res.data.ledger || res.data;
+            setCustomers([...customers, newCustomer]);
+            setCustomerName(newCustomer.name);
+            setCustomerSearch(newCustomer.name);
+            setIsQuickAddOpen(false);
+            setQuickAddForm({ name: '', email: '', mobile: '', salutation: 'Mr.' });
+        } catch (err) {
+            alert('Failed to register customer');
+        } finally {
+            setIsSavingCustomer(false);
         }
     };
 
@@ -1065,10 +1078,10 @@ const NewQuoteForm = ({ companyId, navigate, editId }) => {
                                         {/* Add New Footer */}
                                         <div className="p-2 bg-slate-50/50 border-t border-slate-100">
                                             <button 
-                                                onClick={() => navigate('/customers')}
+                                                onClick={() => { setShowCustomerDropdown(false); setIsQuickAddOpen(true); }}
                                                 className="w-full py-2.5 px-4 bg-white hover:bg-blue-50 border border-slate-200 hover:border-blue-200 rounded-lg text-[12px] font-black text-slate-600 hover:text-blue-600 flex items-center justify-center gap-2 transition-all shadow-sm"
                                             >
-                                                <Plus size={14} strokeWidth={3} /> ADD NEW CUSTOMER
+                                                <Plus size={14} strokeWidth={3} /> REGISTER NEW CUSTOMER
                                             </button>
                                         </div>
                                     </div>
@@ -1243,6 +1256,69 @@ const NewQuoteForm = ({ companyId, navigate, editId }) => {
             </div>
 
             {showQuoteSettings && <QuoteNoSettingsModal onClose={() => setShowQuoteSettings(false)} onSave={setQuoteNo} />}
+
+            {/* Quick Add Customer Drawer */}
+            {isQuickAddOpen && (
+                <div className="fixed inset-0 z-[500] flex justify-end">
+                    <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm animate-fade-in" onClick={() => setIsQuickAddOpen(false)} />
+                    <div className="relative w-[500px] bg-white h-full shadow-2xl animate-slide-left flex flex-col">
+                        <header className="p-8 border-b border-slate-100 flex items-center justify-between bg-slate-50/20">
+                            <div>
+                                <h3 className="text-2xl font-black text-slate-900 tracking-tight italic uppercase">Register New Customer</h3>
+                                <p className="text-[13px] text-slate-400 font-bold uppercase tracking-widest mt-1">QUICK ONBOARDING</p>
+                            </div>
+                            <button onClick={() => setIsQuickAddOpen(false)} className="p-2 hover:bg-white rounded-full transition-colors text-slate-400 hover:text-slate-900 shadow-sm"><X size={24}/></button>
+                        </header>
+                        
+                        <div className="flex-1 overflow-y-auto p-10 space-y-8 no-scrollbar">
+                           <div className="grid grid-cols-4 gap-4">
+                              <div className="col-span-1 space-y-3">
+                                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Salutation</label>
+                                 <select value={quickAddForm.salutation} onChange={e => setQuickAddForm({...quickAddForm, salutation: e.target.value})} className="w-full p-4 bg-slate-50 border-none rounded-xl font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-600 transition-all">
+                                    <option>Mr.</option><option>Ms.</option><option>Mrs.</option><option>Dr.</option>
+                                 </select>
+                              </div>
+                              <div className="col-span-3 space-y-3">
+                                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Primary Name*</label>
+                                 <input type="text" value={quickAddForm.name} onChange={e => setQuickAddForm({...quickAddForm, name: e.target.value})} className="w-full p-4 bg-slate-50 border-none rounded-xl font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-600 transition-all" placeholder="Enter full name or business name" />
+                              </div>
+                           </div>
+
+                           <div className="space-y-3">
+                              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Customer Email</label>
+                              <div className="relative">
+                                 <Mail size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" />
+                                 <input type="email" value={quickAddForm.email} onChange={e => setQuickAddForm({...quickAddForm, email: e.target.value})} className="w-full pl-12 pr-4 py-4 bg-slate-50 border-none rounded-xl font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-600 transition-all" placeholder="example@business.com" />
+                              </div>
+                           </div>
+
+                           <div className="space-y-3">
+                              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Mobile Number</label>
+                              <div className="relative">
+                                 <Phone size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" />
+                                 <input type="text" value={quickAddForm.mobile} onChange={e => setQuickAddForm({...quickAddForm, mobile: e.target.value})} className="w-full pl-12 pr-4 py-4 bg-slate-50 border-none rounded-xl font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-600 transition-all" placeholder="+91 XXXXX XXXXX" />
+                              </div>
+                           </div>
+
+                           <div className="p-6 bg-blue-50/50 rounded-2xl border border-blue-100/50 flex items-start gap-4">
+                              <Info size={18} className="text-blue-500 mt-0.5" />
+                              <p className="text-[12px] text-blue-600 font-medium leading-relaxed">You can always update additional information like GSTIN, Billing Address, and Payment Terms later from the Customer Detail view.</p>
+                           </div>
+                        </div>
+
+                        <footer className="p-8 border-t border-slate-100 flex items-center gap-4 bg-slate-50/30">
+                           <button onClick={() => setIsQuickAddOpen(false)} className="px-8 py-3 bg-white border border-slate-200 text-slate-600 rounded-xl text-[13px] font-black hover:bg-slate-100 transition-all uppercase tracking-widest">Cancel</button>
+                           <button 
+                              onClick={handleQuickAdd}
+                              disabled={isSavingCustomer || !quickAddForm.name}
+                              className="flex-1 py-4 bg-slate-900 text-white rounded-xl text-[13px] font-black hover:bg-black shadow-xl shadow-slate-200 transition-all uppercase tracking-widest disabled:opacity-50"
+                           >
+                              {isSavingCustomer ? <RefreshCw size={18} className="animate-spin mx-auto" /> : 'REGISTER CUSTOMER'}
+                           </button>
+                        </footer>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
