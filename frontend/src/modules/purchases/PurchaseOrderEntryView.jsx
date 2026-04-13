@@ -6,7 +6,7 @@ import {
   User, MapPin, Calendar, CreditCard, Truck,
   FileText, Tag, Link, Info, ArrowLeft,
   Save, Send as SendIcon, UploadCloud, GripVertical, Paperclip,
-  Image as ImageIcon, LayoutGrid
+  Image as ImageIcon, LayoutGrid, X, Settings, HelpCircle, MessageSquare, History
 } from 'lucide-react';
 import { purchaseAPI, inventoryAPI, companyAPI } from '../../services/api';
 import ConfigurePaymentTermsModal from './ConfigurePaymentTermsModal';
