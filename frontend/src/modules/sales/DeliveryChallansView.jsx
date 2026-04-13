@@ -525,6 +525,7 @@ const DeliveryChallansView = ({ companyId }) => {
     const [challans, setChallans] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
+    const [deleteId, setDeleteId] = useState(null);
 
     const isNew = location.pathname.includes('/new');
     const isEdit = location.pathname.includes('/edit');
@@ -532,53 +533,160 @@ const DeliveryChallansView = ({ companyId }) => {
 
     const fetchChallans = async () => {
         if (!companyId) return;
-        try { setLoading(true); const res = await deliveryChallanAPI.getByCompany(companyId); setChallans(res.data || []); }
-        catch (err) { console.error(err); } finally { setLoading(false); }
+        try { 
+            setLoading(true); 
+            const res = await deliveryChallanAPI.getByCompany(companyId); 
+            setChallans(res.data || []); 
+        } catch (err) { 
+            console.error(err); 
+        } finally { 
+            setLoading(false); 
+        }
     };
 
     useEffect(() => { fetchChallans(); }, [companyId]);
 
-    const filtered = useMemo(() => challans.filter(c => c.challanNumber.toLowerCase().includes(searchTerm.toLowerCase()) || c.Customer?.name.toLowerCase().includes(searchTerm.toLowerCase())), [challans, searchTerm]);
+    const handleDelete = async () => {
+        if (!deleteId) return;
+        try {
+            await deliveryChallanAPI.delete(deleteId);
+            addNotification('Delivery Challan deleted', 'success');
+            setDeleteId(null);
+            fetchChallans();
+        } catch (err) {
+            addNotification('Failed to delete challan', 'error');
+        }
+    };
+
+    const filtered = useMemo(() => challans.filter(c => 
+        c.challanNumber.toLowerCase().includes(searchTerm.toLowerCase()) || 
+        c.Customer?.name.toLowerCase().includes(searchTerm.toLowerCase())
+    ), [challans, searchTerm]);
 
     if (isNew || isEdit) return <DeliveryChallanForm companyId={companyId} navigate={navigate} editId={id} />;
+    
+    // When viewing a specific challan, show the detail view
+    if (isView && id) return <DeliveryChallanDetail id={id} navigate={navigate} companyId={companyId} />;
 
     return (
-        <div className="flex h-screen bg-white overflow-hidden font-sans">
-            <div className={`no-print flex flex-col border-r border-slate-100 transition-all duration-300 bg-white ${isView ? 'w-[360px]' : 'flex-1'}`}>
-                <div className="px-5 py-4 bg-white border-b border-slate-100 flex items-center justify-between">
-                    <button className="text-[15px] font-bold text-slate-800 flex items-center gap-1 hover:text-blue-600 transition-all whitespace-nowrap">
-                        All Delivery Challans <ChevronDown size={14} className="mt-0.5" />
-                    </button>
-                    <div className="flex items-center gap-1.5 ml-4">
-                        <button onClick={() => navigate('/delivery-challans/new')} className="p-1.5 bg-[#008ef0] text-white rounded font-bold hover:bg-[#007cd0] transition-all shadow-sm"><Plus size={16}/></button>
-                        <button className="p-1.5 text-slate-400 border border-slate-200 rounded hover:bg-slate-50 transition-all"><MoreVertical size={16}/></button>
+        <div className="flex flex-col h-screen bg-[#f8fafc] overflow-hidden">
+            <ConfirmModal 
+                isOpen={!!deleteId}
+                onClose={() => setDeleteId(null)}
+                onConfirm={handleDelete}
+                title="Delete Delivery Challan"
+                message="Are you sure you want to delete this challan? This action cannot be undone."
+                type="danger"
+            />
+
+            {/* Header Section */}
+            <div className="bg-white px-8 py-6 flex items-center justify-between border-b border-slate-200">
+                <div className="flex items-center gap-3">
+                    <h1 className="text-2xl font-black text-slate-800 tracking-tight flex items-center gap-2">
+                        Delivery Challans <ChevronDown size={20} className="text-slate-400 mt-1" />
+                    </h1>
+                </div>
+                <div className="flex items-center gap-3">
+                    <div className="flex items-center bg-slate-100 px-3 py-2 rounded-lg border border-slate-200 focus-within:bg-white focus-within:ring-2 focus-within:ring-blue-100 transition-all">
+                        <Search size={16} className="text-slate-400" />
+                        <input 
+                            type="text" 
+                            placeholder="Search challans..." 
+                            value={searchTerm} 
+                            onChange={e => setSearchTerm(e.target.value)} 
+                            className="bg-transparent border-none outline-none ml-2 text-sm w-64 font-medium"
+                        />
                     </div>
-                </div>
-                <div className="px-5 py-2.5 bg-slate-50/40 border-b border-slate-100 flex items-center gap-2">
-                    <Search size={14} className="text-slate-400" />
-                    <input type="text" placeholder="Search..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="flex-1 bg-transparent text-[13px] outline-none placeholder:text-slate-300 font-medium" />
-                    <Filter size={14} className="text-slate-400" />
-                </div>
-                <div className="flex-1 overflow-y-auto divide-y divide-slate-50 custom-scrollbar">
-                    {loading ? <div className="p-12 text-center font-bold text-slate-200 animate-pulse uppercase tracking-[0.3em] text-[10px]">Syncing...</div> : filtered.length === 0 ? <div className="p-12 text-center text-slate-300 font-bold text-xs uppercase tracking-widest opacity-40 italic">No Documents Found</div> : filtered.map(c => (
-                        <div key={c.id} onClick={() => navigate(`/delivery-challans/view/${c.id}`)} className={`px-5 py-5 cursor-pointer transition-all border-l-4 ${id === c.id ? 'bg-[#f3f7ff] border-blue-600' : 'bg-white border-transparent hover:bg-slate-50'}`}>
-                            <div className="flex justify-between items-start mb-1"><span className={`text-[13px] font-black leading-tight ${id === c.id ? 'text-blue-600' : 'text-slate-800'}`}>{c.Customer?.name}</span><span className="text-[13px] font-black text-slate-900 ml-4">₹{parseFloat(c.totalAmount).toLocaleString()}</span></div>
-                            <div className="flex justify-between items-center text-[11px] font-bold text-slate-500">
-                                <div className="opacity-80"><span className="hover:underline">{c.challanNumber}</span><span className="mx-1.5 opacity-30">|</span><span>{new Date(c.date).toLocaleDateString('en-GB')}</span></div>
-                                <span className={`uppercase tracking-widest text-[9px] font-black ${c.status === 'Open' ? 'text-emerald-500' : 'text-slate-400'}`}>{c.status}</span>
-                            </div>
-                        </div>
-                    ))}
+                    <button onClick={() => navigate('/delivery-challans/new')} className="bg-[#008ef0] hover:bg-[#007cd0] text-white px-5 py-2 rounded-lg font-bold text-[13px] flex items-center gap-2 transition-all shadow-md">
+                        <Plus size={18} /> New Challan
+                    </button>
+                    <button className="p-2 text-slate-400 hover:bg-slate-100 rounded-lg transition-all border border-slate-200"><Settings size={18}/></button>
                 </div>
             </div>
-            {isView && id ? <DeliveryChallanDetail id={id} navigate={navigate} companyId={companyId} /> : (
-                <div className="flex-1 flex flex-col items-center justify-center bg-[#fcfdfe] text-slate-300 transition-all animate-fade-in">
-                    <div className="w-24 h-24 bg-slate-50 rounded-full flex items-center justify-center mb-6 shadow-sm">
-                        <Truck size={48} className="opacity-20" />
-                    </div>
-                    <p className="uppercase tracking-[0.4em] text-[10px] font-black opacity-30 italic">Select a record to preview session</p>
+
+            {/* Table Section */}
+            <div className="flex-1 overflow-auto p-8">
+                <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                    <table className="w-full text-left border-collapse">
+                        <thead>
+                            <tr className="bg-slate-50 border-b border-slate-200">
+                                <th className="px-6 py-4 text-[11px] font-black text-slate-400 uppercase tracking-widest uppercase">Date</th>
+                                <th className="px-6 py-4 text-[11px] font-black text-slate-400 uppercase tracking-widest uppercase">Challan #</th>
+                                <th className="px-6 py-4 text-[11px] font-black text-slate-400 uppercase tracking-widest uppercase">Customer</th>
+                                <th className="px-6 py-4 text-[11px] font-black text-slate-400 uppercase tracking-widest uppercase">Status</th>
+                                <th className="px-6 py-4 text-[11px] font-black text-slate-400 uppercase tracking-widest uppercase text-right">Amount</th>
+                                <th className="px-6 py-4 text-[11px] font-black text-slate-400 uppercase tracking-widest uppercase text-center">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                            {loading ? (
+                                <tr>
+                                    <td colSpan="6" className="px-6 py-20 text-center">
+                                        <div className="flex flex-col items-center gap-3">
+                                            <Loader2 size={32} className="text-blue-500 animate-spin" />
+                                            <span className="text-sm font-black text-slate-400 uppercase tracking-widest">Syncing Records...</span>
+                                        </div>
+                                    </td>
+                                </tr>
+                            ) : filtered.length === 0 ? (
+                                <tr>
+                                    <td colSpan="6" className="px-6 py-20 text-center">
+                                        <div className="flex flex-col items-center gap-3 opacity-30">
+                                            <Truck size={48} className="text-slate-400" />
+                                            <span className="text-sm font-black text-slate-500 uppercase tracking-[0.3em]">No Documents Found</span>
+                                        </div>
+                                    </td>
+                                </tr>
+                            ) : filtered.map(c => (
+                                <tr 
+                                    key={c.id} 
+                                    onClick={() => navigate(`/delivery-challans/view/${c.id}`)}
+                                    className="hover:bg-blue-50/30 cursor-pointer transition-colors group"
+                                >
+                                    <td className="px-6 py-5 text-[13px] font-bold text-slate-600">
+                                        {new Date(c.date).toLocaleDateString('en-GB')}
+                                    </td>
+                                    <td className="px-6 py-5 text-[13px] font-black text-blue-600">
+                                        {c.challanNumber}
+                                    </td>
+                                    <td className="px-6 py-5">
+                                        <div className="text-[14px] font-black text-slate-800">{c.Customer?.name}</div>
+                                        {c.referenceNumber && <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">{c.referenceNumber}</div>}
+                                    </td>
+                                    <td className="px-6 py-5">
+                                        <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${
+                                            c.status === 'Open' ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-50 text-slate-400'
+                                        }`}>
+                                            {c.status}
+                                        </span>
+                                    </td>
+                                    <td className="px-6 py-5 text-[14px] font-black text-slate-900 text-right">
+                                        ₹{parseFloat(c.totalAmount).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                    </td>
+                                    <td className="px-6 py-5">
+                                        <div className="flex items-center justify-center gap-2">
+                                            <button 
+                                                onClick={(e) => { e.stopPropagation(); navigate(`/delivery-challans/edit/${c.id}`); }}
+                                                className="p-2 hover:bg-blue-50 text-slate-400 hover:text-blue-600 rounded transition-all"
+                                                title="Edit"
+                                            >
+                                                <Edit2 size={16}/>
+                                            </button>
+                                            <button 
+                                                onClick={(e) => { e.stopPropagation(); setDeleteId(c.id); }}
+                                                className="p-2 hover:bg-rose-50 text-slate-400 hover:text-rose-600 rounded transition-all"
+                                                title="Delete"
+                                            >
+                                                <Trash2 size={16}/>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
                 </div>
-            )}
+            </div>
         </div>
     );
 };
