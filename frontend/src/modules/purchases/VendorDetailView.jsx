@@ -27,7 +27,6 @@ const DetailRow = ({ label, value }) => (
 const VendorDetailView = ({ companyId }) => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [vendors, setVendors] = useState([]);
   const [allLedgers, setAllLedgers] = useState([]); // Store full list for robust lookup
   const [selectedId, setSelectedId] = useState(id);
   const [loading, setLoading] = useState(true);
@@ -116,13 +115,6 @@ const VendorDetailView = ({ companyId }) => {
         
         const allLedgersData = ledgersRes.data || [];
         setAllLedgers(allLedgersData);
-        
-        const vendorLedgers = allLedgersData.filter(l => 
-          l.Group?.name?.toLowerCase().includes('creditor') || 
-          l.groupName?.toLowerCase().includes('creditor') ||
-          String(l.id) === String(selectedId) // Ensure selected vendor is always in the sidebar list
-        );
-        setVendors(vendorLedgers);
         setCurrentCompany(companyRes.data);
       } catch (err) {
         console.error("Failed to fetch data", err);
