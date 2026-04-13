@@ -104,7 +104,7 @@ const VendorDetailView = ({ companyId }) => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // 1. Fetch Company & Vendors
+  // 1. Fetch Company & Ledgers
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -132,6 +132,15 @@ const VendorDetailView = ({ companyId }) => {
     };
     fetchData();
   }, [activeCompanyId]);
+
+  // 1b. Derive vendors list based on full ledgers and currently selected ID
+  const vendors = useMemo(() => {
+    return allLedgers.filter(l => 
+      l.Group?.name?.toLowerCase().includes('creditor') || 
+      l.groupName?.toLowerCase().includes('creditor') ||
+      String(l.id) === String(selectedId)
+    );
+  }, [allLedgers, selectedId]);
 
   useEffect(() => {
     if (id) setSelectedId(id);
@@ -174,14 +183,15 @@ const VendorDetailView = ({ companyId }) => {
   }, [activeTab, selectedId, activeCompanyId]);
 
   const vendor = useMemo(() => {
-    // Look in full list for the actual data
-    const found = allLedgers.find(v => String(v.id) === String(selectedId));
-    if (found) {
-      setPaymentTerms(found.paymentTerms || 'Due on Receipt');
-      setOpeningBalance(String(found.openingBalance || 0));
-    }
-    return found;
+    return allLedgers.find(v => String(v.id) === String(selectedId));
   }, [allLedgers, selectedId]);
+
+  useEffect(() => {
+    if (vendor) {
+      setPaymentTerms(vendor.paymentTerms || 'Due on Receipt');
+      setOpeningBalance(String(vendor.openingBalance || 0));
+    }
+  }, [vendor]);
 
   const handleUpdateField = async (field, value) => {
     try {
@@ -190,7 +200,7 @@ const VendorDetailView = ({ companyId }) => {
        await ledgerAPI.update(vendor.id, data);
        if (field === 'paymentTerms') setIsEditingPaymentTerms(false);
        if (field === 'openingBalance') setIsEditingBalance(false);
-       setVendors(prev => prev.map(v => v.id === vendor.id ? { ...v, [field]: value } : v));
+       setAllLedgers(prev => prev.map(v => v.id === vendor.id ? { ...v, [field]: value } : v));
     } catch (err) {
       addNotification(`Failed to update ${field}`, 'error');
     }
@@ -227,7 +237,7 @@ const VendorDetailView = ({ companyId }) => {
         };
         const res = await ledgerAPI.create(payload);
         const newVendor = res.data.ledger || res.data;
-        setVendors(prev => [...prev, newVendor]);
+        setAllLedgers(prev => [...prev, newVendor]);
         setSelectedId(String(newVendor.id));
         navigate(`/vendors/view/${newVendor.id}`);
         setIsQuickAddOpen(false);
