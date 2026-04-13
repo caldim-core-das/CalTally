@@ -484,22 +484,6 @@ const PurchaseOrderEntryView = ({ companyId }) => {
              </div>
              
           </div>
-
-          {/* ─── Right Vertical Action Strip ───────────────────────── */}
-          <div className="w-12 border-l border-slate-200 bg-slate-50 flex flex-col items-center py-4 space-y-6">
-             <div className="relative group/tip cursor-pointer text-slate-500 hover:text-blue-600">
-                <HelpCircle size={18} />
-             </div>
-             <div className="relative group/tip cursor-pointer text-slate-500 hover:text-blue-600">
-                <MessageSquare size={18} />
-             </div>
-             <div className="relative group/tip cursor-pointer text-slate-500 hover:text-blue-600">
-                <History size={18} />
-             </div>
-             <div className="relative group/tip cursor-pointer text-slate-500 hover:text-blue-600">
-                <Settings size={18} />
-             </div>
-          </div>
        </div>
 
        {/* ─── Bottom Actions ────────────────────────────────────── */}
