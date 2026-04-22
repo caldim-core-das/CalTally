@@ -94,7 +94,7 @@ const RecurringBillsView = ({ companyId }) => {
   );
 
   return (
-    <div className="flex h-[calc(100vh-80px)] bg-white overflow-hidden animate-fade-in relative">
+    <div className="flex flex-col h-[calc(100vh-80px)] bg-white overflow-hidden animate-fade-in relative">
         <ConfirmModal 
             isOpen={isDeleteModalOpen}
             onClose={() => setIsDeleteModalOpen(false)}

@@ -16,7 +16,7 @@ const TYPE_COLORS = {
 const fmt = (v) => `₹${Number(v || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
 const fmtDate = (d) => d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
 
-const VoucherListView = ({ onCreateNew, onEdit, onView, onDelete, defaultType = '' }) => {
+const VoucherListView = ({ onCreateNew, onEdit, onView, onDelete, defaultType = '', title = "Vouchers", subtitle = "Transaction Journal", buttonText = "New Voucher", hideTabs = false }) => {
   const [allData, setAllData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -83,9 +83,9 @@ const VoucherListView = ({ onCreateNew, onEdit, onView, onDelete, defaultType = 
         <div>
            <div className="flex items-center gap-3 mb-2">
               <div className="w-10 h-10 bg-slate-900 rounded-xl flex items-center justify-center text-white"><BookOpen size={18}/></div>
-              <span className="text-[10px] font-black uppercase text-slate-400 tracking-[0.2em]">Transaction Journal</span>
+              <span className="text-[10px] font-black uppercase text-slate-400 tracking-[0.2em]">{subtitle}</span>
            </div>
-           <h1 className="text-3xl font-black text-slate-900 tracking-tighter">Vouchers</h1>
+           <h1 className="text-3xl font-black text-slate-900 tracking-tighter">{title}</h1>
         </div>
          <div className="flex gap-3">
             <button onClick={fetchVouchers} className="p-2.5 border border-slate-100 rounded-xl bg-white hover:bg-slate-50 text-slate-400 shadow-sm"><RefreshCcw size={16}/></button>
@@ -93,7 +93,7 @@ const VoucherListView = ({ onCreateNew, onEdit, onView, onDelete, defaultType = 
             {canEdit && (
                <button onClick={onCreateNew}
                   className="bg-slate-900 text-white px-6 py-3 rounded-xl font-black text-xs uppercase tracking-widest shadow-xl flex items-center gap-2 hover:-translate-y-0.5 transition-all">
-                  <Plus size={16}/> New Voucher
+                  <Plus size={16}/> {buttonText}
                </button>
             )}
          </div>
@@ -111,15 +111,17 @@ const VoucherListView = ({ onCreateNew, onEdit, onView, onDelete, defaultType = 
         </div>
 
         {/* Type Filter */}
-        <div className="flex gap-2">
-          {['', 'Journal', 'Payment', 'Receipt', 'Contra'].map(t => (
-            <button key={t} onClick={() => setTypeFilter(t)}
-              className={`px-3 py-1.5 rounded-lg text-[11px] font-black uppercase tracking-wider border transition-all
-                ${typeFilter === t ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-400 border-slate-100 hover:border-slate-200'}`}>
-              {t || 'All'}
-            </button>
-          ))}
-        </div>
+        {!hideTabs && (
+          <div className="flex gap-2">
+            {['', 'Journal', 'Payment', 'Receipt', 'Contra'].map(t => (
+              <button key={t} onClick={() => setTypeFilter(t)}
+                className={`px-3 py-1.5 rounded-lg text-[11px] font-black uppercase tracking-wider border transition-all
+                  ${typeFilter === t ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-400 border-slate-100 hover:border-slate-200'}`}>
+                {t || 'All'}
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* Date range */}
         <div className="flex items-center gap-2">
@@ -137,23 +139,33 @@ const VoucherListView = ({ onCreateNew, onEdit, onView, onDelete, defaultType = 
 
       {/* Summary */}
       <div className="flex gap-5 flex-wrap">
-        {['Receipt', 'Payment', 'Journal', 'Contra'].map(t => {
-          const count = filtered.filter(v => v.voucherType === t).length;
-          const amt = filtered.filter(v => v.voucherType === t)
-            .reduce((s, v) => s + (v.Transactions || []).reduce((a, t) => a + (parseFloat(t.debit) || 0), 0), 0);
-          return (
-            <div key={t} className={`px-4 py-3 rounded-2xl flex items-center gap-3 ${TYPE_COLORS[t] || 'bg-slate-100 text-slate-600'} bg-opacity-60`}>
-              <span className="text-[11px] font-black uppercase tracking-wider">{t}</span>
-              <span className="font-black">{count}</span>
-              <span className="text-[11px] font-bold opacity-70">{fmt(amt)}</span>
+        {hideTabs ? (
+            <div className="px-4 py-3 rounded-2xl flex items-center gap-3 bg-blue-100 text-blue-700 bg-opacity-60">
+              <span className="text-[11px] font-black uppercase tracking-wider">Journals</span>
+              <span className="font-black">{filtered.length}</span>
+              <span className="text-[11px] font-bold opacity-70">{fmt(totalAmount)}</span>
             </div>
-          );
-        })}
-        <div className="ml-auto px-4 py-3 rounded-2xl bg-slate-900 text-white flex items-center gap-3">
-          <span className="text-[11px] font-black uppercase tracking-wider">Total</span>
-          <span className="font-black">{filtered.length}</span>
-          <span className="text-[11px] font-bold opacity-70">{fmt(totalAmount)}</span>
-        </div>
+        ) : (
+          ['Receipt', 'Payment', 'Journal', 'Contra'].map(t => {
+            const count = filtered.filter(v => v.voucherType === t).length;
+            const amt = filtered.filter(v => v.voucherType === t)
+              .reduce((s, v) => s + (v.Transactions || []).reduce((a, tx) => a + (parseFloat(tx.debit) || 0), 0), 0);
+            return (
+              <div key={t} className={`px-4 py-3 rounded-2xl flex items-center gap-3 ${TYPE_COLORS[t] || 'bg-slate-100 text-slate-600'} bg-opacity-60`}>
+                <span className="text-[11px] font-black uppercase tracking-wider">{t}</span>
+                <span className="font-black">{count}</span>
+                <span className="text-[11px] font-bold opacity-70">{fmt(amt)}</span>
+              </div>
+            );
+          })
+        )}
+        {!hideTabs && (
+          <div className="ml-auto px-4 py-3 rounded-2xl bg-slate-900 text-white flex items-center gap-3">
+            <span className="text-[11px] font-black uppercase tracking-wider">Total</span>
+            <span className="font-black">{filtered.length}</span>
+            <span className="text-[11px] font-bold opacity-70">{fmt(totalAmount)}</span>
+          </div>
+        )}
       </div>
 
       {/* Table */}
@@ -163,8 +175,8 @@ const VoucherListView = ({ onCreateNew, onEdit, onView, onDelete, defaultType = 
             <tr>
               <th className="px-8 py-5">Voucher No.</th>
               <th className="px-8 py-5">Date</th>
-              <th className="px-8 py-5">Type</th>
-               <th className="px-8 py-5">Narration</th>
+              {!hideTabs && <th className="px-8 py-5">Type</th>}
+              <th className="px-8 py-5">Narration</th>
               <th className="px-8 py-5 text-right">Amount (₹)</th>
               {canEdit && <th className="px-8 py-5 text-center">Actions</th>}
             </tr>
@@ -176,9 +188,9 @@ const VoucherListView = ({ onCreateNew, onEdit, onView, onDelete, defaultType = 
               </td></tr>
             ) : filtered.length === 0 ? (
               <tr><td colSpan={6} className="py-16 text-center">
-                <p className="text-slate-300 font-bold mb-4">No vouchers found</p>
+                <p className="text-slate-300 font-bold mb-4">No {title.toLowerCase()} found</p>
                 <button onClick={onCreateNew} className="px-5 py-2.5 bg-slate-900 text-white rounded-xl text-xs font-black">
-                  + Create First Voucher
+                  + Create First {title.replace(/s$/, '')}
                 </button>
               </td></tr>
             ) : (
@@ -188,11 +200,13 @@ const VoucherListView = ({ onCreateNew, onEdit, onView, onDelete, defaultType = 
                   <tr key={v.id} className="hover:bg-slate-50/40 transition-all">
                     <td className="px-8 py-4 font-black text-slate-900">{v.voucherNumber || '—'}</td>
                     <td className="px-8 py-4 text-slate-500">{fmtDate(v.date)}</td>
-                    <td className="px-8 py-4">
-                      <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider ${TYPE_COLORS[v.voucherType] || 'bg-slate-100 text-slate-600'}`}>
-                        {v.voucherType || 'Journal'}
-                      </span>
-                    </td>
+                    {!hideTabs && (
+                      <td className="px-8 py-4">
+                        <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider ${TYPE_COLORS[v.voucherType] || 'bg-slate-100 text-slate-600'}`}>
+                          {v.voucherType || 'Journal'}
+                        </span>
+                      </td>
+                    )}
                     <td className="px-8 py-4 text-slate-500 max-w-xs truncate">{v.narration || <span className="italic text-slate-300">No narration</span>}</td>
                      <td className="px-8 py-4 text-right font-black text-slate-900">{fmt(amount)}</td>
                     {canEdit && (
