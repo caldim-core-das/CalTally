@@ -650,6 +650,10 @@ function AuthenticatedApp() {
         <AppShell onLogout={handleLogout}>
           <VoucherListView 
             defaultType="Journal"
+            title="Manual Journals"
+            subtitle="Accountant"
+            buttonText="New Journal"
+            hideTabs={true}
             onCreateNew={() => navigate('/accountant/journals/new')} 
             onEdit={(v) => navigate(`/accountant/journals/edit/${v.id}`)}
             onDelete={async (id) => {
