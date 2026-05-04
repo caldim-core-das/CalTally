@@ -8,6 +8,18 @@ import {
 import { ledgerAPI, voucherAPI, companyAPI } from '../../services/api';
 import useNotificationStore from '../../store/notificationStore';
 
+const ACCOUNT_GROUPS = [
+  { group: 'Other Current Asset', accounts: ['Advance Tax', 'Employee Advance', 'Prepaid Expenses', 'TDS Receivable'] },
+  { group: 'Other Current Liability', accounts: ['Employee Reimbursements', 'Opening Balance Adjustments', 'Tax Payable', 'TDS Payable', 'Unearned Revenue'] },
+  { group: 'Non Current Liability', accounts: ['Construction Loans', 'Mortgages'] },
+  { group: 'Other Liability', accounts: ['Dimension Adjustments'] },
+  { group: 'Equity', accounts: ['Capital Stock', 'Distributions', 'Dividends Paid', 'Drawings', 'Investments', 'Opening Balance Offset', "Owner's Equity"] },
+  { group: 'Income', accounts: ['Discount', 'General Income', 'Interest Income', 'Late Fee Income', 'Other Charges', 'Sales', 'Shipping Charge'] },
+  { group: 'Expense', accounts: ['Advertising And Marketing', 'Automobile Expense', 'Bad Debt', 'Bank Fees and Charges', 'Consultant Expense', 'Contract Assets', 'Credit Card Charges', 'Depreciation And Amortisation', 'Depreciation Expense', 'IT and Internet Expenses', 'Janitorial Expense', 'Lodging', 'Meals and Entertainment', 'Merchandise', 'Office Supplies', 'Other Expenses', 'Postage', 'Printing and Stationery', 'Purchase Discounts', 'Raw Materials And Consumables', 'Rent Expense', 'Repairs and Maintenance', 'Salaries and Employee Wages', 'Telephone Expense', 'Transportation Expense', 'Travel Expense', 'Uncategorized'] },
+  { group: 'Cost Of Goods Sold', accounts: ['Cost of Goods Sold', 'Job Costing', 'Labor', 'Materials', 'Subcontractor'] },
+  { group: 'Other Expense', accounts: ['Exchange Gain or Loss'] }
+];
+
 const BulkUpdateView = () => {
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -66,6 +78,25 @@ const BulkUpdateView = () => {
       addNotification('Please select an account to filter', 'warning');
       return;
     }
+
+    // Date Range Validation
+    if ((filter.startDate && !filter.endDate) || (!filter.startDate && filter.endDate)) {
+      addNotification('Please select the correct date range', 'warning');
+      return;
+    }
+
+    // Mandatory Amount Range if Date is selected
+    if ((filter.startDate || filter.endDate) && (!filter.minAmount || !filter.maxAmount)) {
+      addNotification('please select correct amount range', 'warning');
+      return;
+    }
+
+    // Amount Range Validation (General)
+    if ((filter.minAmount && !filter.maxAmount) || (!filter.minAmount && filter.maxAmount)) {
+      addNotification('Please select the correct amount range', 'warning');
+      return;
+    }
+
     setLoading(true);
     setShowFilterModal(false);
     
@@ -151,7 +182,7 @@ const BulkUpdateView = () => {
         {/* Filter Modal */}
         {showFilterModal && (
           <div className="fixed inset-0 z-[600] flex items-center justify-center p-4">
-            <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={() => setShowFilterModal(false)} />
+            <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" />
             <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-xl overflow-hidden animate-scale-up">
                <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
                   <h3 className="text-[18px] font-bold text-slate-800">Filter Transactions</h3>
@@ -174,7 +205,13 @@ const BulkUpdateView = () => {
                             className="w-full px-3 py-2 border border-slate-200 rounded focus:border-blue-400 outline-none text-[13px] appearance-none bg-white pr-10"
                           >
                              <option value="">Select an account</option>
-                             {ledgers.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
+                             {ACCOUNT_GROUPS.map(g => (
+                               <optgroup key={g.group} label={g.group}>
+                                 {g.accounts.map(acc => (
+                                   <option key={acc} value={acc}>{acc}</option>
+                                 ))}
+                               </optgroup>
+                             ))}
                           </select>
                           <ChevronDown size={14} className="absolute right-3 top-2.5 text-slate-400 pointer-events-none" />
                        </div>
@@ -207,6 +244,8 @@ const BulkUpdateView = () => {
                           <div className="relative flex-1">
                              <input 
                                type="date"
+                               value={filter.startDate}
+                               onChange={e => setFilter({...filter, startDate: e.target.value})}
                                className="w-full px-3 py-2 border border-slate-200 rounded focus:border-blue-400 outline-none text-[13px]"
                                placeholder="dd/MM/yyyy"
                              />
@@ -215,6 +254,8 @@ const BulkUpdateView = () => {
                           <div className="relative flex-1">
                              <input 
                                type="date"
+                               value={filter.endDate}
+                               onChange={e => setFilter({...filter, endDate: e.target.value})}
                                className="w-full px-3 py-2 border border-slate-200 rounded focus:border-blue-400 outline-none text-[13px]"
                                placeholder="dd/MM/yyyy"
                              />
@@ -228,12 +269,18 @@ const BulkUpdateView = () => {
                        <div className="col-span-9 flex items-center gap-4">
                           <input 
                             type="number"
+                            value={filter.minAmount}
+                            onChange={e => setFilter({...filter, minAmount: e.target.value})}
                             className="w-full px-3 py-2 border border-slate-200 rounded focus:border-blue-400 outline-none text-[13px]"
+                            placeholder="Min"
                           />
                           <span className="text-slate-300">-</span>
                           <input 
                             type="number"
+                            value={filter.maxAmount}
+                            onChange={e => setFilter({...filter, maxAmount: e.target.value})}
                             className="w-full px-3 py-2 border border-slate-200 rounded focus:border-blue-400 outline-none text-[13px]"
+                            placeholder="Max"
                           />
                        </div>
                     </div>
@@ -282,7 +329,13 @@ const BulkUpdateView = () => {
                      className="w-full pl-3 pr-10 py-2 border border-slate-200 rounded focus:border-blue-400 outline-none text-[13px] appearance-none bg-white font-medium"
                    >
                       <option value="">Select Target Account</option>
-                      {ledgers.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
+                      {ACCOUNT_GROUPS.map(g => (
+                        <optgroup key={g.group} label={g.group}>
+                          {g.accounts.map(acc => (
+                            <option key={acc} value={acc}>{acc}</option>
+                          ))}
+                        </optgroup>
+                      ))}
                    </select>
                    <ChevronDown size={14} className="absolute right-3 top-2.5 text-slate-400 pointer-events-none" />
                 </div>
@@ -298,77 +351,120 @@ const BulkUpdateView = () => {
        </div>
 
        {/* Content */}
-       <div className="p-8 max-w-7xl mx-auto w-full space-y-6">
-          <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
-             <table className="w-full text-left">
-                <thead className="bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-400 uppercase tracking-widest">
-                   <tr>
-                      <th className="px-6 py-4 w-12">
-                         <input 
-                           type="checkbox" 
-                           checked={selectedTransactions.length === transactions.length && transactions.length > 0}
-                           onChange={() => {
-                              if (selectedTransactions.length === transactions.length) setSelectedTransactions([]);
-                              else setSelectedTransactions(transactions.map(t => t.id));
-                           }}
-                           className="rounded border-slate-300"
-                         />
-                      </th>
-                      <th className="px-6 py-4">Transaction Details</th>
-                      <th className="px-6 py-4">Date</th>
-                      <th className="px-6 py-4">Current Account</th>
-                      <th className="px-6 py-4 text-right">Amount</th>
-                   </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-50">
-                   {transactions.map(t => (
-                      <tr key={t.id} className="hover:bg-slate-50/50 transition-colors group">
-                         <td className="px-6 py-4">
+       <div className="p-8 max-w-7xl mx-auto w-full">
+          
+          {/* Filter Summary Box */}
+          <div className="bg-[#f0f9f1] border border-[#e1f0e3] rounded-lg p-6 mb-10 text-[13px] relative animate-slide-up">
+             <h4 className="font-bold text-[#4c8f52] mb-3 uppercase tracking-wider text-[11px]">Filtered based on</h4>
+             <ul className="space-y-1.5 ml-1">
+                <li className="flex items-center gap-2">
+                   <span className="text-slate-400 w-1 h-1 bg-slate-400 rounded-full"></span>
+                   <span className="text-slate-500">Account Name:</span>
+                   <span className="font-bold text-slate-800">{filter.accountId}</span>
+                </li>
+                {filter.startDate && (
+                   <li className="flex items-center gap-2">
+                      <span className="text-slate-400 w-1 h-1 bg-slate-400 rounded-full"></span>
+                      <span className="text-slate-500">Start Date:</span>
+                      <span className="font-bold text-slate-800">{filter.startDate}</span>
+                   </li>
+                )}
+                {filter.endDate && (
+                   <li className="flex items-center gap-2">
+                      <span className="text-slate-400 w-1 h-1 bg-slate-400 rounded-full"></span>
+                      <span className="text-slate-500">End Date:</span>
+                      <span className="font-bold text-slate-800">{filter.endDate}</span>
+                   </li>
+                )}
+                {filter.minAmount && (
+                   <li className="flex items-center gap-2">
+                      <span className="text-slate-400 w-1 h-1 bg-slate-400 rounded-full"></span>
+                      <span className="text-slate-500">Total Amount Range:</span>
+                      <span className="font-bold text-slate-800">{filter.minAmount} - {filter.maxAmount}</span>
+                   </li>
+                )}
+             </ul>
+             <button 
+                onClick={() => {
+                   setSearchPerformed(false);
+                   setTransactions([]);
+                   setShowFilterModal(true);
+                }}
+                className="mt-4 text-blue-600 font-bold text-[13px] hover:underline flex items-center gap-1"
+             >
+                Change Filter Criteria →
+             </button>
+          </div>
+
+          {transactions.length > 0 ? (
+             <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm animate-fade-in">
+                <table className="w-full text-left">
+                   <thead className="bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-400 uppercase tracking-widest">
+                      <tr>
+                         <th className="px-6 py-4 w-12">
                             <input 
                               type="checkbox" 
-                              checked={selectedTransactions.includes(t.id)}
-                              onChange={() => toggleSelect(t.id)}
-                              className="rounded border-slate-300"
+                              checked={selectedTransactions.length === transactions.length && transactions.length > 0}
+                              onChange={() => {
+                                 if (selectedTransactions.length === transactions.length) setSelectedTransactions([]);
+                                 else setSelectedTransactions(transactions.map(t => t.id));
+                              }}
+                              className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
                             />
-                         </td>
-                         <td className="px-6 py-4">
-                            <div className="flex flex-col">
-                               <span className="text-[14px] font-bold text-slate-700">{t.voucherNumber}</span>
-                               <span className="text-[11px] text-slate-400 uppercase font-black">{t.voucherType}</span>
-                            </div>
-                         </td>
-                         <td className="px-6 py-4 text-[13px] font-medium text-slate-600">
-                            {new Date(t.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
-                         </td>
-                         <td className="px-6 py-4">
-                            <span className="px-2 py-1 bg-slate-100 text-slate-600 rounded text-[11px] font-bold uppercase tracking-tight">
-                               {t.Transactions?.[0]?.Ledger?.name || 'Multiple Accounts'}
-                            </span>
-                         </td>
-                         <td className="px-6 py-4 text-right font-black text-slate-900 text-[14px]">
-                            ₹{(t.Transactions?.reduce((acc, tr) => acc + (parseFloat(tr.debit) || 0), 0) || 0).toLocaleString('en-IN')}
-                         </td>
+                         </th>
+                         <th className="px-6 py-4">Transaction Details</th>
+                         <th className="px-6 py-4">Date</th>
+                         <th className="px-6 py-4">Current Account</th>
+                         <th className="px-6 py-4 text-right">Amount</th>
                       </tr>
-                   ))}
-                   {transactions.length === 0 && (
-                     <tr>
-                        <td colSpan={5} className="py-20 text-center">
-                           <div className="flex flex-col items-center gap-4 text-slate-300">
-                              <ListFilter size={48} strokeWidth={1} />
-                              <p className="font-medium italic">No transactions found matching your filter.</p>
-                              <button onClick={() => setShowFilterModal(true)} className="text-blue-600 font-bold hover:underline">Try different filters</button>
-                           </div>
-                        </td>
-                     </tr>
-                   )}
-                </tbody>
-             </table>
-          </div>
+                   </thead>
+                   <tbody className="divide-y divide-slate-50">
+                      {transactions.map(t => (
+                         <tr key={t.id} className="hover:bg-slate-50/50 transition-colors group">
+                            <td className="px-6 py-4">
+                               <input 
+                                 type="checkbox" 
+                                 checked={selectedTransactions.includes(t.id)}
+                                 onChange={() => toggleSelect(t.id)}
+                                 className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                               />
+                            </td>
+                            <td className="px-6 py-4">
+                               <div className="flex flex-col">
+                                  <span className="text-[14px] font-bold text-slate-700">{t.voucherNumber}</span>
+                                  <span className="text-[11px] text-slate-400 uppercase font-black">{t.voucherType}</span>
+                               </div>
+                            </td>
+                            <td className="px-6 py-4 text-[13px] font-medium text-slate-600">
+                               {new Date(t.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+                            </td>
+                            <td className="px-6 py-4">
+                               <span className="px-2 py-1 bg-slate-100 text-slate-600 rounded text-[11px] font-bold uppercase tracking-tight">
+                                  {t.Transactions?.[0]?.Ledger?.name || 'Multiple Accounts'}
+                               </span>
+                            </td>
+                            <td className="px-6 py-4 text-right font-black text-slate-900 text-[14px]">
+                               ₹{(t.Transactions?.reduce((acc, tr) => acc + (parseFloat(tr.debit) || 0), 0) || 0).toLocaleString('en-IN')}
+                            </td>
+                         </tr>
+                      ))}
+                   </tbody>
+                </table>
+             </div>
+          ) : (
+             <div className="py-32 flex flex-col items-center justify-center text-center px-4 animate-fade-in">
+                <p className="text-[15px] font-medium text-slate-400 max-w-2xl leading-relaxed">
+                   No transactions (Invoices, Credit Notes, Purchase Orders, Expenses, Bills, Vendor Credits) Available. Please change the filter criteria and try again.
+                </p>
+             </div>
+          )}
           
-          <div className="flex items-center justify-between text-[13px] text-slate-400 font-medium px-2">
-             <span>Showing {transactions.length} transactions</span>
-             <span>{selectedTransactions.length} transactions selected for bulk update</span>
-          </div>
+          {transactions.length > 0 && (
+             <div className="mt-6 flex items-center justify-between text-[13px] text-slate-400 font-medium px-2">
+                <span>Showing {transactions.length} transactions</span>
+                <span>{selectedTransactions.length} transactions selected for bulk update</span>
+             </div>
+          )}
        </div>
     </div>
   );

@@ -4,13 +4,38 @@ import {
   ArrowLeft, X, Plus, Info, Upload, ChevronDown, 
   HelpCircle, Settings, Save, FileText, Calendar,
   MoreHorizontal, Trash2, CheckCircle2, AlertCircle,
-  Clock, Link as LinkIcon
+  Clock, Link as LinkIcon, Search, Check
 } from 'lucide-react';
 import { ledgerAPI, voucherAPI, accountingAPI, companyAPI } from '../../services/api';
 import useNotificationStore from '../../store/notificationStore';
 
 const REPORTING_METHODS = ['Accrual and Cash', 'Accrual Only', 'Cash Only'];
-const CURRENCIES = ['INR - Indian Rupee', 'USD - United States Dollar', 'EUR - Euro'];
+const CURRENCIES = [
+  'AED - UAE Dirham',
+  'AUD - Australian Dollar',
+  'BND - Brunei Dollar',
+  'CAD - Canadian Dollar',
+  'CNY - Yuan Renminbi',
+  'EUR - Euro',
+  'GBP - Pound Sterling',
+  'INR - Indian Rupee',
+  'JPY - Japanese Yen',
+  'SAR - Saudi Riyal',
+  'USD - United States Dollar',
+  'ZAR - South African Rand'
+];
+
+const ACCOUNT_GROUPS = [
+  { group: 'Other Current Asset', accounts: ['Advance Tax', 'Employee Advance', 'Prepaid Expenses', 'TDS Receivable'] },
+  { group: 'Other Current Liability', accounts: ['Employee Reimbursements', 'Opening Balance Adjustments', 'Tax Payable', 'TDS Payable', 'Unearned Revenue'] },
+  { group: 'Non Current Liability', accounts: ['Construction Loans', 'Mortgages'] },
+  { group: 'Other Liability', accounts: ['Dimension Adjustments'] },
+  { group: 'Equity', accounts: ['Capital Stock', 'Distributions', 'Dividends Paid', 'Drawings', 'Investments', 'Opening Balance Offset', "Owner's Equity"] },
+  { group: 'Income', accounts: ['Discount', 'General Income', 'Interest Income', 'Late Fee Income', 'Other Charges', 'Sales', 'Shipping Charge'] },
+  { group: 'Expense', accounts: ['Advertising And Marketing', 'Automobile Expense', 'Bad Debt', 'Bank Fees and Charges', 'Consultant Expense', 'Contract Assets', 'Credit Card Charges', 'Depreciation And Amortisation', 'Depreciation Expense', 'IT and Internet Expenses', 'Janitorial Expense', 'Lodging', 'Meals and Entertainment', 'Merchandise', 'Office Supplies', 'Other Expenses', 'Postage', 'Printing and Stationery', 'Purchase Discounts', 'Raw Materials And Consumables', 'Rent Expense', 'Repairs and Maintenance', 'Salaries and Employee Wages', 'Telephone Expense', 'Transportation Expense', 'Travel Expense', 'Uncategorized'] },
+  { group: 'Cost Of Goods Sold', accounts: ['Cost of Goods Sold', 'Job Costing', 'Labor', 'Materials', 'Subcontractor'] },
+  { group: 'Other Expense', accounts: ['Exchange Gain or Loss'] }
+];
 
 let _uid = 1000;
 const newJournalRow = () => ({
@@ -38,11 +63,14 @@ const ManualJournalEntryView = ({ onSaveSuccess, onCancel }) => {
   const [notes, setNotes] = useState('');
   const [reportingMethod, setReportingMethod] = useState('Accrual and Cash');
   const [currency, setCurrency] = useState('INR - Indian Rupee');
+  const [isCurrencyDropdownOpen, setIsCurrencyDropdownOpen] = useState(false);
+  const [currencySearchQuery, setCurrencySearchQuery] = useState('');
   
   const [rows, setRows] = useState([newJournalRow(), newJournalRow()]);
   const [ledgers, setLedgers] = useState([]);
   const [contacts, setContacts] = useState([]);
   const [saving, setSaving] = useState(false);
+  const [attachments, setAttachments] = useState([]);
   
   const companyId = localStorage.getItem('companyId');
 
@@ -95,6 +123,26 @@ const ManualJournalEntryView = ({ onSaveSuccess, onCancel }) => {
   };
 
   const addRow = () => setRows(prev => [...prev, newJournalRow()]);
+
+  const handleFileChange = (e) => {
+    if (e.target.files) {
+       const newFiles = Array.from(e.target.files);
+       if (attachments.length + newFiles.length > 5) {
+         addNotification('Maximum 5 files allowed.', 'error');
+         return;
+       }
+       const oversized = newFiles.some(f => f.size > 10 * 1024 * 1024);
+       if (oversized) {
+         addNotification('Each file must be less than 10MB.', 'error');
+         return;
+       }
+       setAttachments(prev => [...prev, ...newFiles]);
+    }
+  };
+
+  const removeAttachment = (index) => {
+     setAttachments(prev => prev.filter((_, i) => i !== index));
+  };
 
   const handleSave = async (publish = true) => {
     if (!isBalanced) {
@@ -152,139 +200,168 @@ const ManualJournalEntryView = ({ onSaveSuccess, onCancel }) => {
 
       <div className="max-w-[1400px] mx-auto p-12 space-y-12">
         {/* Form Grid */}
-        <div className="grid grid-cols-12 gap-x-12 gap-y-8">
+        <div className="max-w-4xl space-y-6">
            
-           {/* Left Col: Main Info */}
-           <div className="col-span-12 lg:col-span-7 space-y-6">
-              
-              {/* Date */}
-              <div className="grid grid-cols-12 items-center gap-4">
-                 <label className="col-span-3 text-[13px] font-bold text-slate-500">Date*</label>
-                 <div className="col-span-7">
-                    <div className="relative">
-                       <input 
-                         type="date" 
-                         value={date} 
-                         onChange={e => setDate(e.target.value)}
-                         className="w-full px-3 py-2 border border-slate-200 rounded focus:border-blue-400 outline-none text-[13px] bg-white transition-all"
-                       />
-                       <Calendar size={14} className="absolute right-3 top-2.5 text-slate-400 pointer-events-none" />
-                    </div>
-                 </div>
-              </div>
-
-              {/* Reverse Journal */}
-              <div className="grid grid-cols-12 items-start gap-4">
-                 <label className="col-span-3 text-[13px] font-bold text-slate-500 pt-2">Reverse Journal Date</label>
-                 <div className="col-span-7 space-y-3">
-                    <div className="relative">
-                       <input 
-                         type="date" 
-                         value={reverseJournalDate} 
-                         onChange={e => setReverseJournalDate(e.target.value)}
-                         className="w-full px-3 py-2 border border-slate-200 rounded focus:border-blue-400 outline-none text-[13px] bg-white transition-all"
-                         placeholder="dd/MM/yyyy"
-                       />
-                       <Calendar size={14} className="absolute right-3 top-2.5 text-slate-400 pointer-events-none" />
-                    </div>
-                    <label className="flex items-center gap-2 cursor-pointer group">
-                       <input 
-                         type="checkbox" 
-                         checked={publishReverseOnly} 
-                         onChange={e => setPublishReverseOnly(e.target.checked)}
-                         className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-                       />
-                       <span className="text-[12px] text-slate-600 group-hover:text-slate-800 transition-colors">Publish reverse journal only on the reverse journal date</span>
-                       <HelpCircle size={14} className="text-slate-300" />
-                    </label>
-                 </div>
-              </div>
-
-              {/* Journal Number */}
-              <div className="grid grid-cols-12 items-center gap-4">
-                 <label className="col-span-3 text-[13px] font-bold text-rose-500 underline decoration-dotted">Journal#*</label>
-                 <div className="col-span-7">
-                    <div className="relative">
-                       <input 
-                         type="text" 
-                         value={journalNumber} 
-                         onChange={e => setJournalNumber(e.target.value)}
-                         className="w-full px-3 py-2 border border-slate-200 rounded focus:border-blue-400 outline-none text-[13px] bg-white transition-all font-bold text-slate-700"
-                       />
-                       <Settings size={14} className="absolute right-3 top-2.5 text-blue-500 cursor-pointer" />
-                    </div>
-                 </div>
-              </div>
-
-              {/* Reference */}
-              <div className="grid grid-cols-12 items-center gap-4">
-                 <label className="col-span-3 text-[13px] font-bold text-slate-500">Reference#</label>
-                 <div className="col-span-7">
+           {/* Date */}
+           <div className="grid grid-cols-12 items-center gap-4">
+              <label className="col-span-3 text-[13px] font-bold text-slate-600">Date<span className="text-red-500">*</span></label>
+              <div className="col-span-5">
+                 <div className="relative">
                     <input 
-                      type="text" 
-                      value={referenceNumber}
-                      onChange={e => setReferenceNumber(e.target.value)}
+                      type="date" 
+                      value={date} 
+                      onChange={e => setDate(e.target.value)}
                       className="w-full px-3 py-2 border border-slate-200 rounded focus:border-blue-400 outline-none text-[13px] bg-white transition-all"
                     />
                  </div>
               </div>
-
-              {/* Notes */}
-              <div className="grid grid-cols-12 items-start gap-4">
-                 <label className="col-span-3 text-[13px] font-bold text-rose-500 underline decoration-dotted">Notes*</label>
-                 <div className="col-span-9">
-                    <textarea 
-                      rows="3" 
-                      value={notes}
-                      onChange={e => setNotes(e.target.value)}
-                      placeholder="Max. 500 characters"
-                      className="w-full px-3 py-2 border border-slate-200 rounded focus:border-blue-400 outline-none text-[13px] bg-white transition-all resize-none"
-                    />
-                 </div>
-              </div>
-
            </div>
 
-           {/* Right Col: Secondary Info */}
-           <div className="col-span-12 lg:col-span-5 space-y-6 lg:pl-12">
-              
-              {/* Reporting Method */}
-              <div className="space-y-3 pt-2">
-                 <div className="flex items-center gap-1">
-                    <label className="text-[13px] font-bold text-slate-500">Reporting Method</label>
-                    <HelpCircle size={14} className="text-slate-300 cursor-help" />
-                 </div>
-                 <div className="flex items-center gap-6">
-                    {REPORTING_METHODS.map(method => (
-                       <label key={method} className="flex items-center gap-2 cursor-pointer group">
-                          <input 
-                            type="radio" 
-                            name="reportingMethod"
-                            checked={reportingMethod === method}
-                            onChange={() => setReportingMethod(method)}
-                            className="w-4 h-4 border-slate-300 text-blue-600 focus:ring-blue-500"
-                          />
-                          <span className="text-[13px] text-slate-600 group-hover:text-slate-900 transition-colors uppercase tracking-tight">{method}</span>
-                       </label>
-                    ))}
-                 </div>
-              </div>
-
-              {/* Currency */}
-              <div className="space-y-2">
-                 <label className="text-[13px] font-bold text-slate-500">Currency</label>
+           {/* Reverse Journal */}
+           <div className="grid grid-cols-12 items-start gap-4">
+              <label className="col-span-3 text-[13px] font-bold text-slate-600 pt-2">Reverse Journal Date</label>
+              <div className="col-span-5 space-y-3">
                  <div className="relative">
-                    <select 
-                      value={currency} 
-                      onChange={e => setCurrency(e.target.value)}
-                      className="w-full px-3 py-2 border border-slate-200 rounded focus:border-blue-400 outline-none text-[13px] bg-white transition-all appearance-none pr-10 font-medium"
-                    >
-                       {CURRENCIES.map(c => <option key={c}>{c}</option>)}
-                    </select>
-                    <ChevronDown size={14} className="absolute right-3 top-2.5 text-slate-400 pointer-events-none" />
+                    <input 
+                      type="date" 
+                      value={reverseJournalDate} 
+                      onChange={e => setReverseJournalDate(e.target.value)}
+                      className="w-full px-3 py-2 border border-slate-200 rounded focus:border-blue-400 outline-none text-[13px] bg-white transition-all"
+                      placeholder="dd/MM/yyyy"
+                    />
+                 </div>
+                 <label className="flex items-center gap-2 cursor-pointer group">
+                    <input 
+                      type="checkbox" 
+                      checked={publishReverseOnly} 
+                      onChange={e => setPublishReverseOnly(e.target.checked)}
+                      className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                    />
+                    <span className="text-[12px] text-slate-600 group-hover:text-slate-800 transition-colors">Publish reverse journal only on the reverse journal date</span>
+                    <HelpCircle size={14} className="text-slate-400" />
+                 </label>
+              </div>
+           </div>
+
+           {/* Journal Number */}
+           <div className="grid grid-cols-12 items-center gap-4">
+              <label className="col-span-3 text-[13px] font-bold text-slate-600">Journal#<span className="text-red-500">*</span></label>
+              <div className="col-span-5">
+                 <div className="relative">
+                    <input 
+                      type="text" 
+                      value={journalNumber} 
+                      onChange={e => setJournalNumber(e.target.value)}
+                      className="w-full px-3 py-2 border border-slate-200 rounded focus:border-blue-400 outline-none text-[13px] bg-white transition-all font-bold text-slate-700"
+                    />
+                    <Settings size={14} className="absolute right-3 top-2.5 text-blue-500 cursor-pointer" />
                  </div>
               </div>
+           </div>
 
+           {/* Reference */}
+           <div className="grid grid-cols-12 items-center gap-4">
+              <label className="col-span-3 text-[13px] font-bold text-slate-600">Reference#</label>
+              <div className="col-span-5">
+                 <input 
+                   type="text" 
+                   value={referenceNumber}
+                   onChange={e => setReferenceNumber(e.target.value)}
+                   className="w-full px-3 py-2 border border-slate-200 rounded focus:border-blue-400 outline-none text-[13px] bg-white transition-all"
+                 />
+              </div>
+           </div>
+
+           {/* Notes */}
+           <div className="grid grid-cols-12 items-start gap-4">
+              <label className="col-span-3 text-[13px] font-bold text-slate-600 pt-2">Notes<span className="text-red-500">*</span></label>
+              <div className="col-span-6">
+                 <textarea 
+                   rows="3" 
+                   value={notes}
+                   onChange={e => setNotes(e.target.value)}
+                   placeholder="Max. 500 characters"
+                   className="w-full px-3 py-2 border border-slate-200 rounded focus:border-blue-400 outline-none text-[13px] bg-white transition-all resize-none"
+                 />
+              </div>
+           </div>
+
+           {/* Reporting Method */}
+           <div className="grid grid-cols-12 items-center gap-4">
+              <div className="col-span-3 flex items-center gap-1">
+                 <label className="text-[13px] font-bold text-slate-600">Reporting Method</label>
+                 <HelpCircle size={14} className="text-slate-400 cursor-help" />
+              </div>
+              <div className="col-span-9 flex items-center gap-6">
+                 {REPORTING_METHODS.map(method => (
+                    <label key={method} className="flex items-center gap-2 cursor-pointer group">
+                       <input 
+                         type="radio" 
+                         name="reportingMethod"
+                         checked={reportingMethod === method}
+                         onChange={() => setReportingMethod(method)}
+                         className="w-4 h-4 border-slate-300 text-blue-600 focus:ring-blue-500"
+                       />
+                       <span className="text-[13px] text-slate-600 group-hover:text-slate-900 transition-colors">{method}</span>
+                    </label>
+                 ))}
+              </div>
+           </div>
+
+           {/* Currency */}
+           <div className="grid grid-cols-12 items-center gap-4">
+              <label className="col-span-3 text-[13px] font-bold text-slate-600">Currency</label>
+              <div className="col-span-5 relative">
+                 <div 
+                   onClick={() => { setIsCurrencyDropdownOpen(!isCurrencyDropdownOpen); setCurrencySearchQuery(''); }}
+                   className="w-full px-3 py-2 border border-slate-200 rounded flex items-center justify-between cursor-pointer bg-white hover:border-slate-300 transition-all"
+                 >
+                    <span className="text-[13px] text-slate-700">{currency}</span>
+                    <ChevronDown size={14} className="text-slate-400" />
+                 </div>
+
+                 {isCurrencyDropdownOpen && (
+                   <>
+                     <div 
+                       className="fixed inset-0 z-40" 
+                       onClick={() => setIsCurrencyDropdownOpen(false)} 
+                     />
+                     <div className="absolute top-full left-0 mt-1 w-full bg-white border border-blue-400 rounded shadow-xl z-50 overflow-hidden flex flex-col">
+                        <div className="p-2 border-b border-slate-100 bg-white">
+                           <div className="relative">
+                              <Search size={14} className="absolute left-2.5 top-2.5 text-slate-400" />
+                              <input 
+                                type="text"
+                                autoFocus
+                                value={currencySearchQuery}
+                                onChange={(e) => setCurrencySearchQuery(e.target.value)}
+                                placeholder="Search"
+                                className="w-full pl-8 pr-3 py-2 border border-blue-400 rounded text-[13px] outline-none text-slate-700"
+                              />
+                           </div>
+                        </div>
+                        <div className="max-h-56 overflow-y-auto py-1">
+                           {CURRENCIES.filter(c => c.toLowerCase().includes(currencySearchQuery.toLowerCase())).map(c => (
+                             <div 
+                               key={c}
+                               onClick={() => { setCurrency(c); setIsCurrencyDropdownOpen(false); }}
+                               className={`px-4 py-2.5 text-[13px] cursor-pointer flex items-center justify-between
+                                 ${currency === c ? 'bg-blue-500 text-white font-medium' : 'text-slate-700 hover:bg-slate-50'}`}
+                             >
+                               <span>{c}</span>
+                               {currency === c && <Check size={14} className="text-white" />}
+                             </div>
+                           ))}
+                           {CURRENCIES.filter(c => c.toLowerCase().includes(currencySearchQuery.toLowerCase())).length === 0 && (
+                             <div className="px-3 py-4 text-center text-slate-400 text-[13px]">
+                               No currencies found
+                             </div>
+                           )}
+                        </div>
+                     </div>
+                   </>
+                 )}
+              </div>
            </div>
 
         </div>
@@ -320,7 +397,13 @@ const ManualJournalEntryView = ({ onSaveSuccess, onCancel }) => {
                                className="w-full p-2 border border-slate-200 rounded text-[13px] outline-none focus:border-blue-400 appearance-none bg-white font-medium"
                              >
                                 <option value="">Select an account</option>
-                                {ledgers.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
+                                {ACCOUNT_GROUPS.map(g => (
+                                  <optgroup key={g.group} label={g.group}>
+                                    {g.accounts.map(acc => (
+                                      <option key={acc} value={acc}>{acc}</option>
+                                    ))}
+                                  </optgroup>
+                                ))}
                              </select>
                              <ChevronDown size={14} className="absolute right-2 top-2.5 text-slate-300 pointer-events-none" />
                           </div>
@@ -330,10 +413,24 @@ const ManualJournalEntryView = ({ onSaveSuccess, onCancel }) => {
                                 <Plus size={12} strokeWidth={3} /> Select a project
                                 <ChevronDown size={10} />
                              </button>
-                             <button className="flex items-center gap-1.5 text-[11px] font-bold text-slate-400 hover:text-blue-600 transition-colors">
-                                <FileText size={12} /> Reporting Tags
-                                <ChevronDown size={10} />
-                             </button>
+                             <div className="relative flex items-center gap-1.5 text-[11px] font-bold text-slate-400 hover:text-blue-600 transition-colors group">
+                                <FileText size={12} />
+                                <select 
+                                  value={row.tags?.[0] || ''}
+                                  onChange={e => updateRow(row._id, 'tags', e.target.value ? [e.target.value] : [])}
+                                  className="bg-transparent outline-none cursor-pointer appearance-none pr-3 text-slate-400 group-hover:text-blue-600 font-bold"
+                                >
+                                  <option value="">Reporting Tags</option>
+                                  {ACCOUNT_GROUPS.map(g => (
+                                    <optgroup key={g.group} label={g.group}>
+                                      {g.accounts.map(acc => (
+                                        <option key={acc} value={acc}>{acc}</option>
+                                      ))}
+                                    </optgroup>
+                                  ))}
+                                </select>
+                                <ChevronDown size={10} className="absolute right-0 pointer-events-none" />
+                             </div>
                           </div>
                        </div>
                     </td>
@@ -403,29 +500,33 @@ const ManualJournalEntryView = ({ onSaveSuccess, onCancel }) => {
 
         {/* Totals Section */}
         <div className="flex justify-end pt-8">
-           <div className="w-[450px] bg-slate-50/50 rounded-xl p-8 space-y-6">
-              <div className="flex justify-between items-center text-[13px] font-medium text-slate-500">
-                 <span>Sub Total</span>
-                 <div className="flex gap-12">
-                   <span>{totalDebit.toFixed(2)}</span>
-                   <span>{totalCredit.toFixed(2)}</span>
-                 </div>
+           <div className="w-[500px] bg-[#FAFAFA] rounded-xl p-8 space-y-5">
+              
+              {/* Sub Total */}
+              <div className="flex items-center text-[13px] text-slate-800">
+                 <div className="flex-1">Sub Total</div>
+                 <div className="w-[120px] text-right">{totalDebit.toFixed(2)}</div>
+                 <div className="w-[120px] text-right">{totalCredit.toFixed(2)}</div>
               </div>
               
-              <div className="flex justify-between items-center h-12 border-y border-slate-100 px-2 -mx-2">
-                 <span className="text-[14px] font-black text-slate-800 tracking-tight">Total (₹)</span>
-                 <div className="flex gap-12 font-black text-slate-900">
-                    <span>{totalDebit.toFixed(2)}</span>
-                    <span>{totalCredit.toFixed(2)}</span>
+              {/* Total */}
+              <div className="flex items-center text-[15px] font-bold text-slate-900 mt-2">
+                 <div className="flex-1">Total (₹)</div>
+                 <div className="w-[120px] text-right">{totalDebit.toFixed(2)}</div>
+                 <div className="w-[120px] text-right">{totalCredit.toFixed(2)}</div>
+              </div>
+
+              {/* Difference */}
+              <div className="flex items-center text-[13px] text-rose-500 animate-fade-in mt-1">
+                 <div className="flex-1">Difference</div>
+                 <div className="w-[120px] text-right">
+                    {totalCredit > totalDebit ? difference.toFixed(2) : ''}
+                 </div>
+                 <div className="w-[120px] text-right">
+                    {totalDebit >= totalCredit ? difference.toFixed(2) : ''}
                  </div>
               </div>
 
-              {difference > 0 && (
-                <div className="flex justify-between items-center text-[13px] font-bold text-rose-500 px-2 -mx-2 animate-fade-in">
-                   <span>Difference</span>
-                   <span>{difference.toFixed(2)}</span>
-                </div>
-              )}
            </div>
         </div>
 
@@ -434,13 +535,38 @@ const ManualJournalEntryView = ({ onSaveSuccess, onCancel }) => {
            <h3 className="text-[14px] font-bold text-slate-700">Attachments</h3>
            <div className="flex items-start gap-4">
               <div className="relative group">
-                 <button className="flex items-center gap-2 px-4 py-2 border border-slate-200 rounded text-[12px] font-bold text-slate-600 bg-white group-hover:bg-slate-50 transition-all">
+                 <input 
+                   type="file" 
+                   multiple 
+                   id="file-upload" 
+                   className="hidden" 
+                   onChange={handleFileChange} 
+                   accept="image/*,.pdf,.doc,.docx,.xls,.xlsx"
+                 />
+                 <label htmlFor="file-upload" className="flex items-center gap-2 px-4 py-2 border border-slate-200 rounded text-[12px] font-bold text-slate-600 bg-white group-hover:bg-slate-50 transition-all cursor-pointer">
                     <Upload size={14} className="text-slate-400" /> Upload File
                     <ChevronDown size={14} className="text-slate-400" />
-                 </button>
+                 </label>
               </div>
               <p className="text-[11px] text-slate-400 font-medium pt-2">You can upload a maximum of 5 files, 10MB each</p>
            </div>
+           
+           {attachments.length > 0 && (
+             <div className="flex flex-col gap-2 mt-4 max-w-md">
+                {attachments.map((file, index) => (
+                  <div key={index} className="flex items-center justify-between p-2.5 bg-slate-50 border border-slate-200 rounded text-[12px] text-slate-700 animate-fade-in">
+                     <div className="flex items-center gap-3 overflow-hidden">
+                        <FileText size={14} className="text-blue-500 shrink-0" />
+                        <span className="truncate font-medium">{file.name}</span>
+                        <span className="text-slate-400 shrink-0">({(file.size / 1024 / 1024).toFixed(2)} MB)</span>
+                     </div>
+                     <button onClick={() => removeAttachment(index)} className="text-slate-400 hover:text-rose-500 p-1 transition-colors">
+                        <X size={14} />
+                     </button>
+                  </div>
+                ))}
+             </div>
+           )}
         </div>
 
       </div>
@@ -462,22 +588,22 @@ const ManualJournalEntryView = ({ onSaveSuccess, onCancel }) => {
             
             <div className="flex items-center gap-4">
                <button 
-                 onClick={() => handleSave(false)}
-                 disabled={saving || !isBalanced}
-                 className="px-6 py-2.5 bg-slate-900 text-white rounded font-bold text-[13px] hover:bg-slate-800 transition-all disabled:opacity-50"
-               >
-                  Save as Draft
-               </button>
-               <button 
                  onClick={() => handleSave(true)}
                  disabled={saving || !isBalanced}
-                 className="px-8 py-2.5 bg-blue-600 text-white rounded font-bold text-[13px] hover:bg-blue-700 shadow-xl shadow-blue-100 transition-all disabled:opacity-50"
+                 className="px-6 py-2 bg-blue-600 text-white rounded font-bold text-[13px] hover:bg-blue-700 transition-all disabled:opacity-50"
                >
                   {saving ? 'Processing...' : 'Save and Publish'}
                </button>
                <button 
+                 onClick={() => handleSave(false)}
+                 disabled={saving || !isBalanced}
+                 className="px-6 py-2 bg-white border border-slate-200 text-slate-700 rounded font-bold text-[13px] hover:bg-slate-50 transition-all disabled:opacity-50"
+               >
+                  Save as Draft
+               </button>
+               <button 
                  onClick={() => navigate('/accountant/journals')}
-                 className="px-6 py-2.5 bg-white border border-slate-200 text-slate-600 rounded font-bold text-[13px] hover:bg-slate-50 transition-all"
+                 className="px-6 py-2 bg-white border border-slate-200 text-slate-700 rounded font-bold text-[13px] hover:bg-slate-50 transition-all"
                >
                   Cancel
                </button>
