@@ -19,7 +19,8 @@ export default function AuditReportView() {
     const fetchLogs = async () => {
       try {
         // We'll use axios directly or update reportsAPI
-        const response = await fetch(`http://localhost:5000/api/reports/audit/${companyId}`, {
+        const API_BASE = import.meta.env.VITE_API_BASE_URL || (import.meta.env.PROD ? 'https://tally-backend-wfml.onrender.com/api' : 'http://localhost:5000/api');
+        const response = await fetch(`${API_BASE}/reports/audit/${companyId}`, {
           headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
         });
         const data = await response.json();
