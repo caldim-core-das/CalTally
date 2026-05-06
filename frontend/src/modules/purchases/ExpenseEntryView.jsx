@@ -620,29 +620,37 @@ const ExpenseEntryView = ({ companyId }) => {
     <div className="bg-white min-h-screen flex flex-col font-sans">
       
       {/* Header Tabs */}
-      <div className="border-b border-slate-200 bg-white sticky top-0 z-10 px-6 pt-3 flex items-center justify-between">
-         <div className="flex gap-6">
-            {['Record Expense', 'Record Mileage', 'Bulk Add Expenses'].map(tab => (
-               <button
-                  key={tab}
-                  onClick={() => {
-                      setActiveTab(tab);
-                      if (tab === 'Record Mileage') setShowMileageModal(true);
-                   }}
-                  className={`pb-3 text-[14px] font-medium transition-all relative ${
-                     activeTab === tab 
-                     ? 'text-[#1e61f0]' 
-                     : 'text-slate-500 hover:text-blue-700'
-                  }`}
-               >
-                  {tab}
-                  {activeTab === tab && (
-                     <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#1e61f0] rounded-t-lg"></div>
-                  )}
-               </button>
-            ))}
+      <div className="border-b border-slate-200 bg-white sticky top-0 z-50 px-6 py-3 flex items-center justify-between shadow-sm">
+         <div className="flex items-center gap-4">
+            <button 
+              onClick={() => navigate('/expenses')}
+              className="p-1.5 bg-slate-100 hover:bg-slate-200 rounded text-slate-600 transition-colors"
+            >
+              <ArrowLeft size={18} />
+            </button>
+            <div className="flex gap-6 ml-2">
+               {['Record Expense', 'Record Mileage', 'Bulk Add Expenses'].map(tab => (
+                  <button
+                     key={tab}
+                     onClick={() => {
+                         setActiveTab(tab);
+                         if (tab === 'Record Mileage') setShowMileageModal(true);
+                      }}
+                     className={`pb-1 text-[15px] font-bold transition-all relative ${
+                        activeTab === tab 
+                        ? 'text-[#1e61f0]' 
+                        : 'text-slate-500 hover:text-blue-700'
+                     }`}
+                  >
+                     {tab}
+                     {activeTab === tab && (
+                        <div className="absolute -bottom-[13px] left-0 right-0 h-0.5 bg-[#1e61f0] rounded-t-lg"></div>
+                     )}
+                  </button>
+               ))}
+            </div>
          </div>
-         <button onClick={() => navigate('/expenses')} className="mb-2 p-1.5 text-slate-400 hover:bg-slate-100 rounded-md transition-all">
+         <button onClick={() => navigate('/expenses')} className="p-1.5 text-slate-400 hover:bg-slate-100 rounded-md transition-all">
             <X size={20} />
          </button>
       </div>
@@ -656,7 +664,7 @@ const ExpenseEntryView = ({ companyId }) => {
                       <AlertCircle size={18} className="text-red-600" />
                    </div>
                    <div className="flex-1">
-                      <p className="text-[14px] font-bold text-red-800">Please check your entries</p>
+                      <p className="text-[13px] font-bold text-red-800">Please check your entries</p>
                       <p className="text-[12px] text-red-600 opacity-90">{error}</p>
                    </div>
                    <button onClick={() => setError(null)} className="p-1 hover:bg-red-100 rounded text-red-400"><X size={16} /></button>
@@ -668,7 +676,7 @@ const ExpenseEntryView = ({ companyId }) => {
                    <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center shrink-0">
                       <Check size={18} className="text-emerald-600" />
                    </div>
-                   <div className="flex-1 text-[14px] font-bold text-emerald-800">{successMessage}</div>
+                   <div className="flex-1 text-[13px] font-bold text-emerald-800">{successMessage}</div>
                 </div>
              )}
 
@@ -926,7 +934,7 @@ const ExpenseEntryView = ({ companyId }) => {
                             </div>
 
                            <div className="grid grid-cols-[160px_1fr] items-center gap-4">
-                              <label className="text-[14px] text-red-500 font-medium whitespace-nowrap">Amount*</label>
+                              <label className="text-[13px] text-red-500 font-bold whitespace-nowrap">Amount*</label>
                               <div className="flex w-[400px]">
                                  <div className="relative w-[100px] shrink-0">
                                     {/* Custom Currency Trigger */}
@@ -1270,8 +1278,8 @@ const ExpenseEntryView = ({ companyId }) => {
                                     Add New Row
                                  </button>
                                  <div className="flex items-center gap-8 pr-12">
-                                    <span className="text-[14px] font-bold text-slate-800">Expense Total ( ₹ )</span>
-                                    <span className="text-[14px] font-bold text-slate-800">{itemizedTotal.toFixed(2)}</span>
+                                    <span className="text-[13px] font-bold text-slate-800">Expense Total ( ₹ )</span>
+                                    <span className="text-[13px] font-bold text-slate-800">{itemizedTotal.toFixed(2)}</span>
                                  </div>
                               </div>
                            </div>
@@ -1460,7 +1468,7 @@ const ExpenseEntryView = ({ companyId }) => {
                                      <div className="absolute top-0 w-[200%] h-[200%] -left-[50%] rounded-[40%] animate-spin-slow bg-white/20"></div>
                                   </div>
                               </div>
-                              <h3 className="text-[14px] font-bold text-slate-800 mb-1">Drag or Drop your Receipts</h3>
+                              <h3 className="text-[13px] font-bold text-slate-800 mb-1">Drag or Drop your Receipts</h3>
                               <p className="text-[11px] text-slate-400 mb-6 font-medium">Maximum file size allowed is 10MB</p>
                               
                               <div className="flex items-center gap-2 px-4 py-2 bg-slate-100 group-hover:bg-slate-200 text-slate-700 text-[12px] font-bold rounded shadow-sm border border-slate-200 transition-all">

@@ -80,34 +80,29 @@ const ExpensesView = ({ companyId, initialTab = 'All Expenses' }) => {
   return (
     <>
     <div className="bg-white min-h-screen flex flex-col">
-       {/* Tabbed Header */}
-        <div className="flex items-center justify-between px-6 h-14 border-b border-slate-200 bg-white">
-           <div className="flex items-center gap-6 h-full">
-              <button 
-                onClick={() => setActiveTab('Receipts Inbox')}
-                className={`text-[13px] font-bold h-full transition-all border-b-2 ${activeTab === 'Receipts Inbox' ? 'text-blue-600 border-blue-600' : 'text-slate-500 border-transparent hover:text-slate-800'}`}
-              >
-                 Receipts Inbox
-              </button>
-              <button 
-                onClick={() => setActiveTab('All Expenses')}
-                className={`text-[14px] font-black h-full flex items-center gap-2 transition-all border-b-2 ${activeTab === 'All Expenses' ? 'text-slate-800 border-blue-600' : 'text-slate-500 border-transparent hover:text-slate-800'}`}
-              >
-                 All Expenses <ChevronDown size={14} className="text-blue-600" />
-              </button>
-           </div>
-           
-           <div className="flex items-center gap-3">
-              <button 
-                 onClick={() => navigate('/expenses/new')}
-                 className="w-8 h-8 bg-[#1e61f0] hover:bg-[#1a54d1] text-white rounded flex items-center justify-center transition-all shadow-sm"
-              >
-                 <Plus size={18} strokeWidth={3}/>
-              </button>
-              <button className="w-8 h-8 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded flex items-center justify-center transition-all">
-                 <MoreHorizontal size={18} />
-              </button>
-           </div>
+        {/* HEADER: Synchronized with Customers/Quotes */}
+        <div className="flex items-center justify-between px-8 py-4 border-b border-slate-100 bg-white">
+            <div className="flex items-center gap-2 group cursor-pointer relative">
+                <h1 className="text-[20px] font-bold text-slate-900" onClick={() => setActiveTab(activeTab === 'All Expenses' ? 'Receipts Inbox' : 'All Expenses')}>
+                    {activeTab}
+                </h1>
+                <ChevronDown size={18} className="text-blue-600 mt-1" />
+            </div>
+
+            <div className="flex items-center gap-2">
+                <button 
+                  onClick={() => navigate('/expenses/new')}
+                  className="bg-[#1e61f0] hover:bg-[#1a54d1] text-white px-4 py-2 rounded-md font-medium flex items-center gap-1.5 transition-all shadow-sm"
+                >
+                  <Plus size={18} strokeWidth={2.5} /> New Expense
+                </button>
+                
+                <div className="relative">
+                    <button className="p-2 text-slate-500 hover:text-slate-800 border border-slate-200 bg-white rounded-md hover:bg-slate-50 transition-colors shadow-sm">
+                        <MoreHorizontal size={18} />
+                    </button>
+                </div>
+            </div>
         </div>
 
         <div className="flex-1 overflow-auto">

@@ -195,6 +195,7 @@ export const retainerInvoiceAPI = {
 export const recurringInvoiceAPI = {
   create: (data) => api.post('/recurring-invoices', data),
   getByCompany: (companyId) => api.get(`/recurring-invoices/company/${companyId}`),
+  getById: (id) => api.get(`/recurring-invoices/${id}`),
   update: (id, data) => api.put(`/recurring-invoices/${id}`, data),
   delete: (id) => api.delete(`/recurring-invoices/${id}`),
   getHistory: (id) => api.get(`/recurring-invoices/history/${id}`),

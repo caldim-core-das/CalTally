@@ -45,6 +45,32 @@ exports.getByCompany = async (req, res) => {
   }
 };
 
+exports.getById = async (req, res) => {
+  try {
+    const template = await RecurringInvoice.findByPk(req.params.id);
+    if (!template) return res.status(404).json({ error: 'Template not found' });
+    
+    const templateObj = template.toJSON();
+    
+    // Convert itemsJson to items array for frontend compatibility
+    try {
+      if (templateObj.itemsJson) {
+        templateObj.items = JSON.parse(templateObj.itemsJson);
+      } else {
+        templateObj.items = [];
+      }
+    } catch (e) {
+      console.error("Failed to parse itemsJson:", e);
+      templateObj.items = [];
+    }
+    
+    res.json(templateObj);
+  } catch (err) {
+    console.error("Error in getById:", err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
 exports.update = async (req, res) => {
   try {
     const template = await RecurringInvoice.findByPk(req.params.id);
