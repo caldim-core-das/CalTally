@@ -727,14 +727,28 @@ const NewProjectForm = ({ companyId, onCancel, onSave, editId }) => {
   };
 
   return (
-    <div className="flex-1 flex flex-col bg-white overflow-hidden animate-fade-in">
-      <header className="h-16 border-b border-slate-100 flex items-center justify-between px-10 shrink-0 bg-slate-50/30">
-        <h2 className="text-xl font-black text-slate-900 tracking-tight">{editId ? 'Edit Project' : 'New Project'}</h2>
-        <button onClick={onCancel} className="p-2 hover:bg-slate-100 rounded-full text-slate-400 transition-colors"><X size={20}/></button>
+    <div className="flex flex-col min-h-screen bg-[#f8f9fa]">
+      {/* Header */}
+      <header className="px-6 py-3 border-b border-slate-200 flex items-center justify-between bg-white z-50 sticky top-0">
+        <div className="flex items-center gap-3">
+          <button 
+            onClick={onCancel} 
+            className="p-1.5 bg-slate-100 hover:bg-slate-200 rounded text-slate-600 transition-colors" 
+            title="Go Back"
+          >
+            <ArrowLeft size={18} />
+          </button>
+          <div className="p-1.5 bg-slate-100 rounded text-slate-600">
+            <Briefcase size={18} />
+          </div>
+          <h2 className="text-[17px] font-bold text-slate-800 tracking-tight">{editId ? 'Edit Project' : 'New Project'}</h2>
+        </div>
+        <button onClick={onCancel} className="p-1.5 hover:bg-slate-100 rounded text-slate-400 transition-colors"><X size={20}/></button>
       </header>
 
-      <div className="flex-1 overflow-y-auto p-12 no-scrollbar">
-        <form className="max-w-5xl mx-auto space-y-16 pb-20" onSubmit={handleSubmit}>
+      <div className="flex-1 overflow-y-auto p-8 max-w-[1200px] w-full mx-auto no-scrollbar">
+        <div className="bg-white rounded-lg border border-slate-200 p-10 space-y-10 shadow-sm animate-fade-in">
+          <form className="space-y-16" onSubmit={handleSubmit}>
           
           {/* Section 1: Basic Info */}
           <div className="space-y-10">
@@ -743,22 +757,22 @@ const NewProjectForm = ({ companyId, onCancel, onSave, editId }) => {
             <div className="grid grid-cols-12 gap-x-12 gap-y-8">
               <div className="col-span-12 lg:col-span-8 space-y-6">
                 <div className="grid grid-cols-12 items-center gap-4">
-                  <label className="col-span-3 text-[13px] font-bold text-slate-500">Project Name*</label>
+                  <label className="col-span-3 text-[11px] font-black text-rose-500 uppercase tracking-widest">Project Name*</label>
                   <input required value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="col-span-9 px-4 py-2.5 border border-slate-200 rounded-lg text-[14px] font-medium focus:border-blue-500 outline-none transition-all shadow-sm" />
                 </div>
                 <div className="grid grid-cols-12 items-center gap-4">
-                  <label className="col-span-3 text-[13px] font-bold text-slate-500">Project Code</label>
+                  <label className="col-span-3 text-[11px] font-black text-slate-500 uppercase tracking-widest">Project Code</label>
                   <input value={formData.projectCode} onChange={e => setFormData({...formData, projectCode: e.target.value})} className="col-span-9 px-4 py-2.5 border border-slate-200 rounded-lg text-[14px] font-medium focus:border-blue-500 outline-none transition-all shadow-sm" />
                 </div>
                 <div className="grid grid-cols-12 items-center gap-4">
-                  <label className="col-span-3 text-[13px] font-bold text-slate-500">Customer Name*</label>
+                  <label className="col-span-3 text-[11px] font-black text-rose-500 uppercase tracking-widest">Customer Name*</label>
                   <div className="col-span-9 flex gap-2">
                     <select 
                       required 
                       value={formData.customerLedgerId} 
                       onChange={e => {
                         if (e.target.value === 'NEW') {
-                          navigate('/customers/new');
+                          navigate('/customers/new', { state: { returnTo: location.pathname } });
                         } else {
                           setFormData({...formData, customerLedgerId: e.target.value});
                         }
@@ -769,9 +783,9 @@ const NewProjectForm = ({ companyId, onCancel, onSave, editId }) => {
                       {customers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                       <option value="NEW" className="text-blue-600 font-bold tracking-tight">+ New Customer</option>
                     </select>
-                    <button 
-                      type="button" 
-                      onClick={() => navigate('/customers/new')}
+                      <button 
+                        type="button" 
+                        onClick={() => navigate('/customers/new', { state: { returnTo: location.pathname } })}
                       title="Add New Customer"
                       className="p-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-lg shadow-blue-100 transition-all flex items-center justify-center shrink-0"
                     >
@@ -780,7 +794,7 @@ const NewProjectForm = ({ companyId, onCancel, onSave, editId }) => {
                   </div>
                 </div>
                 <div className="grid grid-cols-12 items-center gap-4">
-                  <label className="col-span-3 text-[13px] font-bold text-slate-500">Billing Method*</label>
+                  <label className="col-span-3 text-[11px] font-black text-rose-500 uppercase tracking-widest">Billing Method*</label>
                   <select value={formData.billingMethod} onChange={e => setFormData({...formData, billingMethod: e.target.value})} className="col-span-9 px-4 py-2.5 border border-slate-200 rounded-lg text-[14px] font-medium focus:border-blue-500 outline-none transition-all appearance-none bg-white">
                     <option value="Hourly Project Rate">Hourly Project Rate</option>
                     <option value="Hourly Staff Rate">Hourly Staff Rate</option>
@@ -789,7 +803,7 @@ const NewProjectForm = ({ companyId, onCancel, onSave, editId }) => {
                   </select>
                 </div>
                 <div className="grid grid-cols-12 items-start gap-4">
-                  <label className="col-span-3 text-[13px] font-bold text-slate-500 mt-3">Description</label>
+                  <label className="col-span-3 text-[11px] font-black text-slate-500 uppercase tracking-widest mt-3">Description</label>
                   <textarea value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} rows="3" maxLength="2000" className="col-span-9 px-4 py-3 border border-slate-200 rounded-lg text-[14px] font-medium focus:border-blue-500 outline-none transition-all resize-none shadow-sm" placeholder="Max. 2000 characters" />
                 </div>
               </div>
@@ -932,19 +946,20 @@ const NewProjectForm = ({ companyId, onCancel, onSave, editId }) => {
           </div>
         </form>
       </div>
+    </div>
 
-      <NewUserModal 
-        isOpen={showNewUserModal} 
-        onClose={() => { setShowNewUserModal(false); setActiveUserIdx(null); }}
-        onSaved={(newUser) => {
-           setAllSystemUsers(prev => [...prev, newUser]);
-           if (activeUserIdx !== null) {
-              const newU = [...users];
-              newU[activeUserIdx].UserId = newUser.id;
-              setUsers(newU);
-           }
-        }} 
-      />
+    <NewUserModal 
+      isOpen={showNewUserModal} 
+      onClose={() => { setShowNewUserModal(false); setActiveUserIdx(null); }}
+      onSaved={(newUser) => {
+         setAllSystemUsers(prev => [...prev, newUser]);
+         if (activeUserIdx !== null) {
+            const newU = [...users];
+            newU[activeUserIdx].UserId = newUser.id;
+            setUsers(newU);
+         }
+      }} 
+    />
     </div>
   );
 };
@@ -1003,102 +1018,135 @@ const ProjectsView = ({ companyId }) => {
 
   // --- FULL WIDTH TABLE VIEW ---
   const ProjectsTable = () => (
-    <div className="flex-1 flex flex-col min-h-screen bg-white animate-fade-in no-scrollbar">
-      {/* Header Section */}
-      <header className="px-8 py-5 flex items-center justify-between border-b border-slate-100">
-        <h1 className="text-xl font-bold text-slate-800 flex items-center gap-2 cursor-pointer hover:bg-slate-50 px-2 py-1 rounded transition-all">
-          All Projects <span className="text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full text-[12px] font-black ml-1">{projects.length}</span> <ChevronDown size={18} className="text-blue-400 mt-1" />
-        </h1>
-
-        <div className="flex items-center gap-2">
-          <div className="relative group mr-2">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
-            <input 
-               value={search}
-               onChange={e => setSearch(e.target.value)}
-               placeholder="Search..."
-               className="w-48 pl-9 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded text-[13px] outline-none focus:border-blue-500 transition-all"
-            />
+    <div className="flex-1 flex flex-col h-full bg-white animate-fade-in overflow-hidden">
+      {/* HEADER: Synchronized with Customers/Quotes */}
+      <div className="flex items-center justify-between px-8 py-4 border-b border-slate-100">
+          <div className="flex items-center gap-2 group cursor-pointer">
+              <h1 className="text-[20px] font-bold text-slate-900">All Projects</h1>
+              <ChevronDown size={18} className="text-blue-600 mt-1" />
           </div>
-          
-          <button 
-             onClick={() => navigate('/time-tracking/projects/new')}
-             className="h-8 px-4 bg-blue-600 text-white rounded font-bold text-[13px] hover:bg-blue-700 shadow-sm flex items-center gap-2"
-          >
-             <Plus size={16} strokeWidth={3} /> New
-          </button>
-          <button className="h-8 w-8 flex items-center justify-center border border-slate-200 rounded text-slate-400 hover:bg-slate-50 transition-all">
-             <MoreHorizontal size={16} />
-          </button>
+          <div className="flex items-center gap-2">
+             <button 
+               onClick={() => navigate('/time-tracking/projects/new')}
+               className="bg-[#1e61f0] hover:bg-[#1a54d1] text-white px-4 py-2 rounded-md font-medium flex items-center gap-1.5 transition-all shadow-sm"
+             >
+                <Plus size={18} strokeWidth={2.5}/> New Project
+             </button>
+             <div className="relative">
+                <button 
+                  className="p-2 text-slate-500 hover:text-slate-800 border border-slate-200 bg-white rounded-md hover:bg-slate-50 transition-colors shadow-sm"
+                >
+                   <MoreHorizontal size={18} />
+                </button>
+             </div>
+          </div>
+      </div>
+
+      {/* SEARCH/FILTER BAR */}
+      <div className="px-8 py-4 bg-slate-50/50 flex items-center justify-between border-b border-slate-100">
+        <div className="flex items-center gap-4">
+            <div className="relative group w-64">
+                <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#1e61f0] transition-colors" />
+                <input 
+                    value={search}
+                    onChange={e => setSearch(e.target.value)}
+                    placeholder="Search records..."
+                    className="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded text-[13px] font-medium text-slate-700 outline-none focus:border-[#1e61f0] shadow-sm transition-all"
+                />
+            </div>
+            <button 
+                onClick={fetchProjects}
+                className="p-2 text-slate-400 hover:text-[#1e61f0] transition-colors"
+                title="Refresh"
+            >
+                <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
+            </button>
         </div>
-      </header>
+
+        <div className="flex items-center gap-3">
+            <button className="flex items-center gap-1.5 text-slate-500 text-[13px] font-medium hover:text-slate-900 transition-colors">
+                <Filter size={14} /> Filter
+            </button>
+            <div className="w-px h-4 bg-slate-200 mx-2" />
+            <button className="h-9 px-4 flex items-center gap-2 bg-white border border-slate-200 text-slate-600 rounded-[4px] text-[11px] font-black uppercase tracking-widest hover:bg-slate-50 transition-all shadow-sm">
+                <Download size={14} /> Export
+            </button>
+        </div>
+      </div>
 
       {/* Table Section */}
-      <div className="flex-1 p-8">
-        <table className="w-full border-collapse">
-          <thead>
-            <tr className="bg-slate-50/50 border-y border-slate-100 text-[11px] font-bold text-slate-400 uppercase tracking-widest">
-              <th className="px-6 py-3 text-left">Name</th>
-              <th className="px-6 py-4 text-left">Customer Name</th>
-              <th className="px-6 py-4 text-left">Billing Method</th>
+      <div className="flex-1 p-8 overflow-y-auto no-scrollbar">
+        <table className="w-full text-left">
+          <thead className="bg-slate-50 text-[11px] font-bold text-slate-500 uppercase tracking-widest border-b border-slate-200 sticky top-0 z-10">
+            <tr>
+              <th className="px-6 py-4">Name</th>
+              <th className="px-6 py-4">Customer Name</th>
+              <th className="px-6 py-4">Billing Method</th>
               <th className="px-6 py-4 text-right">Budget</th>
               <th className="px-6 py-4 text-center">Status</th>
-              <th className="px-6 py-4 text-center w-40">Actions</th>
+              <th className="px-6 py-4 text-center">Actions</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-50">
+          <tbody className="divide-y divide-slate-100">
             {loading ? (
-              <tr>
-                <td colSpan={6} className="py-20 text-center text-slate-400 italic text-[13px]">Loading projects...</td>
-              </tr>
-            ) : filtered.length > 0 ? (
+                <tr><td colSpan="6" className="py-24 text-center font-bold text-slate-400 animate-pulse uppercase tracking-widest">Syncing...</td></tr>
+            ) : filtered.length === 0 ? (
+                <tr>
+                    <td colSpan="6" className="py-20 text-center">
+                       <div className="flex flex-col items-center justify-center gap-3">
+                          <div className="w-12 h-12 bg-slate-50 rounded-full flex items-center justify-center text-slate-300">
+                             <Briefcase size={24} />
+                          </div>
+                          <p className="text-slate-500 text-[14px]">No projects found.</p>
+                          <button onClick={() => navigate('/time-tracking/projects/new')} className="text-blue-600 text-[13px] font-medium hover:underline">Create a project</button>
+                       </div>
+                    </td>
+                </tr>
+            ) : (
               filtered.map(p => (
                 <tr 
                   key={p.id}
-                  className="group hover:bg-blue-50/20 transition-colors cursor-pointer"
+                  className="hover:bg-slate-50 transition-colors cursor-pointer group"
                   onClick={() => navigate(`/time-tracking/projects/view/${p.id}`)}
                 >
                   <td className="px-6 py-4">
-                     <span className="text-[14px] font-medium text-blue-600 hover:underline">{p.name}</span>
+                     <div className="text-[14px] font-medium text-blue-600 group-hover:underline">{p.name}</div>
+                     {p.projectCode && <div className="text-[11px] text-slate-400 font-bold uppercase tracking-tight mt-0.5">Code: {p.projectCode}</div>}
                   </td>
-                  <td className="px-6 py-4">
-                     <span className="text-[14px] text-slate-600">{p.Customer?.name || '---'}</span>
+                  <td className="px-6 py-4 text-[14px] font-medium text-slate-800">
+                     {p.Customer?.name || '---'}
                   </td>
-                  <td className="px-6 py-4 text-[13px] text-slate-400">
+                  <td className="px-6 py-4 text-[13px] text-slate-500 font-medium">
                      {p.billingMethod}
                   </td>
-                  <td className="px-6 py-4 text-right">
-                     <span className="text-[14px] text-slate-900 font-medium">₹{parseFloat(p.revenueBudget || 0).toLocaleString()}</span>
+                  <td className="px-6 py-4 text-right whitespace-nowrap">
+                     <span className="text-[14px] text-slate-900 font-medium">₹ {(parseFloat(p.revenueBudget || 0)).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                   </td>
                   <td className="px-6 py-4 text-center">
-                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-tight ${p.status === 'Active' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
+                    <span className={`px-2 py-0.5 rounded uppercase text-[10px] font-bold tracking-widest border
+                        ${p.status === 'Active' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-slate-50 text-slate-500 border-slate-100'}`}>
                       {p.status}
                     </span>
                   </td>
-                  <td className="px-6 py-4 text-center" onClick={e => e.stopPropagation()}>
+                  <td className="px-6 py-4" onClick={e => e.stopPropagation()}>
                      <div className="flex items-center justify-center gap-2">
                         <button 
                            onClick={() => navigate(`/time-tracking/projects/edit/${p.id}`)}
-                           className="flex items-center gap-1 px-2 py-1 border border-slate-200 rounded text-slate-600 hover:bg-slate-50 transition-all text-[12px] font-bold"
+                           className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 text-slate-600 hover:text-blue-600 hover:border-blue-200 rounded shadow-sm transition-all text-[12px] font-medium"
                         >
-                           <Edit2 size={12} className="text-slate-400" /> Edit
+                           <Edit2 size={13} /> Edit
                         </button>
                         <button 
                            onClick={() => setDeleteId(p.id)}
-                           className="p-1.5 border border-slate-200 rounded text-slate-300 hover:text-red-500 hover:bg-red-50 transition-all"
+                           className="flex items-center justify-center p-1.5 bg-white border border-slate-200 text-slate-400 hover:text-red-600 hover:border-red-200 hover:bg-red-50 rounded shadow-sm transition-all"
+                           title="Delete Project"
                         >
-                           <Trash2 size={14} />
+                           <Trash2 size={16} />
                         </button>
                      </div>
                   </td>
                 </tr>
               ))
-            ) : (
-              <tr>
-                 <td colSpan={6} className="py-20 text-center text-slate-400">
-                    <p className="text-[13px]">No records found</p>
-                 </td>
-              </tr>
             )}
           </tbody>
         </table>

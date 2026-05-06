@@ -302,187 +302,327 @@ const DeliveryChallanForm = ({ companyId, navigate, editId }) => {
         }
     };
 
-    if (loading) return <div className="p-20 text-center font-bold text-slate-400 animate-pulse uppercase tracking-[0.2em] text-xs">Syncing Challan Interface...</div>;
+    if (loading) return (
+      <div className="flex flex-col items-center justify-center h-[60vh] text-slate-400 font-sans">
+        <Loader2 size={40} className="animate-spin text-[#1e61f0] mb-4 opacity-20" />
+        <span className="text-[11px] font-bold tracking-widest uppercase opacity-40">Loading Context...</span>
+      </div>
+    );
 
     return (
-        <div className="min-h-screen bg-white text-slate-700 font-sans p-6 max-w-5xl mx-auto shadow-2xl rounded-2xl animate-fade-in border border-slate-100 mt-6 overflow-hidden">
-            <ManageSalespersonsModal
-                isOpen={showManageSalespersons}
-                onClose={() => setShowManageSalespersons(false)}
-                salespersons={salespersons}
-                onSave={setSalespersons}
-                onSelect={(name) => { setFormData(prev => ({ ...prev, salesperson: name })); }}
-            />
-            <div className="flex items-center justify-between mb-8 pb-4 border-b border-slate-100">
-                <div className="flex items-center gap-3">
-                    <button onClick={() => navigate('/delivery-challans')} className="text-slate-400 hover:text-slate-600 transition-all p-1 hover:bg-slate-50 rounded-full"><ArrowLeft size={20} /></button>
-                    <h1 className="text-xl font-black text-slate-900 tracking-tight">{editId ? 'Edit Delivery Challan' : 'New Delivery Challan'}</h1>
+        <div className="flex flex-col h-screen bg-[#f8fafc]">
+            {/* Form Header */}
+            <header className="fixed top-0 left-0 right-0 bg-white border-b border-slate-100 px-12 py-4 flex items-center justify-between z-[110] shadow-[0_2px_15px_rgba(0,0,0,0.02)]">
+              <div className="flex items-center gap-6">
+                <button 
+                  onClick={() => navigate('/delivery-challans')}
+                  className="p-2 hover:bg-slate-100 rounded-full text-slate-400 hover:text-[#1e61f0] transition-all"
+                >
+                  <ArrowLeft size={22} />
+                </button>
+                <div>
+                  <h2 className="text-[18px] font-bold text-slate-900 tracking-tight flex items-center gap-2">
+                    {editId ? 'Edit Delivery Challan' : 'New Delivery Challan'}
+                    <span className="text-[11px] font-bold text-[#1e61f0] bg-blue-50 px-2 py-0.5 rounded uppercase tracking-widest border border-blue-100">
+                      {formData.challanNumber}
+                    </span>
+                  </h2>
+                  <p className="text-[11px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">Goods Shipment & Delivery Tracking</p>
                 </div>
-                <X size={18} className="text-slate-300 cursor-pointer hover:text-slate-500" onClick={() => navigate('/delivery-challans')} />
+              </div>
+              <div className="flex items-center gap-4">
+                <button className="p-2 text-slate-400 hover:text-slate-600 transition-colors"><Settings size={20}/></button>
+                <div className="w-px h-6 bg-slate-200" />
+                <button onClick={() => navigate('/delivery-challans')} className="p-2 text-slate-400 hover:text-red-500 transition-colors">
+                  <X size={24} />
+                </button>
+              </div>
+            </header>
+
+            <div className="flex-1 mt-20 pb-32 bg-[#f8fafc] overflow-y-auto no-scrollbar">
+              <div className="max-w-[1000px] mx-auto py-10 px-6">
+                <div className="bg-white rounded-2xl border border-slate-200 shadow-xl shadow-slate-200/50 p-12 space-y-12 animate-fade-in">
+                  
+                  {/* Form Section: Core Details */}
+                  <div className="grid grid-cols-2 gap-x-12 gap-y-8">
+                    <div className="space-y-2.5">
+                      <label className="text-[11px] font-bold text-red-500 uppercase tracking-widest ml-1">Customer Selection*</label>
+                      <div className="relative group">
+                        <select 
+                          value={formData.customerLedgerId} 
+                          onChange={e => {
+                            if (e.target.value === 'NEW') navigate('/customers/new');
+                            else {
+                                const cust = customers.find(c => c.id === e.target.value);
+                                setFormData({...formData, customerLedgerId: e.target.value, customerName: cust?.name || ''});
+                            }
+                          }}
+                          className="w-full h-11 px-4 bg-slate-50 border border-slate-200 rounded-xl text-[14px] font-bold text-slate-700 outline-none focus:bg-white focus:border-blue-500 transition-all appearance-none"
+                        >
+                          <option value="">Select a ledger...</option>
+                          <option value="NEW" className="text-blue-600">Register New Customer</option>
+                          {customers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                        </select>
+                        <ChevronDown size={14} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2.5">
+                      <label className="text-[11px] font-bold text-red-500 uppercase tracking-widest ml-1">Challan #*</label>
+                      <input 
+                        type="text" 
+                        value={formData.challanNumber} 
+                        onChange={e => setFormData({...formData, challanNumber: e.target.value})}
+                        className="w-full h-11 px-4 bg-slate-50 border border-slate-200 rounded-xl text-[14px] font-bold text-slate-700 outline-none focus:bg-white focus:border-blue-500 transition-all"
+                      />
+                    </div>
+
+                    <div className="space-y-2.5">
+                      <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest ml-1">Reference ID</label>
+                      <input 
+                        type="text" 
+                        value={formData.referenceNumber} 
+                        onChange={e => setFormData({...formData, referenceNumber: e.target.value})}
+                        placeholder="e.g. PO-8829"
+                        className="w-full h-11 px-4 bg-slate-50 border border-slate-200 rounded-xl text-[14px] font-bold text-slate-700 outline-none focus:bg-white focus:border-blue-500 transition-all"
+                      />
+                    </div>
+
+                    <div className="space-y-2.5">
+                      <label className="text-[11px] font-bold text-red-500 uppercase tracking-widest ml-1">Challan Date*</label>
+                      <div className="relative">
+                        <Calendar size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                        <input 
+                          type="date" 
+                          value={formData.date} 
+                          onChange={e => setFormData({...formData, date: e.target.value})}
+                          className="w-full h-11 px-4 bg-slate-50 border border-slate-200 rounded-xl text-[14px] font-bold text-slate-700 outline-none focus:bg-white focus:border-blue-500 transition-all pr-12"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2.5">
+                      <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest ml-1">Challan Type</label>
+                      <div className="relative group">
+                        <select 
+                          value={formData.challanType} 
+                          onChange={e => setFormData({...formData, challanType: e.target.value})}
+                          className="w-full h-11 px-4 bg-slate-50 border border-slate-200 rounded-xl text-[14px] font-bold text-slate-700 outline-none focus:bg-white focus:border-blue-500 transition-all appearance-none"
+                        >
+                          {CHALLAN_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+                        </select>
+                        <ChevronDown size={14} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2.5">
+                      <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest ml-1">Salesperson</label>
+                      <div className="relative" ref={salespersonDropdownRef}>
+                          <button
+                              type="button"
+                              onClick={() => { setShowSalespersonDropdown(!showSalespersonDropdown); setSalespersonSearch(''); }}
+                              className={`w-full h-11 px-4 border rounded-xl text-[14px] font-bold text-left flex items-center justify-between transition-all
+                                  ${showSalespersonDropdown ? 'border-blue-500 bg-white ring-4 ring-blue-50' : 'border-slate-200 bg-slate-50 text-slate-700'}`}
+                          >
+                              <span className={formData.salesperson ? 'text-slate-900' : 'text-slate-400'}>
+                                  {formData.salesperson || 'Assign Salesperson'}
+                              </span>
+                              <ChevronDown size={16} className={`text-slate-400 transition-transform ${showSalespersonDropdown ? 'rotate-180' : ''}`} />
+                          </button>
+
+                          {showSalespersonDropdown && (
+                              <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-slate-200 shadow-2xl rounded-xl z-[200] overflow-hidden animate-fade-in">
+                                  <div className="p-3 border-b border-slate-100 bg-slate-50/50">
+                                      <div className="relative">
+                                          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                                          <input
+                                              autoFocus
+                                              value={salespersonSearch}
+                                              onChange={e => setSalespersonSearch(e.target.value)}
+                                              placeholder="Search..."
+                                              className="w-full pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-lg text-[13px] font-medium outline-none focus:border-blue-500 transition-all"
+                                          />
+                                      </div>
+                                  </div>
+                                  <div className="max-h-48 overflow-y-auto no-scrollbar">
+                                      {salespersons.filter(s => !salespersonSearch || s.name.toLowerCase().includes(salespersonSearch.toLowerCase())).map(s => (
+                                          <div
+                                              key={s.id}
+                                              onClick={() => { setFormData({ ...formData, salesperson: s.name }); setShowSalespersonDropdown(false); }}
+                                              className="px-4 py-3 hover:bg-blue-50 cursor-pointer text-[13px] font-bold text-slate-700 flex items-center justify-between transition-colors border-b border-slate-50 last:border-0"
+                                          >
+                                              {s.name}
+                                              {formData.salesperson === s.name && <CheckCircle2 size={14} className="text-blue-500" />}
+                                          </div>
+                                      ))}
+                                  </div>
+                                  <button
+                                      type="button"
+                                      onClick={() => { setShowSalespersonDropdown(false); setShowManageSalespersons(true); }}
+                                      className="w-full p-4 text-[12px] font-bold text-blue-600 bg-slate-50 hover:bg-blue-50 flex items-center justify-center gap-2 transition-all uppercase tracking-widest border-t border-slate-100"
+                                  >
+                                      <Settings size={14} /> Manage Salespersons
+                                  </button>
+                              </div>
+                          )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Item Table Section */}
+                  <div className="space-y-4 pt-4">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-[14px] font-bold text-slate-900 uppercase tracking-tight">Delivery Line Items</h3>
+                      <button className="text-[11px] font-bold text-[#1e61f0] flex items-center gap-2 hover:bg-blue-50 px-3 py-1.5 rounded-lg transition-all">
+                        <RefreshCw size={14} /> Reset Table
+                      </button>
+                    </div>
+
+                    <div className="border border-slate-200 rounded overflow-hidden shadow-sm bg-white">
+                      <table className="w-full border-collapse">
+                        <thead>
+                          <tr className="bg-slate-50 border-b border-slate-200 text-[10px] text-slate-400 font-bold uppercase tracking-[0.1em]">
+                            <th className="px-6 py-4 text-left font-bold">Item Details</th>
+                            <th className="px-6 py-4 text-right w-28 font-bold">Quantity</th>
+                            <th className="px-6 py-4 text-right w-36 font-bold">Rate</th>
+                            <th className="px-6 py-4 text-right w-40 font-bold">Amount</th>
+                            <th className="w-12"></th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                          {lineItems.map((line, idx) => (
+                            <tr key={line.id} className="group hover:bg-slate-50/50 transition-colors">
+                              <td className="px-6 py-5">
+                                <select 
+                                  value={line.itemId} 
+                                  onChange={e => handleItemSelect(line.id, e.target.value)}
+                                  className="w-full bg-transparent border-none outline-none text-[14px] font-bold text-slate-700 cursor-pointer appearance-none"
+                                >
+                                  <option value="">Select an item...</option>
+                                  {items.map(it => (
+                                    <option key={it.id} value={it.id}>{it.name}</option>
+                                  ))}
+                                </select>
+                                <textarea 
+                                  value={line.description}
+                                  onChange={e => handleUpdateLine(line.id, 'description', e.target.value)}
+                                  placeholder="Add delivery instructions or details..." 
+                                  className="w-full mt-2 h-10 bg-transparent text-[11px] text-slate-400 outline-none resize-none border-none focus:ring-0 placeholder:italic font-medium"
+                                />
+                              </td>
+                              <td className="px-6 py-5 align-top">
+                                <input 
+                                  type="number" 
+                                  value={line.quantity} 
+                                  onChange={e => handleUpdateLine(line.id, 'quantity', e.target.value)}
+                                  className="w-full text-right bg-transparent border-none outline-none text-[13px] font-bold text-slate-600 focus:bg-white rounded transition-all" 
+                                />
+                              </td>
+                              <td className="px-6 py-5 align-top font-mono">
+                                <input 
+                                  type="number" 
+                                  value={line.rate} 
+                                  onChange={e => handleUpdateLine(line.id, 'rate', e.target.value)}
+                                  className="w-full text-right bg-transparent border-none outline-none text-[13px] font-bold text-slate-600 focus:bg-white rounded transition-all" 
+                                />
+                              </td>
+                              <td className="px-6 py-5 text-right align-top font-mono">
+                                <span className="text-[13px] font-bold text-slate-900">{(parseFloat(line.amount) || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                              </td>
+                              <td className="px-4 py-5 text-center align-top">
+                                <button onClick={() => setLineItems(prev => prev.length > 1 ? prev.filter(p => p.id !== line.id) : prev)} className="text-slate-300 hover:text-red-500 transition-colors">
+                                  <Trash2 size={16}/>
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    
+                    <button 
+                        onClick={() => setLineItems([...lineItems, { id: Date.now(), itemId: '', name: '', description: '', quantity: 1, rate: 0, amount: 0 }])}
+                        className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-[#1e61f0] text-[12px] font-bold rounded shadow-sm hover:bg-slate-50 transition-all"
+                    >
+                      <Plus size={14} strokeWidth={3}/> Add Row
+                    </button>
+                  </div>
+
+                  {/* Bottom Section */}
+                  <div className="flex justify-between items-start pt-12 border-t border-slate-100 gap-20">
+                     <div className="flex-1 max-w-md space-y-8">
+                        <div className="space-y-3">
+                           <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest ml-1">Customer Notes</label>
+                           <textarea 
+                              value={formData.customerNotes} 
+                              onChange={e => setFormData({...formData, customerNotes: e.target.value})} 
+                              className="w-full h-24 p-4 bg-slate-50 border border-slate-200 rounded text-[13px] font-bold text-slate-600 outline-none focus:bg-white focus:border-blue-500 transition-all resize-none shadow-sm" 
+                           />
+                        </div>
+
+                        <div className="space-y-3">
+                           <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest ml-1">Terms & Conditions</label>
+                           <textarea 
+                              value={formData.termsConditions} 
+                              onChange={e => setFormData({...formData, termsConditions: e.target.value})} 
+                              className="w-full h-24 p-4 bg-slate-50 border border-slate-200 rounded text-[13px] font-bold text-slate-600 outline-none focus:bg-white focus:border-blue-500 transition-all resize-none shadow-sm" 
+                           />
+                        </div>
+                     </div>
+
+                     <div className="w-80 space-y-4">
+                        <div className="flex justify-between text-[13px]">
+                          <span className="font-bold text-slate-500 uppercase tracking-widest">Sub Total</span>
+                          <span className="font-bold text-slate-900 font-mono">₹{totals.subTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                        </div>
+
+                        <div className="flex justify-between items-center text-[13px]">
+                          <label className="text-slate-500 font-bold uppercase tracking-widest">Discount (%)</label>
+                          <div className="flex items-center gap-4">
+                             <input type="number" value={formData.discount} onChange={e => setFormData({...formData, discount: e.target.value})} className="w-16 h-8 px-2 bg-slate-50 border border-slate-200 rounded text-right font-bold outline-none" />
+                          </div>
+                        </div>
+
+                        <div className="flex justify-between items-center text-[13px]">
+                          <span className="text-slate-500 font-bold uppercase tracking-widest">Tax (GST 18%)</span>
+                          <span className="text-slate-900 font-bold font-mono">₹{totals.taxAmt.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                        </div>
+
+                        <div className="flex justify-between items-center text-[13px]">
+                          <span className="text-slate-500 font-bold uppercase tracking-widest">Adjustment</span>
+                          <input type="number" value={formData.adjustment} onChange={e => setFormData({...formData, adjustment: e.target.value})} className="w-24 h-8 px-2 bg-slate-50 border border-slate-200 rounded text-right font-bold outline-none" />
+                        </div>
+
+                        <div className="pt-6 border-t border-slate-200 flex justify-between items-center bg-slate-50 -mx-8 px-8 py-4 mt-6">
+                          <span className="text-[14px] font-bold text-slate-500 uppercase tracking-widest">Challan Total</span>
+                          <span className="text-[24px] font-bold text-[#1e61f0] tracking-tighter font-mono">₹{totals.total.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                        </div>
+                     </div>
+                  </div>
+                </div>
+              </div>
             </div>
 
-            <div className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-6">
-                    <div className="space-y-4">
-                        <div className="flex items-start gap-4">
-                            <label className="w-32 text-[12px] text-rose-500 font-bold pt-2">Customer Name*</label>
-                            <div className="flex-1 flex gap-2">
-                                <select 
-                                    value={formData.customerLedgerId} 
-                                    onChange={e => {
-                                        if (e.target.value === 'NEW') navigate('/customers/new');
-                                        else {
-                                            const cust = customers.find(c => c.id === e.target.value);
-                                            setFormData({...formData, customerLedgerId: e.target.value, customerName: cust?.name || ''});
-                                        }
-                                    }}
-                                    className="flex-1 p-2 bg-[#f3f7ff]/50 border border-slate-200 rounded-lg text-[13px] font-semibold outline-none transition-all shadow-sm"
-                                >
-                                    <option value="">Select or add a customer</option>
-                                    <option value="NEW" className="text-blue-600 font-bold">➕ Add New Customer</option>
-                                    {customers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                                </select>
-                                <button className="p-2 bg-blue-600 text-white rounded-lg shadow-md hover:bg-blue-700 transition-all"><Search size={16}/></button>
-                            </div>
-                        </div>
-                        <div className="flex items-center gap-4">
-                            <label className="w-32 text-[12px] text-rose-500 font-bold">Challan#*</label>
-                            <input type="text" value={formData.challanNumber} onChange={e => setFormData({...formData, challanNumber: e.target.value})} className="flex-1 p-2.5 border border-slate-200 rounded-lg text-[13px] font-black outline-none focus:border-blue-400 transition-all" />
-                        </div>
-                        <div className="flex items-center gap-4">
-                            <label className="w-32 text-[12px] text-slate-500 font-bold">Reference#</label>
-                            <input type="text" value={formData.referenceNumber} onChange={e => setFormData({...formData, referenceNumber: e.target.value})} className="flex-1 p-2.5 border border-slate-200 rounded-lg text-[13px] font-semibold outline-none focus:border-blue-400 transition-all" />
-                        </div>
-                    </div>
-                    <div className="pt-4 space-y-4">
-                        <div className="flex items-center gap-4">
-                            <label className="w-32 text-[12px] text-rose-500 font-bold">Challan Date*</label>
-                            <input type="date" value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} className="flex-1 p-2.5 border border-slate-200 rounded-lg text-[13px] font-semibold outline-none" />
-                        </div>
-                        <div className="flex items-center gap-4">
-                            <label className="w-32 text-[12px] text-slate-500 font-bold">Challan Type</label>
-                            <select value={formData.challanType} onChange={e => setFormData({...formData, challanType: e.target.value})} className="flex-1 p-2.5 border border-slate-200 rounded-lg text-[13px] font-semibold outline-none">
-                                {CHALLAN_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
-                            </select>
-                        </div>
-                        <div className="flex items-center gap-4">
-                            <label className="w-32 text-[12px] text-slate-500 font-bold">Salesperson</label>
-                            <div className="flex-1 relative" ref={salespersonDropdownRef}>
-                                <button
-                                    type="button"
-                                    onClick={() => { setShowSalespersonDropdown(prev => !prev); setSalespersonSearch(''); }}
-                                    className={`w-full h-11 px-3 pr-9 border rounded-lg text-[13px] font-semibold text-left shadow-sm flex items-center justify-between transition-colors
-                                        ${showSalespersonDropdown ? 'border-blue-500 ring-2 ring-blue-100' : 'border-slate-200 bg-white'}
-                                        ${formData.salesperson ? 'text-slate-800' : 'text-slate-400 font-medium'}`}
-                                >
-                                    <span>{formData.salesperson || 'Select or Add Salesperson'}</span>
-                                    <ChevronDown size={14} className={`absolute right-3 text-slate-400 transition-transform ${showSalespersonDropdown ? 'rotate-180' : ''}`} />
-                                </button>
-
-                                {showSalespersonDropdown && (
-                                    <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-slate-200 shadow-xl rounded-xl z-[200] overflow-hidden animate-fade-in">
-                                        <div className="p-2 border-b border-slate-100">
-                                            <div className="relative">
-                                                <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                                                <input
-                                                    autoFocus
-                                                    value={salespersonSearch}
-                                                    onChange={e => setSalespersonSearch(e.target.value)}
-                                                    placeholder="Search"
-                                                    className="w-full pl-8 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-[13px] font-medium outline-none focus:border-blue-400 transition-all"
-                                                />
-                                            </div>
-                                        </div>
-
-                                        <div className="max-h-48 overflow-y-auto no-scrollbar">
-                                            {salespersons.filter(s => !salespersonSearch || s.name.toLowerCase().includes(salespersonSearch.toLowerCase())).length === 0 ? (
-                                                <div className="py-6 text-center text-[12px] text-slate-400 font-medium uppercase tracking-widest opacity-60">No Match Found</div>
-                                            ) : (
-                                                salespersons
-                                                    .filter(s => !salespersonSearch || s.name.toLowerCase().includes(salespersonSearch.toLowerCase()))
-                                                    .map(s => (
-                                                        <div
-                                                            key={s.id}
-                                                            onClick={() => { setFormData(prev => ({ ...prev, salesperson: s.name })); setShowSalespersonDropdown(false); }}
-                                                            className={`px-4 py-2.5 cursor-pointer text-[13px] font-medium hover:bg-blue-50 transition-colors
-                                                                ${formData.salesperson === s.name ? 'bg-blue-50 text-blue-700 font-bold' : 'text-slate-700'}`}
-                                                        >
-                                                            {s.name}
-                                                        </div>
-                                                    ))
-                                            )}
-                                        </div>
-
-                                        <div className="border-t border-slate-100">
-                                            <button
-                                                onClick={() => { setShowSalespersonDropdown(false); setShowManageSalespersons(true); }}
-                                                className="w-full flex items-center gap-2 px-4 py-3 text-[13px] font-bold text-[#1e61f0] hover:bg-blue-50 transition-colors"
-                                            >
-                                                <Plus size={14} /> Manage Salespersons
-                                            </button>
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                    </div>
+            {/* Footer Action Bar */}
+            <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-100 px-12 py-4 flex items-center justify-between z-[100] shadow-[0_-10px_40px_rgba(0,0,0,0.04)]">
+                <div className="flex items-center gap-2 text-slate-400 text-[11px] font-bold uppercase tracking-widest">
+                    <Truck size={14} className="text-[#1e61f0]" />
+                    Standard Delivery Workflow Enabled
                 </div>
-
-                <div className="mt-8 bg-white rounded-2xl border border-slate-100 shadow-xl overflow-hidden">
-                    <table className="w-full border-collapse">
-                        <thead>
-                            <tr className="bg-white text-slate-400 text-[9px] font-black uppercase border-b border-slate-100 tracking-widest text-center">
-                                <th className="px-6 py-3 text-left">Item Details</th>
-                                <th className="px-6 py-3 w-32 border-l">Quantity</th>
-                                <th className="px-6 py-3 w-40 border-l">Rate</th>
-                                <th className="px-6 py-3 w-40 border-l">Amount</th>
-                                <th className="w-10"></th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-50">
-                            {lineItems.map(line => (
-                                <tr key={line.id} className="group hover:bg-blue-50/20">
-                                    <td className="px-6 py-5">
-                                        <select value={line.itemId} onChange={e => handleItemSelect(line.id, e.target.value)} className="w-full p-2 border border-transparent border-dashed rounded-lg text-sm bg-transparent outline-none transition-all">
-                                            <option value="">Select an item.</option>
-                                            {items.map(it => <option key={it.id} value={it.id}>{it.name}</option>)}
-                                        </select>
-                                        <div className="text-[10px] text-slate-400 pl-2 mt-1 italic">{items.find(i => i.id === line.itemId)?.description || 'Additional description...'}</div>
-                                    </td>
-                                    <td className="px-6 py-5 border-l"><input type="number" value={line.quantity} onChange={e => handleUpdateLine(line.id, 'quantity', e.target.value)} className="w-full p-2 text-center text-sm bg-transparent outline-none" /></td>
-                                    <td className="px-6 py-5 border-l"><input type="number" value={line.rate} onChange={e => handleUpdateLine(line.id, 'rate', e.target.value)} className="w-full p-2 text-right text-sm bg-transparent outline-none" /></td>
-                                    <td className="px-6 py-5 border-l text-right font-black text-slate-900 text-sm">{(parseFloat(line.amount) || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
-                                    <td className="px-4 py-3"><button onClick={() => setLineItems(prev => prev.length > 1 ? prev.filter(p => p.id !== line.id) : prev)} className="text-slate-300 hover:text-rose-500 transition-all"><X size={14}/></button></td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-20 pt-6">
-                    <div className="space-y-6">
-                        <div className="space-y-2">
-                            <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest pl-1">Customer Notes</label>
-                            <textarea value={formData.customerNotes} onChange={e => setFormData({...formData, customerNotes: e.target.value})} className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none h-24 focus:bg-white focus:border-blue-500 transition-all resize-none shadow-sm" />
-                        </div>
-                        <div className="space-y-2">
-                            <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest pl-1">Terms & Conditions</label>
-                            <textarea value={formData.termsConditions} onChange={e => setFormData({...formData, termsConditions: e.target.value})} className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none h-24 focus:bg-white focus:border-blue-500 transition-all resize-none shadow-sm" />
-                        </div>
-                    </div>
-                    <div className="space-y-4 bg-slate-50/50 p-8 rounded-[2rem] self-start border border-slate-100 shadow-xl">
-                        <div className="flex justify-between text-xs font-bold text-slate-500"><span>Sub Total</span><span className="text-slate-900">{totals.subTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span></div>
-                        <div className="flex justify-between items-center text-xs font-bold text-slate-500"><span>Discount (%)</span><input type="number" value={formData.discount} onChange={e => setFormData({...formData, discount: e.target.value})} className="w-20 p-2 bg-white border border-slate-200 rounded-lg text-center" /></div>
-                        <div className="flex justify-between text-xs font-bold text-slate-500"><span>Tax (IGST 18%)</span><span className="text-slate-900">+ {totals.taxAmt.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span></div>
-                        <div className="flex justify-between text-xl font-black text-slate-900 pt-6 border-t font-sans"><span>Total ( ₹ )</span><span>{totals.total.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span></div>
-                    </div>
-                </div>
-
-                <div className="sticky bottom-0 bg-white border-t border-slate-100 py-3 flex justify-end gap-3 mt-10 z-[100] -mx-6 px-6 shadow-[0_-4px_10px_-5px_rgba(0,0,0,0.05)]">
-                    <button onClick={() => navigate('/delivery-challans')} className="px-5 py-2 border border-slate-200 text-slate-500 rounded font-bold text-[13px]">Cancel</button>
-                    <button onClick={() => handleSave('Draft')} disabled={saving} className="px-5 py-2 bg-white border border-slate-300 text-slate-700 rounded font-bold text-[13px] hover:bg-slate-50">Save as Draft</button>
-                    <button onClick={() => handleSave('Open')} disabled={saving} className="px-5 py-2 bg-[#008ef0] text-white rounded font-bold text-[13px] hover:bg-[#007cd0] shadow-md flex items-center gap-2">
-                        {saving ? <Loader2 className="animate-spin" size={16} /> : 'Save and Send'}
+                <div className="flex items-center gap-4">
+                    <button 
+                        onClick={() => navigate('/delivery-challans')}
+                        className="px-6 py-2.5 text-slate-500 text-[13px] font-bold hover:bg-slate-100 rounded transition-all"
+                    >
+                        Discard
+                    </button>
+                    <button 
+                        onClick={() => handleSave('Open')} 
+                        disabled={saving}
+                        className="px-10 py-2.5 bg-slate-900 text-white rounded font-bold text-[13px] hover:bg-black shadow-xl shadow-slate-200 transition-all uppercase tracking-widest flex items-center gap-2"
+                    >
+                        {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+                        {saving ? 'Processing...' : (editId ? 'Update Challan' : 'Save and Send')}
                     </button>
                 </div>
             </div>
@@ -845,12 +985,12 @@ const DeliveryChallansView = ({ companyId }) => {
                             className={`px-6 py-4 cursor-pointer transition-all border-l-4 ${id === c.id ? 'bg-blue-50 border-blue-600' : 'hover:bg-slate-50 border-transparent'}`}
                         >
                             <div className="flex justify-between items-start mb-1">
-                                <span className={`text-[13px] font-black ${id === c.id ? 'text-blue-600' : 'text-slate-800'}`}>{c.challanNumber}</span>
-                                <span className="text-[13px] font-black text-slate-900">₹{parseFloat(c.totalAmount).toLocaleString()}</span>
+                                <span className={`text-[13px] font-semibold ${id === c.id ? 'text-blue-600' : 'text-slate-800'}`}>{c.challanNumber}</span>
+                                <span className="text-[13px] font-semibold text-slate-900">₹{parseFloat(c.totalAmount).toLocaleString()}</span>
                             </div>
                             <div className="flex justify-between items-center">
                                <span className="text-[11px] font-bold text-slate-400 truncate max-w-[180px]">{c.Customer?.name}</span>
-                               <span className="text-[9px] font-black uppercase text-slate-300 border border-slate-100 px-1.5 py-0.5 rounded tracking-widest">{new Date(c.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}</span>
+                               <span className="text-[9px] font-bold uppercase text-slate-300 border border-slate-100 px-1.5 py-0.5 rounded tracking-widest">{new Date(c.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}</span>
                             </div>
                         </div>
                     ))}
@@ -866,8 +1006,8 @@ const DeliveryChallansView = ({ companyId }) => {
                         {/* Table Header */}
                         <div className="bg-white px-8 py-7 flex items-center justify-between border-b border-slate-200">
                             <div>
-                                <h1 className="text-2xl font-black text-slate-900 tracking-tight">Delivery Challans</h1>
-                                <p className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] mt-1">Manage product shipments and job work</p>
+                                <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Delivery Challans</h1>
+                                <p className="text-[11px] font-medium text-slate-500 uppercase tracking-widest mt-1">Manage product shipments and job work</p>
                             </div>
                             <div className="flex items-center gap-3">
                                 <div className="flex items-center bg-white px-4 py-2.5 rounded-2xl border border-slate-200 shadow-sm focus-within:ring-2 focus-within:ring-blue-100 transition-all">
@@ -880,8 +1020,8 @@ const DeliveryChallansView = ({ companyId }) => {
                                         className="bg-transparent border-none outline-none ml-3 text-[14px] w-72 font-semibold"
                                     />
                                 </div>
-                                <button onClick={() => navigate('/delivery-challans/new')} className="bg-[#1e61f0] hover:bg-blue-700 text-white px-6 py-3 rounded-2xl font-black text-[13px] uppercase tracking-widest flex items-center gap-2 transition-all shadow-lg shadow-blue-200">
-                                    <Plus size={18} strokeWidth={3} /> New Challan
+                                <button onClick={() => navigate('/delivery-challans/new')} className="bg-[#1e61f0] hover:bg-blue-700 text-white px-6 py-3 rounded-2xl font-bold text-[13px] uppercase tracking-widest flex items-center gap-2 transition-all shadow-lg shadow-blue-200">
+                                    <Plus size={18} strokeWidth={2} /> New Challan
                                 </button>
                                 <button onClick={fetchChallans} className="p-3 bg-white border border-slate-200 text-slate-400 rounded-2xl hover:text-blue-600 hover:border-blue-200 transition-all shadow-sm">
                                     <RefreshCw size={20} className={loading ? 'animate-spin' : ''} />
@@ -894,7 +1034,7 @@ const DeliveryChallansView = ({ companyId }) => {
                             <div className="bg-white rounded-[2.5rem] shadow-2xl shadow-slate-200/50 border border-slate-100 overflow-hidden">
                                 <table className="w-full text-left">
                                     <thead>
-                                        <tr className="bg-slate-50/50 border-b border-slate-100 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">
+                                        <tr className="bg-slate-50/50 border-b border-slate-100 text-[11px] font-bold text-slate-500 uppercase tracking-widest">
                                             <th className="px-10 py-6">Date</th>
                                             <th className="px-10 py-6">Challan #</th>
                                             <th className="px-10 py-6">Customer</th>
@@ -921,29 +1061,29 @@ const DeliveryChallansView = ({ companyId }) => {
                                                 onClick={() => navigate(`/delivery-challans/view/${c.id}`)}
                                                 className={`hover:bg-blue-50/30 cursor-pointer transition-all group`}
                                             >
-                                                <td className="px-10 py-6 text-[14px] font-bold text-slate-600">
+                                                <td className="px-10 py-6 text-[14px] font-medium text-slate-600">
                                                     {new Date(c.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
                                                 </td>
-                                                <td className="px-10 py-6 text-[14px] font-black text-blue-600">
+                                                <td className="px-10 py-6 text-[14px] font-medium text-blue-600">
                                                     {c.challanNumber}
                                                 </td>
                                                 <td className="px-10 py-6">
                                                     <div className="flex items-center gap-3">
                                                        <div className="w-9 h-9 bg-slate-50 rounded-xl flex items-center justify-center text-slate-400 font-bold text-[13px]">{c.Customer?.name?.charAt(0)}</div>
                                                        <div>
-                                                           <div className="text-[14px] font-black text-slate-800">{c.Customer?.name}</div>
-                                                           {c.referenceNumber && <div className="text-[9px] text-slate-400 font-black uppercase tracking-[0.2em]">{c.referenceNumber}</div>}
+                                                           <div className="text-[14px] font-medium text-slate-800">{c.Customer?.name}</div>
+                                                           {c.referenceNumber && <div className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">{c.referenceNumber}</div>}
                                                        </div>
                                                     </div>
                                                 </td>
                                                 <td className="px-10 py-6">
-                                                    <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-[0.2em] ${
+                                                    <span className={`px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest ${
                                                         c.status === 'Open' ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-slate-50 text-slate-400 border border-slate-100'
                                                     }`}>
                                                         {c.status}
                                                     </span>
                                                 </td>
-                                                <td className="px-10 py-6 text-[16px] font-black text-slate-900 text-right font-sans">
+                                                <td className="px-10 py-6 text-[16px] font-semibold text-slate-900 text-right font-sans">
                                                     ₹{parseFloat(c.totalAmount).toLocaleString()}
                                                 </td>
                                                 <td className="px-10 py-6">
