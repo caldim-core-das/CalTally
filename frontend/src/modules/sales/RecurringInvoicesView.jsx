@@ -7,14 +7,106 @@ import {
   Package, User, Search, X, ChevronRight, FileText,
   Filter, Download, ArrowLeft, Loader2, Save, Send,
   Trash, Info, HelpCircle, Tag, Paperclip, ChevronDown, Check,
-  AlertTriangle, Play, Pause, Square, File
+  AlertTriangle, Play, Pause, Square, File, Zap, ShieldCheck, Phone
 } from 'lucide-react';
 import ConfirmModal from '../../components/ConfirmModal';
 import useNotificationStore from '../../store/notificationStore';
 
-// ─────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// ITEM SEARCH SELECTOR (FOR TABLE CELLS)
+// ─────────────────────────────────────────────────────────────────────────────
+const ItemSearchSelector = ({ value, onChange, items, placeholder }) => {
+    const [isOpen, setIsOpen] = useState(false);
+    const [search, setSearch] = useState('');
+    const containerRef = useRef(null);
+
+    useEffect(() => {
+        const handleClickOutside = (e) => {
+            if (containerRef.current && !containerRef.current.contains(e.target)) setIsOpen(false);
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    const filtered = (items || []).filter(it => {
+        const n = it.name || '';
+        const d = it.salesDescription || '';
+        const s = search.toLowerCase();
+        return n.toLowerCase().includes(s) || d.toLowerCase().includes(s);
+    });
+
+    return (
+        <div className="relative w-full" ref={containerRef}>
+            <div 
+                onClick={() => setIsOpen(!isOpen)}
+                className="w-full flex items-center justify-between cursor-pointer group"
+            >
+                <div className="flex-1">
+                    {value ? (
+                        <div className="text-[14px] font-bold text-slate-900 tracking-tight">{value}</div>
+                    ) : (
+                        <div className="text-[14px] font-medium text-slate-300 italic">{placeholder}</div>
+                    )}
+                </div>
+                <ChevronDown size={14} className={`text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+            </div>
+
+            {isOpen && (
+                <div className="absolute top-full left-0 mt-2 w-[400px] bg-white border border-slate-200 shadow-[0_20px_50px_rgba(0,0,0,0.15)] rounded-xl z-[100] overflow-hidden animate-fade-in">
+                    <div className="p-3 border-b border-slate-50 bg-slate-50/50">
+                        <div className="relative">
+                            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                            <input 
+                                autoFocus
+                                value={search}
+                                onChange={e => setSearch(e.target.value)}
+                                placeholder="Search items or descriptions..."
+                                className="w-full pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-lg text-[13px] outline-none focus:border-blue-500 transition-all font-medium"
+                            />
+                        </div>
+                    </div>
+                    <div className="max-h-[300px] overflow-y-auto no-scrollbar py-1 flex flex-col">
+                        {filtered.length > 0 ? (
+                            <div className="flex-1">
+                                {filtered.map(it => (
+                                    <div 
+                                        key={it.id}
+                                        onClick={() => {
+                                            onChange(it);
+                                            setIsOpen(false);
+                                            setSearch('');
+                                        }}
+                                        className="px-4 py-3 hover:bg-blue-50 cursor-pointer transition-colors group mx-1 rounded-lg"
+                                    >
+                                        <div className="flex justify-between items-start mb-0.5">
+                                            <div className="text-[14px] font-bold text-slate-800 tracking-tight flex items-center gap-2">
+                                                <Package size={14} className="text-blue-500 opacity-50" />
+                                                {it.name}
+                                            </div>
+                                            <div className="text-[13px] font-bold text-slate-900">₹{parseFloat(it.sellingPrice || 0).toLocaleString()}</div>
+                                        </div>
+                                        <div className="text-[11px] text-slate-400 font-medium whitespace-nowrap overflow-hidden text-ellipsis italic">
+                                            {it.salesDescription || 'No description provided'}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="py-12 text-center flex flex-col items-center justify-center">
+                                <Package size={20} className="text-slate-200 mb-2" />
+                                <p className="text-[11px] text-slate-400 font-bold uppercase tracking-widest">No matching items</p>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
 // MANAGE SALESPERSONS MODAL
-// ─────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
 const ManageSalespersonsModal = ({ isOpen, onClose, salespersons, onSave, onSelect }) => {
     const [search, setSearch] = useState('');
     const [showAddForm, setShowAddForm] = useState(false);
@@ -45,13 +137,11 @@ const ManageSalespersonsModal = ({ isOpen, onClose, salespersons, onSave, onSele
         <div className="fixed inset-0 z-[400] flex items-center justify-center p-4">
             <div className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" onClick={onClose} />
             <div className="relative bg-white rounded-2xl shadow-[0_30px_80px_rgba(0,0,0,0.2)] w-full max-w-lg overflow-hidden animate-scale-up">
-                {/* Modal Header */}
                 <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between">
                     <h3 className="text-[18px] font-black text-slate-900 tracking-tight">Manage Salespersons</h3>
                     <button onClick={onClose} className="p-1.5 hover:bg-slate-100 rounded-full text-slate-400 hover:text-slate-700 transition-colors"><X size={18}/></button>
                 </div>
 
-                {/* Search + New Button */}
                 <div className="px-6 py-4 flex items-center gap-3 border-b border-slate-100">
                     <div className="relative flex-1">
                         <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -71,7 +161,6 @@ const ManageSalespersonsModal = ({ isOpen, onClose, salespersons, onSave, onSele
                     </button>
                 </div>
 
-                {/* Inline Add Form */}
                 {showAddForm && (
                     <div className="mx-6 my-4 p-5 bg-slate-50 rounded-xl border border-slate-200">
                         <div className="grid grid-cols-2 gap-4 mb-4">
@@ -111,12 +200,7 @@ const ManageSalespersonsModal = ({ isOpen, onClose, salespersons, onSave, onSele
                     </div>
                 )}
 
-                {/* Table */}
-                <div className="px-6">
-                    <div className="grid grid-cols-2 py-3 border-b border-slate-100">
-                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Salesperson Name</span>
-                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Email</span>
-                    </div>
+                <div className="px-6 py-2">
                     <div className="max-h-56 overflow-y-auto no-scrollbar">
                         {filtered.length === 0 ? (
                             <div className="py-12 text-center text-slate-400 text-[13px] font-medium italic">No salespersons found.</div>
@@ -125,16 +209,15 @@ const ManageSalespersonsModal = ({ isOpen, onClose, salespersons, onSave, onSele
                                 <div
                                     key={s.id}
                                     onClick={() => { onSelect(s.name); onClose(); }}
-                                    className="grid grid-cols-2 py-3 border-b border-slate-50 hover:bg-blue-50 cursor-pointer rounded transition-colors"
+                                    className="flex justify-between items-center py-3 border-b border-slate-50 hover:bg-blue-50 cursor-pointer rounded transition-colors px-2"
                                 >
-                                    <span className="text-[13px] font-bold text-[#1e61f0]">{s.name}</span>
-                                    <span className="text-[13px] text-slate-500 font-medium">{s.email || '—'}</span>
+                                    <span className="text-[13px] font-bold text-slate-900">{s.name}</span>
+                                    <span className="text-[11px] text-slate-400 font-bold uppercase tracking-tight">{s.email || '—'}</span>
                                 </div>
                             ))
                         )}
                     </div>
                 </div>
-
                 <div className="px-6 py-4" />
             </div>
         </div>
@@ -142,19 +225,15 @@ const ManageSalespersonsModal = ({ isOpen, onClose, salespersons, onSave, onSele
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
-// RECURRING INVOICE FORM (ZOHO STYLE)
+// RECURRING INVOICE FORM (COMPONENT)
 // ─────────────────────────────────────────────────────────────────────────────
-
 const RecurringInvoiceForm = ({ companyId, navigate, editId }) => {
     const { addNotification } = useNotificationStore();
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
-    
-    // Core Data
     const [customers, setCustomers] = useState([]);
     const [items, setItems] = useState([]);
     
-    // Form State
     const [formData, setFormData] = useState({
         templateName: '',
         customerName: '',
@@ -166,73 +245,81 @@ const RecurringInvoiceForm = ({ companyId, navigate, editId }) => {
         invoiceType: 'TaxInvoice',
         discount: 0,
         adjustment: 0,
-        taxPercent: 18, // Default 18% GST
+        taxPercent: 18, 
         salesperson: '',
         customerNotes: 'Thanks for your business.',
-        termsConditions: ''
+        termsConditions: '',
+        repeatEvery: 1
     });
 
+    const [lineItems, setLineItems] = useState([
+        { id: Date.now(), itemId: '', name: '', description: '', quantity: 1, rate: 0, amount: 0 }
+    ]);
+
+    const [errors, setErrors] = useState({});
     const [salespersons, setSalespersons] = useState(() => {
         try { return JSON.parse(localStorage.getItem('tally_salespersons') || '[]'); } catch { return []; }
     });
     const [showSalespersonDropdown, setShowSalespersonDropdown] = useState(false);
     const [salespersonSearch, setSalespersonSearch] = useState('');
     const [showManageSalespersons, setShowManageSalespersons] = useState(false);
-    const salespersonDropdownRef = React.useRef(null);
+    const salespersonDropdownRef = useRef(null);
 
-    const [errors, setErrors] = useState({});
+    const [customerSearch, setCustomerSearch] = useState('');
+    const [showCustomerDropdown, setShowCustomerDropdown] = useState(false);
+    const customerDropdownRef = useRef(null);
 
-    const [lineItems, setLineItems] = useState([
-        { id: Date.now(), itemId: '', name: '', description: '', quantity: 1, rate: 0, amount: 0 }
-    ]);
-
-    // Initialize
     useEffect(() => {
-        if (!companyId) return;
-        setLoading(true);
-        Promise.all([
-            ledgerAPI.getByCompany(companyId),
-            inventoryAPI.getByCompany(companyId)
-        ]).then(([ledgersRes, itemsRes]) => {
-            const allLedgers = ledgersRes.data || [];
-            setCustomers(allLedgers.filter(l => {
-                const g = l.Group?.name || '';
-                return g.toLowerCase().includes('debtor') || g.toLowerCase().includes('customer');
-            }));
-            setItems(itemsRes.data || []);
-        }).finally(() => setLoading(false));
+        const fetchContext = async () => {
+            if (!companyId) return;
+            setLoading(true);
+            try {
+                const [ledRes, itRes] = await Promise.all([
+                    ledgerAPI.getByCompany(companyId),
+                    inventoryAPI.getByCompany(companyId)
+                ]);
+                const allLedgers = ledRes.data || [];
+                const debtors = allLedgers.filter(l => {
+                    const g = l.Group?.name || '';
+                    return g.toLowerCase().includes('debtor') || g.toLowerCase().includes('customer');
+                });
+                setCustomers(debtors);
+                setItems(itRes.data || []);
 
-        if (editId) {
-            recurringInvoiceAPI.getByCompany(companyId).then(res => {
-                const template = res.data.find(t => t.id === editId);
-                if (template) {
-                    setFormData({
-                        ...template,
-                        startDate: new Date(template.startDate).toISOString().split('T')[0],
-                        endDate: template.endDate ? new Date(template.endDate).toISOString().split('T')[0] : '',
-                        taxPercent: template.taxAmount ? Math.round((template.taxAmount / (template.subTotal - (template.subTotal * template.discount/100))) * 100) : 18
-                    });
-                    setLineItems(JSON.parse(template.itemsJson || '[]'));
+                if (editId) {
+                    const res = await recurringInvoiceAPI.getById(editId);
+                    const template = res.data;
+                    if (template) {
+                        setFormData({
+                            ...template,
+                            startDate: new Date(template.startDate).toISOString().split('T')[0],
+                            endDate: template.endDate ? new Date(template.endDate).toISOString().split('T')[0] : '',
+                            taxPercent: template.taxAmount ? Math.round((template.taxAmount / (template.subTotal - (template.subTotal * template.discount/100))) * 100) : 18
+                        });
+                        setCustomerSearch(template.customerName);
+                        if (template.items && template.items.length > 0) {
+                            setLineItems(template.items.map(it => ({ ...it, id: Math.random(), name: it.Item?.name || '' })));
+                        }
+                    }
                 }
-            });
-        }
+            } catch (err) { console.error(err); }
+            finally { setLoading(false); }
+        };
+        fetchContext();
 
         const handleClickOutside = (event) => {
-            if (salespersonDropdownRef.current && !salespersonDropdownRef.current.contains(event.target)) {
-                setShowSalespersonDropdown(false);
-            }
+            if (salespersonDropdownRef.current && !salespersonDropdownRef.current.contains(event.target)) setShowSalespersonDropdown(false);
+            if (customerDropdownRef.current && !customerDropdownRef.current.contains(event.target)) setShowCustomerDropdown(false);
         };
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, [companyId, editId]);
 
-    // Calculations
     const totals = useMemo(() => {
         const subTotal = lineItems.reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0);
-        const discountAmt = subTotal * (parseFloat(formData.discount || 0) / 100);
-        const beforeTax = subTotal - discountAmt;
-        const taxAmt = beforeTax * (parseFloat(formData.taxPercent || 0) / 100);
-        const total = beforeTax + taxAmt + parseFloat(formData.adjustment || 0);
+        const discountAmt = (subTotal * parseFloat(formData.discount || 0)) / 100;
+        const taxAmt = (subTotal - discountAmt) * (parseFloat(formData.taxPercent || 0) / 100);
+        const total = subTotal - discountAmt + taxAmt + parseFloat(formData.adjustment || 0);
         return { subTotal, discountAmt, taxAmt, total };
     }, [lineItems, formData.discount, formData.taxPercent, formData.adjustment]);
 
@@ -240,909 +327,598 @@ const RecurringInvoiceForm = ({ companyId, navigate, editId }) => {
         setLineItems(prev => prev.map(item => {
             if (item.id === id) {
                 const updated = { ...item, [field]: value };
-                if (field === 'quantity' || field === 'rate') {
-                    updated.amount = (parseFloat(updated.quantity) || 0) * (parseFloat(updated.rate) || 0);
-                }
+                if (field === 'quantity' || field === 'rate') updated.amount = (parseFloat(updated.quantity) || 0) * (parseFloat(updated.rate) || 0);
                 return updated;
             }
             return item;
         }));
     };
 
-    const handleItemSelect = (rowId, itId) => {
-        const item = items.find(i => i.id === itId);
-        if (!item) return;
-
+    const handleItemSelect = (rowId, item) => {
         setLineItems(prev => prev.map(row => {
             if (row.id === rowId) {
-                return {
-                    ...row,
-                    itemId: item.id,
-                    name: item.name,
-                    description: item.salesDescription || '',
-                    rate: item.sellingPrice || 0,
-                    amount: (item.sellingPrice || 0) * (row.quantity || 1)
+                return { 
+                    ...row, 
+                    itemId: item.id, 
+                    name: item.name, 
+                    description: item.salesDescription || '', 
+                    rate: item.sellingPrice || 0, 
+                    amount: (item.sellingPrice || 0) * (row.quantity || 1) 
                 };
             }
             return row;
         }));
     };
 
-    const handleSave = async () => {
+    const validate = () => {
         const newErrors = {};
-        if (!formData.templateName) newErrors.templateName = true;
         if (!formData.customerName) newErrors.customerName = true;
-        if (lineItems.every(li => !li.itemId)) newErrors.lineItems = true;
+        if (!formData.templateName) newErrors.templateName = true;
+        setErrors(newErrors);
+        return Object.keys(newErrors).length === 0;
+    };
 
-        if (Object.keys(newErrors).length > 0) {
-            setErrors(newErrors);
-            if (newErrors.templateName) addNotification('Profile Name is required', 'error');
-            if (newErrors.customerName) addNotification('Customer selection is required', 'error');
-            if (newErrors.lineItems) addNotification('At least one item must be added from the list', 'error');
-            return;
-        }
-        
-        setErrors({});
+    const handleSave = async () => {
+        if (!validate()) { addNotification('Please fill all required fields', 'warning'); return; }
+        setSaving(true);
         try {
-            // Zoho Style Mapping: Ensure we only send what the backend expects
-            // and handle empty date strings which crash PostgreSQL
             const payload = {
-                templateName: formData.templateName,
-                customerName: formData.customerName,
-                frequency: formData.frequency,
-                startDate: formData.startDate,
-                endDate: formData.endDate === '' ? null : formData.endDate, // Fix: Send null if empty
-                status: formData.status,
-                autoSend: formData.autoSend,
-                invoiceType: formData.invoiceType,
-                discount: parseFloat(formData.discount || 0),
+                ...formData,
+                items: lineItems,
                 subTotal: totals.subTotal,
                 taxAmount: totals.taxAmt,
                 totalAmount: totals.total,
-                itemsJson: JSON.stringify(lineItems),
-                 CompanyId: companyId,
-                 nextGenerationDate: formData.startDate,
-                 salesperson: formData.salesperson
+                companyId
             };
-
-            if (editId) {
-                await recurringInvoiceAPI.update(editId, payload);
-                addNotification('Automation template updated successfully', 'success');
-            } else {
-                await recurringInvoiceAPI.create(payload);
-                addNotification('Automation template created successfully', 'success');
-            }
+            if (editId) await recurringInvoiceAPI.update(editId, payload);
+            else await recurringInvoiceAPI.create(payload);
+            addNotification(`Automation ${editId ? 'updated' : 'initialized'} successfully`, 'success');
             navigate('/recurring-invoices');
         } catch (err) {
-            console.error('Save Error Details:', err.response?.data || err.message);
-            addNotification(err.response?.data?.error || 'Failed to save automation template', 'error');
-        } finally {
-            setSaving(false);
-        }
+            addNotification('Failed to save automation: ' + (err.response?.data?.error || err.message), 'error');
+        } finally { setSaving(false); }
     };
 
-    if (loading) return <div className="p-20 text-center font-bold text-slate-400">Loading Automation Interface...</div>;
+    if (loading) return <div className="p-20 text-center font-bold text-slate-400 animate-pulse">Loading Automation Context...</div>;
+
+    const filteredCustomers = customers.filter(c => c.name.toLowerCase().includes(customerSearch.toLowerCase()));
 
     return (
-        <div className="min-h-screen bg-white text-slate-700 font-sans p-10 max-w-6xl mx-auto">
-            {/* Header */}
-            <div className="flex items-center gap-4 mb-10">
-                <button onClick={() => navigate('/recurring-invoices')} className="text-slate-400 hover:text-slate-600"><ArrowLeft size={24} /></button>
-                 <h1 className="text-2xl font-semibold text-slate-900">{editId ? 'Edit Recurring Invoice' : 'New Recurring Invoice'}</h1>
-            </div>
-
-            <ManageSalespersonsModal
-                isOpen={showManageSalespersons}
-                onClose={() => setShowManageSalespersons(false)}
-                salespersons={salespersons}
-                onSave={setSalespersons}
-                onSelect={(name) => { setFormData(prev => ({ ...prev, salesperson: name })); }}
-            />
-
-            <div className="space-y-8">
-                {/* Main Form Fields */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-20 gap-y-6 border-b border-slate-100 pb-10">
-                    <div className="space-y-6">
-                        <div className="flex items-start gap-4">
-                            <label className="w-32 text-sm text-rose-500 font-medium pt-2">Customer Name*</label>
-                            <div className="flex-1 flex gap-2">
-                                <select 
-                                    value={formData.customerName} 
-                                    onChange={e => {
-                                        if (e.target.value === 'NEW_CUSTOMER') {
-                                            navigate('/customers/new');
-                                        } else {
-                                            const newName = e.target.value;
-                                            setFormData(prev => ({
-                                                ...prev, 
-                                                customerName: newName,
-                                                // Auto-suggest profile name if empty
-                                                templateName: prev.templateName || (newName ? `Subscription - ${newName}` : '')
-                                            }));
-                                            setErrors({...errors, customerName: false});
-                                        }
-                                    }}
-                                    className={`flex-1 p-2 border ${errors.customerName ? 'border-red-500 shadow-[0_0_0_2px_rgba(239,68,68,0.1)]' : 'border-slate-200'} rounded text-sm focus:border-blue-500 outline-none`}
-                                >
-                                    <option value="">Select or add a customer</option>
-                                    <option value="NEW_CUSTOMER" className="text-blue-600 font-bold">➕ Add New Customer</option>
-                                    {customers.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
-                                </select>
-                                <button className="p-2 bg-blue-600 text-white rounded"><Search size={16}/></button>
-                            </div>
+        <div className="min-h-screen bg-[#f8fafc] p-12 flex flex-col items-center font-sans">
+            <div className="w-full max-w-5xl bg-white rounded-sm shadow-[0_10px_40px_rgba(0,0,0,0.04)] border border-slate-200 overflow-hidden animate-fade-in mb-20">
+                <header className="px-10 py-6 border-b border-slate-100 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        <button 
+                            onClick={() => window.history.length > 2 ? navigate(-1) : navigate('/recurring-invoices')}
+                            className="p-2 -ml-2 text-slate-400 hover:text-slate-900 hover:bg-slate-100 rounded-full transition-all"
+                        >
+                            <ArrowLeft size={20} />
+                        </button>
+                        <div className="w-10 h-10 bg-slate-900 rounded flex items-center justify-center text-white">
+                            <RefreshCw size={18} />
                         </div>
-
-                        <div className="flex items-center gap-4">
-                            <label className="w-32 text-sm text-rose-500 font-medium">Profile Name*</label>
-                            <input 
-                                type="text"
-                                value={formData.templateName} 
-                                onChange={e => {
-                                    setFormData({...formData, templateName: e.target.value});
-                                    setErrors({...errors, templateName: false});
-                                }}
-                                placeholder="e.g., Monthly Service Retainer"
-                                className={`flex-1 p-2 border ${errors.templateName ? 'border-red-500 shadow-[0_0_0_2px_rgba(239,68,68,0.1)]' : 'border-slate-200'} rounded text-sm outline-none focus:border-blue-500`}
-                            />
+                        <div>
+                            <h2 className="text-[18px] font-bold text-slate-900 tracking-tight uppercase flex items-center gap-2">
+                                {editId ? 'Edit Subscription' : 'New Subscription'}
+                                <span className="text-[10px] font-bold text-[#1e61f0] bg-blue-50 px-2 py-0.5 rounded uppercase tracking-widest border border-blue-100">Smart Draft</span>
+                            </h2>
+                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">Recurring Billing & Lifecycle Management</p>
                         </div>
+                    </div>
+                    <button onClick={() => navigate('/recurring-invoices')} className="text-slate-300 hover:text-slate-600 transition-colors"><X size={24} /></button>
+                </header>
 
-                        <div className="flex items-center gap-4">
-                            <label className="w-32 text-sm text-slate-500 font-bold tracking-tight">Salesperson</label>
-                            <div className="flex-1 relative" ref={salespersonDropdownRef}>
-                                <button
-                                    type="button"
-                                    onClick={() => { setShowSalespersonDropdown(prev => !prev); setSalespersonSearch(''); }}
-                                    className={`w-full h-11 px-3 pr-9 border rounded text-[13px] font-bold text-left shadow-sm flex items-center justify-between transition-colors
-                                        ${showSalespersonDropdown ? 'border-blue-500 ring-2 ring-blue-100' : 'border-slate-200 bg-white'}
-                                        ${formData.salesperson ? 'text-slate-800' : 'text-slate-400 font-medium'}`}
-                                >
-                                    <span>{formData.salesperson || 'Select or Add Salesperson'}</span>
-                                    <ChevronDown size={14} className={`absolute right-3 text-slate-400 transition-transform ${showSalespersonDropdown ? 'rotate-180' : ''}`} />
-                                </button>
+                <div className="p-12 space-y-12">
+                    <ManageSalespersonsModal
+                        isOpen={showManageSalespersons}
+                        onClose={() => setShowManageSalespersons(false)}
+                        salespersons={salespersons}
+                        onSave={setSalespersons}
+                        onSelect={(name) => { setFormData(prev => ({ ...prev, salesperson: name })); setSalespersonSearch(name); }}
+                    />
 
-                                {showSalespersonDropdown && (
-                                    <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-slate-200 shadow-xl rounded-xl z-[200] overflow-hidden animate-fade-in shadow-blue-900/10">
-                                        <div className="p-2 border-b border-slate-100">
-                                            <div className="relative">
-                                                <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                                                <input
-                                                    autoFocus
-                                                    value={salespersonSearch}
-                                                    onChange={e => setSalespersonSearch(e.target.value)}
-                                                    placeholder="Search"
-                                                    className="w-full pl-8 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-[13px] font-medium outline-none focus:border-blue-400 transition-all font-bold"
-                                                />
+                    {/* Top Section: Standard Invoice Layout */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-20 gap-y-8">
+                        <div className="space-y-6">
+                            {/* Customer Selection */}
+                            <div className="flex flex-col gap-2">
+                                <label className="text-[11px] font-bold text-red-500 uppercase tracking-widest">Customer Name*</label>
+                                <div className="relative" ref={customerDropdownRef}>
+                                    <div className="flex shadow-sm">
+                                        <input 
+                                            type="text"
+                                            value={customerSearch}
+                                            onChange={(e) => { setCustomerSearch(e.target.value); setShowCustomerDropdown(true); }}
+                                            onFocus={() => setShowCustomerDropdown(true)}
+                                            placeholder="Select or add a customer"
+                                            className={`flex-1 h-11 px-4 bg-slate-50 border ${errors.customerName ? 'border-red-500' : 'border-slate-200'} rounded-l text-[13px] font-bold text-slate-700 outline-none focus:bg-white focus:border-blue-500 transition-all`}
+                                        />
+                                        <button className="px-4 bg-[#1e61f0] text-white rounded-r flex items-center justify-center"><Search size={16} /></button>
+                                    </div>
+
+                                    {showCustomerDropdown && (
+                                        <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-slate-200 shadow-xl rounded z-50 overflow-hidden">
+                                            <div className="max-h-60 overflow-y-auto no-scrollbar">
+                                                {filteredCustomers.length === 0 ? (
+                                                    <div className="p-4 text-center">
+                                                        <p className="text-[12px] text-slate-400 mb-2">No customers found</p>
+                                                        <button onClick={() => navigate('/customers/new')} className="text-[11px] text-blue-600 font-bold uppercase tracking-widest hover:underline">+ Add New</button>
+                                                    </div>
+                                                ) : (
+                                                    <div className="py-1">
+                                                        {filteredCustomers.map(c => (
+                                                            <div 
+                                                                key={c.id}
+                                                                onClick={() => { setFormData(prev => ({ ...prev, customerName: c.name, templateName: prev.templateName || `Subscription - ${c.name}` })); setCustomerSearch(c.name); setShowCustomerDropdown(false); setErrors({...errors, customerName: false}); }}
+                                                                className={`px-4 py-2 hover:bg-blue-50 cursor-pointer text-[14px] font-medium border-b border-slate-50 last:border-0 ${formData.customerName === c.name ? 'bg-blue-50 text-blue-700' : 'text-slate-700'}`}
+                                                            >
+                                                                {c.name}
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
-
-                                        <div className="max-h-40 overflow-y-auto no-scrollbar">
-                                            {salespersons.filter(s => !salespersonSearch || s.name.toLowerCase().includes(salespersonSearch.toLowerCase())).length === 0 ? (
-                                                <div className="py-6 text-center text-[12px] text-slate-400 font-medium uppercase tracking-widest opacity-60">No Match Found</div>
-                                            ) : (
-                                                salespersons
-                                                    .filter(s => !salespersonSearch || s.name.toLowerCase().includes(salespersonSearch.toLowerCase()))
-                                                    .map(s => (
-                                                        <div
-                                                            key={s.id}
-                                                            onClick={() => { setFormData(prev => ({ ...prev, salesperson: s.name })); setShowSalespersonDropdown(false); }}
-                                                            className={`px-4 py-2.5 cursor-pointer text-[13px] font-black hover:bg-blue-50 transition-colors
-                                                                ${formData.salesperson === s.name ? 'bg-blue-50 text-blue-700' : 'text-slate-700'}`}
-                                                        >
-                                                            {s.name}
-                                                        </div>
-                                                    ))
-                                            )}
-                                        </div>
-
-                                        <div className="border-t border-slate-100">
-                                            <button
-                                                type="button"
-                                                onClick={() => { setShowSalespersonDropdown(false); setShowManageSalespersons(true); }}
-                                                className="w-full flex items-center gap-2 px-4 py-3 text-[12px] font-black text-[#1e61f0] hover:bg-blue-50 transition-colors uppercase tracking-widest"
-                                            >
-                                                <Plus size={14} strokeWidth={3} /> Manage Salespersons
-                                            </button>
-                                        </div>
-                                    </div>
-                                )}
+                                    )}
+                                </div>
                             </div>
-                        </div>
-                    </div>
 
-                    <div className="space-y-6">
-                        <div className="flex items-center gap-4">
-                            <label className="w-32 text-sm text-rose-500 font-medium">Repeat Every*</label>
-                            <select 
-                                value={formData.frequency}
-                                onChange={e => setFormData({...formData, frequency: e.target.value})}
-                                className="flex-1 p-2 border border-slate-200 rounded text-sm outline-none focus:border-blue-500"
-                            >
-                                <option>Daily</option>
-                                <option>Weekly</option>
-                                <option>Monthly</option>
-                                <option>Yearly</option>
-                            </select>
-                        </div>
-
-                        <div className="flex items-center gap-4">
-                            <label className="w-32 text-sm text-rose-500 font-medium">Start Date*</label>
-                            <input 
-                                type="date"
-                                value={formData.startDate}
-                                onChange={e => setFormData({...formData, startDate: e.target.value})}
-                                className="flex-1 p-2 border border-slate-200 rounded text-sm outline-none focus:border-blue-500"
-                            />
-                        </div>
-
-                        <div className="flex items-center gap-4">
-                            <label className="w-32 text-sm text-slate-500">Ends On</label>
-                            <div className="flex-1 flex items-center gap-4">
+                            {/* Profile Identifier */}
+                            <div className="flex flex-col gap-2">
+                                <label className="text-[11px] font-bold text-red-500 uppercase tracking-widest">Profile Identifier*</label>
                                 <input 
-                                    type="date"
-                                    value={formData.endDate}
-                                    onChange={e => setFormData({...formData, endDate: e.target.value})}
-                                    disabled={!formData.endDate && formData.endDate !== ''}
-                                    className="flex-1 p-2 border border-slate-200 rounded text-sm outline-none focus:border-blue-500 disabled:bg-slate-50"
+                                    type="text"
+                                    value={formData.templateName} 
+                                    onChange={e => { setFormData({...formData, templateName: e.target.value}); setErrors({...errors, templateName: false}); }}
+                                    placeholder="e.g. Monthly Maintenance"
+                                    className={`w-full h-11 px-4 bg-slate-50 border ${errors.templateName ? 'border-red-500' : 'border-slate-200'} rounded text-[13px] font-bold text-slate-700 outline-none focus:bg-white focus:border-blue-500 transition-all shadow-sm`}
                                 />
-                                <label className="flex items-center gap-2 cursor-pointer text-sm text-slate-500">
-                                    <input type="checkbox" checked={!formData.endDate} onChange={e => setFormData({...formData, endDate: e.target.checked ? '' : new Date().toISOString().split('T')[0]})} className="w-4 h-4 rounded border-slate-200" />
-                                    Never Expires
-                                </label>
                             </div>
-                        </div>
-                    </div>
-                </div>
 
-                {/* Item Table */}
-                <div className="mt-10">
-                    <table className="w-full border-collapse">
-                        <thead>
-                            <tr className="bg-slate-50 text-slate-500 text-[11px] font-bold uppercase border-y border-slate-200">
-                                <th className="px-4 py-3 text-left">Item Details</th>
-                                <th className="px-4 py-3 text-right w-28">Quantity</th>
-                                <th className="px-4 py-3 text-right w-36">Rate</th>
-                                <th className="px-4 py-3 text-right w-40">Amount</th>
-                                <th className="px-4 py-3 w-12"></th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {lineItems.map(line => (
-                                <tr key={line.id} className="border-b border-slate-100 group">
-                                    <td className="px-4 py-4">
-                                        <div className="relative group">
-                                            <select 
-                                                value={line.itemId} 
-                                                onChange={e => {
-                                                    handleItemSelect(line.id, e.target.value);
-                                                    setErrors({...errors, lineItems: false});
-                                                }}
-                                                className={`w-full p-2 border ${errors.lineItems ? 'border-red-400' : 'border-transparent'} hover:border-slate-200 border-dashed rounded text-sm outline-none bg-transparent appearance-none transition-all`}
-                                            >
-                                                <option value="">Type or click to select an item.</option>
-                                                {items.map(it => (
-                                                    <option key={it.id} value={it.id}>
-                                                        {it.name} (Rate: ₹{parseFloat(it.sellingPrice || 0).toLocaleString()})
-                                                    </option>
-                                                ))}
-                                            </select>
-                                        </div>
-                                        <textarea 
-                                            value={line.description}
-                                            onChange={e => handleUpdateLine(line.id, 'description', e.target.value)}
-                                            placeholder="Additional description..." 
-                                            className="w-full mt-2 h-12 p-2 border border-transparent hover:border-slate-100 rounded text-xs text-slate-500 outline-none resize-none bg-transparent transition-all"
-                                        />
-                                    </td>
-                                    <td className="px-4 py-4 text-right align-top">
-                                        <input type="number" value={line.quantity} onChange={e => handleUpdateLine(line.id, 'quantity', e.target.value)} className="w-full p-2 text-right text-sm outline-none bg-transparent border border-transparent focus:border-slate-200 rounded transition-all" />
-                                    </td>
-                                    <td className="px-4 py-4 text-right align-top">
-                                        <input type="number" value={line.rate} onChange={e => handleUpdateLine(line.id, 'rate', e.target.value)} className="w-full p-2 text-right text-sm outline-none bg-transparent border border-transparent focus:border-slate-200 rounded transition-all" />
-                                    </td>
-                                    <td className="px-4 py-4 text-right align-top">
-                                        <div className="p-2 text-sm font-bold text-slate-900">
-                                            {(parseFloat(line.amount) || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                                        </div>
-                                    </td>
-                                    <td className="px-4 py-4 text-center align-top">
-                                        <button onClick={() => setLineItems(prev => prev.filter(p => p.id !== line.id))} className="mt-2 text-slate-300 hover:text-rose-500 transition-all"><X size={16}/></button>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                    
-                    <div className="mt-4 flex gap-4">
-                        <button onClick={() => setLineItems(prev => [...prev, { id: Date.now(), itemId: '', name: '', description: '', quantity: 1, rate: 0, amount: 0 }])} className="px-4 py-1 border border-slate-200 rounded text-xs font-medium text-slate-600 hover:bg-slate-50 flex items-center gap-1">
-                            <Plus size={14} className="text-blue-600" /> Add New Row
-                        </button>
-                    </div>
-                </div>
-
-                {/* Totals & Notes */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-20 pt-10">
-                    <div className="space-y-6">
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium text-slate-500">Customer Notes</label>
-                            <textarea value={formData.customerNotes} onChange={e => setFormData({...formData, customerNotes: e.target.value})} className="w-full p-2 border border-slate-200 rounded text-sm outline-none h-24 italic" />
-                        </div>
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium text-slate-500">Terms & Conditions</label>
-                            <textarea value={formData.termsConditions} onChange={e => setFormData({...formData, termsConditions: e.target.value})} className="w-full p-2 border border-slate-200 rounded text-sm outline-none h-24" />
-                        </div>
-                    </div>
-
-                    <div className="space-y-4 bg-slate-50/50 p-6 rounded-lg self-start">
-                        <div className="flex justify-between text-sm">
-                            <span>Sub Total</span>
-                            <span className="font-medium">{totals.subTotal.toFixed(2)}</span>
-                        </div>
-                        <div className="flex justify-between items-center gap-4 text-sm">
-                            <div className="flex items-center gap-2">
-                                <span>Discount</span>
-                                <input type="number" value={formData.discount} onChange={e => setFormData({...formData, discount: e.target.value})} className="w-12 p-1 border border-slate-200 rounded text-xs text-right" />
-                                <span>%</span>
-                            </div>
-                            <span className="font-medium text-slate-500">{totals.discountAmt.toFixed(2)}</span>
-                        </div>
-                        <div className="flex justify-between items-center gap-4 text-sm">
-                            <div className="flex items-center gap-2">
-                                <span>Tax (GST)</span>
+                            {/* Frequency */}
+                            <div className="flex flex-col gap-2">
+                                <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Billing Frequency</label>
                                 <select 
-                                    value={formData.taxPercent} 
-                                    onChange={e => setFormData({...formData, taxPercent: parseFloat(e.target.value)})}
-                                    className="ml-2 p-1 border border-slate-200 rounded text-xs outline-none"
+                                    value={formData.frequency} 
+                                    onChange={e => setFormData({...formData, frequency: e.target.value})}
+                                    className="w-full h-11 px-4 bg-slate-50 border border-slate-200 rounded text-[13px] font-bold text-slate-700 outline-none focus:bg-white focus:border-blue-500 transition-all appearance-none shadow-sm"
                                 >
-                                    <option value="0">GST (0%)</option>
-                                    <option value="5">GST (5%)</option>
-                                    <option value="12">GST (12%)</option>
-                                    <option value="18">GST (18%)</option>
-                                    <option value="28">GST (28%)</option>
+                                    <option value="Weekly">Every Week</option>
+                                    <option value="Monthly">Every Month</option>
+                                    <option value="Quarterly">Every Quarter</option>
+                                    <option value="Half-yearly">Every 6 Months</option>
+                                    <option value="Yearly">Every Year</option>
                                 </select>
                             </div>
-                            <span className="font-medium text-slate-500">{totals.taxAmt.toFixed(2)}</span>
-                        </div>
-                        <div className="flex justify-between items-center text-sm">
-                            <div className="flex items-center gap-2 border-b border-slate-200 border-dashed">
-                                <span>Adjustment</span>
-                                <Info size={12} className="text-slate-400" />
-                            </div>
-                            <input type="number" value={formData.adjustment} onChange={e => setFormData({...formData, adjustment: e.target.value})} className="w-24 p-1 border border-slate-200 rounded text-right text-xs" />
                         </div>
 
-                        <div className="flex justify-between text-lg font-bold text-slate-900 pt-4 border-t border-slate-200">
-                            <span>Total ( ₹ ) {formData.frequency && <span className="text-[10px] text-blue-600 font-bold ml-1 uppercase">{formData.frequency} CYCLE</span>}</span>
-                            <span>{totals.total.toFixed(2)}</span>
+                        <div className="space-y-6">
+                            {/* Cycle Activation */}
+                            <div className="flex flex-col gap-2">
+                                <label className="text-[11px] font-bold text-red-500 uppercase tracking-widest">Cycle Activation*</label>
+                                <div className="relative">
+                                    <input 
+                                        type="date" 
+                                        value={formData.startDate} 
+                                        onChange={e => setFormData({...formData, startDate: e.target.value})}
+                                        className="w-full h-11 px-4 bg-slate-50 border border-slate-200 rounded text-[13px] font-bold text-slate-700 outline-none focus:bg-white focus:border-blue-500 transition-all shadow-sm"
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Salesperson */}
+                            <div className="flex flex-col gap-2">
+                                <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Salesperson</label>
+                                <div className="relative" ref={salespersonDropdownRef}>
+                                    <button
+                                        type="button"
+                                        onClick={() => { setShowSalespersonDropdown(!showSalespersonDropdown); setSalespersonSearch(''); }}
+                                        className={`w-full h-11 px-4 border rounded text-[13px] font-bold text-left flex items-center justify-between transition-all shadow-sm
+                                            ${showSalespersonDropdown ? 'border-blue-500 bg-white ring-4 ring-blue-50' : 'border-slate-200 bg-slate-50 text-slate-700'}`}
+                                    >
+                                        <span className={formData.salesperson ? 'text-slate-900' : 'text-slate-400'}>
+                                            {formData.salesperson || 'Select or Add Salesperson'}
+                                        </span>
+                                        <ChevronDown size={14} className={`text-slate-400 transition-transform ${showSalespersonDropdown ? 'rotate-180' : ''}`} />
+                                    </button>
+                                    {showSalespersonDropdown && (
+                                        <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-slate-200 shadow-xl rounded z-[120] overflow-hidden">
+                                            <div className="p-2 border-b border-slate-50 bg-slate-50/50">
+                                                <div className="relative">
+                                                    <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                                                    <input 
+                                                        autoFocus
+                                                        value={salespersonSearch}
+                                                        onChange={e => setSalespersonSearch(e.target.value)}
+                                                        placeholder="Search..."
+                                                        className="w-full pl-9 pr-4 py-1.5 bg-white border border-slate-200 rounded text-[12px] outline-none focus:border-blue-500"
+                                                    />
+                                                </div>
+                                            </div>
+                                            <div className="max-h-48 overflow-y-auto no-scrollbar">
+                                                {salespersons.filter(s => s.name.toLowerCase().includes(salespersonSearch.toLowerCase())).map(s => (
+                                                    <div key={s.id} onClick={() => { setFormData({...formData, salesperson: s.name}); setShowSalespersonDropdown(false); }} className="px-4 py-2 hover:bg-blue-50 cursor-pointer text-[13px] font-bold text-slate-700 border-b border-slate-50 last:border-0">{s.name}</div>
+                                                ))}
+                                            </div>
+                                            <button onClick={() => setShowManageSalespersons(true)} className="w-full py-3 bg-slate-50 hover:bg-blue-50 text-blue-600 font-bold text-[11px] uppercase tracking-widest border-t border-slate-100">+ Manage Staff</button>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Subject */}
+                            <div className="flex flex-col gap-2">
+                                <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Subject</label>
+                                <input 
+                                    type="text" 
+                                    placeholder="What is this automation for?"
+                                    className="w-full h-11 px-4 bg-slate-50 border border-slate-200 rounded text-[13px] font-bold text-slate-700 outline-none focus:bg-white focus:border-blue-500 transition-all shadow-sm" 
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Item Table Section */}
+                    <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                            <h3 className="text-[14px] font-bold text-slate-900 uppercase tracking-tight">Item Table</h3>
+                            <button className="text-[11px] font-bold text-[#1e61f0] flex items-center gap-2 hover:bg-blue-50 px-3 py-1.5 rounded transition-all uppercase tracking-widest">
+                                <RefreshCw size={14} /> Bulk Actions
+                            </button>
+                        </div>
+
+                        <div className="border border-slate-200 rounded-sm overflow-hidden shadow-sm bg-white">
+                            <table className="w-full border-collapse">
+                                <thead>
+                                    <tr className="bg-slate-50 border-b border-slate-200 text-[10px] text-slate-400 font-bold uppercase tracking-[0.1em]">
+                                        <th className="px-6 py-4 text-left font-bold">Item Details</th>
+                                        <th className="px-6 py-4 text-right w-28 font-bold">Quantity</th>
+                                        <th className="px-6 py-4 text-right w-36 font-bold">Rate</th>
+                                        <th className="px-6 py-4 text-right w-40 font-bold">Amount</th>
+                                        <th className="w-12"></th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100">
+                                    {lineItems.map(line => (
+                                        <tr key={line.id} className="group hover:bg-slate-50/50 transition-colors">
+                                            <td className="px-6 py-5">
+                                                <ItemSearchSelector 
+                                                    value={line.name} 
+                                                    onChange={(item) => handleItemSelect(line.id, item)}
+                                                    items={items}
+                                                    placeholder="Type or click to select an item."
+                                                />
+                                                <textarea 
+                                                    value={line.description}
+                                                    onChange={e => handleUpdateLine(line.id, 'description', e.target.value)}
+                                                    placeholder="No additional description" 
+                                                    className="w-full mt-2 h-10 bg-transparent text-[11px] text-slate-400 outline-none resize-none border-none focus:ring-0 placeholder:italic font-medium no-scrollbar"
+                                                />
+                                            </td>
+                                            <td className="px-6 py-5 align-top">
+                                                <input type="number" value={line.quantity} onChange={e => handleUpdateLine(line.id, 'quantity', e.target.value)} className="w-full text-right bg-transparent border-none outline-none text-[13px] font-bold text-slate-600" />
+                                            </td>
+                                            <td className="px-6 py-5 align-top font-mono text-right">
+                                                <input type="number" value={line.rate} onChange={e => handleUpdateLine(line.id, 'rate', e.target.value)} className="w-full text-right bg-transparent border-none outline-none text-[13px] font-bold text-slate-600" />
+                                            </td>
+                                            <td className="px-6 py-5 text-right align-top font-mono">
+                                                <span className="text-[13px] font-bold text-slate-900">{(parseFloat(line.amount) || 0).toFixed(2)}</span>
+                                            </td>
+                                            <td className="px-4 py-5 text-center align-top">
+                                                <button onClick={() => setLineItems(prev => prev.length > 1 ? prev.filter(p => p.id !== line.id) : prev)} className="text-slate-300 hover:text-red-500 transition-colors"><Trash2 size={16}/></button>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                        <button onClick={() => setLineItems([...lineItems, { id: Date.now(), itemId: '', name: '', description: '', quantity: 1, rate: 0, amount: 0 }])} className="flex items-center gap-2 px-4 py-2 text-[#1e61f0] text-[12px] font-bold rounded hover:bg-blue-50 transition-all uppercase tracking-widest">+ Add New Row</button>
+                    </div>
+
+                    {/* Bottom Section */}
+                    <div className="flex justify-between items-start pt-12 border-t border-slate-100 gap-20">
+                        <div className="flex-1 max-w-md space-y-8">
+                            <div className="space-y-3">
+                                <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest ml-1">Customer Notes</label>
+                                <textarea value={formData.customerNotes} onChange={e => setFormData({...formData, customerNotes: e.target.value})} className="w-full h-24 p-4 bg-slate-50 border border-slate-200 rounded text-[13px] font-bold text-slate-600 outline-none focus:bg-white focus:border-blue-500 transition-all resize-none shadow-sm" />
+                            </div>
+                            <div className="space-y-3">
+                                <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest ml-1">Terms & Conditions</label>
+                                <textarea value={formData.termsConditions} onChange={e => setFormData({...formData, termsConditions: e.target.value})} className="w-full h-24 p-4 bg-slate-50 border border-slate-200 rounded text-[13px] font-bold text-slate-600 outline-none focus:bg-white focus:border-blue-500 transition-all resize-none shadow-sm" />
+                            </div>
+                        </div>
+                        <div className="w-80 space-y-4">
+                            <div className="flex justify-between text-[13px] font-bold text-slate-500 uppercase tracking-widest"><span>Sub Total</span><span>{totals.subTotal.toFixed(2)}</span></div>
+                            <div className="flex justify-between items-center text-[13px] font-bold text-slate-500 uppercase tracking-widest"><span>Discount (%)</span><input type="number" value={formData.discount} onChange={e => setFormData({...formData, discount: e.target.value})} className="w-16 h-8 px-2 bg-slate-50 border border-slate-200 rounded text-right font-bold" /></div>
+                            <div className="flex justify-between items-center text-[13px] font-bold text-slate-500 uppercase tracking-widest"><span>Tax (GST %)</span><input type="number" value={formData.taxPercent} onChange={e => setFormData({...formData, taxPercent: e.target.value})} className="w-16 h-8 px-2 bg-slate-50 border border-slate-200 rounded text-right font-bold" /></div>
+                            <div className="flex justify-between items-center text-[13px] font-bold text-slate-500 uppercase tracking-widest"><span>Adjustment</span><input type="number" value={formData.adjustment} onChange={e => setFormData({...formData, adjustment: e.target.value})} className="w-24 h-8 px-2 bg-slate-50 border border-slate-200 rounded text-right font-bold" /></div>
+                            <div className="pt-6 border-t border-slate-200 flex justify-between items-center bg-slate-50 -mx-8 px-8 py-4 mt-6">
+                                <span className="text-[14px] font-bold text-slate-500 uppercase tracking-widest">Total Amount</span>
+                                <span className="text-[24px] font-bold text-[#1e61f0] tracking-tighter">₹{totals.total.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                            </div>
                         </div>
                     </div>
                 </div>
+            </div>
 
-                {/* Save Footer */}
-                <div className="sticky bottom-0 bg-white border-t border-slate-100 py-6 flex gap-4 mt-20">
-                     <div className="flex-1 flex items-center gap-4">
-                        <label className="flex items-center gap-2 cursor-pointer text-sm text-slate-600 font-medium">
-                            <input type="checkbox" checked={formData.autoSend} onChange={e => setFormData({...formData, autoSend: e.target.checked})} className="w-4 h-4 text-blue-600 rounded border-slate-200" />
-                            Auto-send invoices to the customer via email
-                        </label>
-                     </div>
-                     <button 
-                        onClick={handleSave}
-                        disabled={saving}
-                        className="px-8 py-2.5 bg-blue-600 text-white rounded font-bold text-sm hover:bg-blue-700 transition-all shadow-sm flex items-center gap-2"
-                    >
-                        {saving ? <Loader2 className="animate-spin" size={18} /> : (editId ? 'Update Template' : 'Initialize Automation')}
+            <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-100 px-12 py-4 flex items-center justify-between z-[100] shadow-md">
+                <div className="flex items-center gap-8">
+                    <div className="flex items-center gap-2 text-slate-400 text-[11px] font-bold uppercase tracking-widest"><ShieldCheck size={14} className="text-emerald-500" /> Infrastructure Security Verified</div>
+                    <div className="flex items-center gap-2 text-slate-400 text-[11px] font-bold uppercase tracking-widest"><Zap size={14} className="text-blue-500" /> Automated Dispatch Active</div>
+                </div>
+                <div className="flex items-center gap-4">
+                    <button onClick={() => navigate('/recurring-invoices')} className="px-6 py-2.5 text-slate-500 text-[13px] font-bold hover:bg-slate-100 rounded">Discard</button>
+                    <button onClick={handleSave} disabled={saving} className="px-10 py-2.5 bg-[#1e61f0] text-white rounded font-bold text-[13px] hover:bg-blue-700 shadow-xl flex items-center gap-2 uppercase tracking-widest">
+                        {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+                        {saving ? 'Saving...' : 'Save and Send'}
                     </button>
-                    <button onClick={() => navigate('/recurring-invoices')} className="px-8 py-2 border border-slate-200 rounded text-sm font-medium hover:bg-slate-50">Cancel</button>
                 </div>
             </div>
         </div>
     );
 };
 
-// ─────────────────────────────────────────────────────────────────────────────
-// RECURRING INVOICE DETAIL VIEW
-// ─────────────────────────────────────────────────────────────────────────────
-const RecurringInvoiceDetail = ({ id, companyId, navigate }) => {
-    const { addNotification } = useNotificationStore();
+class DetailErrorBoundary extends React.Component {
+    constructor(props) {
+        super(props);
+        this.state = { hasError: false, error: null };
+    }
+    static getDerivedStateFromError(error) {
+        return { hasError: true, error };
+    }
+    render() {
+        if (this.state.hasError) {
+            return (
+                <div className="p-20 text-center flex flex-col items-center justify-center">
+                    <div className="text-red-500 mb-4"><AlertTriangle size={48} /></div>
+                    <h2 className="text-xl font-bold text-slate-900 mb-2">Rendering Error</h2>
+                    <p className="text-slate-500 font-mono text-sm max-w-lg bg-slate-100 p-4 rounded">{this.state.error?.message}</p>
+                </div>
+            );
+        }
+        return this.props.children;
+    }
+}
+
+const RecurringInvoiceDetailContent = ({ id, navigate, companyId }) => {
     const [template, setTemplate] = useState(null);
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState('Overview');
-    const [history, setHistory] = useState([]);
-    const [loadingHistory, setLoadingHistory] = useState(false);
 
     useEffect(() => {
-        if (!id || !companyId) return;
+        if (!id) return;
         setLoading(true);
-        recurringInvoiceAPI.getByCompany(companyId).then(res => {
-            const found = res.data.find(t => t.id === id);
-            setTemplate(found);
-        }).finally(() => setLoading(false));
-    }, [id, companyId]);
+        recurringInvoiceAPI.getById(id)
+            .then(res => { setTemplate(res.data); setLoading(false); })
+            .catch((err) => { console.error(err); setLoading(false); });
+    }, [id]);
 
-    useEffect(() => {
-        if (activeTab === 'Recent Activities' && id) {
-            setLoadingHistory(true);
-            recurringInvoiceAPI.getHistory(id)
-                .then(res => setHistory(res.data))
-                .finally(() => setLoadingHistory(false));
-        }
-    }, [activeTab, id]);
+    if (loading) return <div className="p-20 text-center font-bold text-slate-300 animate-pulse uppercase tracking-widest">Syncing Automation...</div>;
+    if (!template) return <div className="p-20 text-center text-slate-300 font-black text-2xl opacity-20 uppercase">Not Found</div>;
 
-    const getActivityInfo = (log) => {
-        switch (log.action) {
-            case 'RECURRING_CREATED': return { title: 'Automation Initialized', icon: 'bg-emerald-500', desc: `Created by ${log.User?.name || 'System'}` };
-            case 'RECURRING_UPDATED': return { title: 'Settings Modified', icon: 'bg-blue-500', desc: `Configuration updated by ${log.User?.name || 'System'}` };
-            case 'RECURRING_DELETED': return { title: 'Automation Terminated', icon: 'bg-rose-500', desc: `Profile deleted by ${log.User?.name || 'System'}` };
-            case 'INVOICE_GENERATED': return { title: 'Invoice Generated', icon: 'bg-purple-600', desc: log.newData?.message || `New instance ${log.newData?.invoiceNumber || ''} created automatically.` };
-            default: return { title: log.action.replace('_', ' '), icon: 'bg-slate-400', desc: `Action performed by ${log.User?.name || 'System'}` };
-        }
-    };
-
-    if (loading) return <div className="p-32 text-center font-bold text-slate-300 animate-pulse uppercase tracking-[0.3em]">Loading Profile Details...</div>;
-    if (!template) return <div className="p-32 text-center text-slate-400">Profile not found.</div>;
-
-    const items = JSON.parse(template.itemsJson || '[]');
+    const safeDate = template.nextGenerationDate ? new Date(template.nextGenerationDate).toLocaleDateString('en-GB') : '—';
+    const startDate = template.startDate ? new Date(template.startDate).toLocaleDateString('en-GB') : '—';
+    const endDate = template.endDate ? new Date(template.endDate).toLocaleDateString('en-GB') : 'Never Expires';
+    const safeTotal = parseFloat(template.totalAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 });
+    
+    // Status Badge Color Logic
+    const status = template.status || 'Active';
+    const isExpired = status === 'Expired';
+    const statusBg = isExpired ? 'bg-red-500' : 'bg-[#22c55e]';
 
     return (
-        <div className="p-8 bg-[#f8fafc] min-h-screen font-sans animate-fade-in">
-            <header className="flex items-center justify-between mb-8">
-                <div className="flex items-center gap-4">
-                    <button onClick={() => navigate('/recurring-invoices')} className="p-2 hover:bg-white rounded-xl text-slate-400 transition-all shadow-sm"><ArrowLeft size={20} /></button>
-                    <div>
-                        <h1 className="text-2xl font-bold text-slate-900 tracking-tight">{template.templateName}</h1>
-                        <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">{template.customerName}</p>
+        <div className="flex-1 flex flex-col h-full bg-white animate-fade-in shadow-inner overflow-hidden font-sans">
+            {/* Header */}
+            <div className="bg-[#fcfdfe] px-6 pt-5 pb-0 flex flex-col no-print border-b border-slate-200">
+                <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-[20px] font-medium text-slate-800 tracking-tight">{template.templateName || 'Unnamed Profile'}</h2>
+                    <div className="flex items-center gap-2">
+                        <button onClick={() => navigate(`/recurring-invoices/edit/${template.id}`)} className="p-1.5 border border-slate-300 rounded hover:bg-slate-50 transition-colors text-slate-600"><Edit2 size={15}/></button>
+                        <button className="px-3 py-1.5 border border-slate-300 rounded hover:bg-slate-50 transition-colors text-slate-800 text-[13px] font-medium">Create Invoice</button>
+                        <button className="px-3 py-1.5 border border-slate-300 rounded hover:bg-slate-50 transition-colors text-slate-800 text-[13px] font-medium flex items-center gap-1">More <ChevronDown size={14}/></button>
+                        <button onClick={() => navigate('/recurring-invoices')} className="ml-2 p-1 text-slate-400 hover:text-slate-800 transition-colors"><X size={20}/></button>
                     </div>
                 </div>
-                <div className="flex items-center gap-3">
-                    <button 
-                        onClick={() => navigate(`/recurring-invoices/edit/${template.id}`)}
-                        className="flex items-center gap-2 px-6 py-2.5 bg-white border border-slate-200 rounded-xl text-[13px] font-bold text-slate-600 hover:bg-slate-50 transition-all shadow-sm"
-                    >
-                        <Edit2 size={16} /> Edit Profile
-                    </button>
-                    <button className="px-6 py-2.5 bg-[#1e61f0] text-white rounded-xl font-bold text-[13px] hover:bg-blue-700 transition-all shadow-xl shadow-blue-100 uppercase tracking-widest">
-                        Create Invoice Now
-                    </button>
-                </div>
-            </header>
-
-            <div className="bg-white rounded-[2.5rem] shadow-2xl shadow-slate-200/50 border border-slate-100 overflow-hidden min-h-[600px] flex flex-col">
-                <div className="px-10 py-6 border-b border-slate-100 flex items-center gap-8">
+                
+                {/* Tabs */}
+                <div className="flex items-center gap-6 text-[13px] font-medium text-slate-600">
                     {['Overview', 'Next Invoice', 'Recent Activities'].map(tab => (
                         <button 
-                            key={tab} 
+                            key={tab}
                             onClick={() => setActiveTab(tab)}
-                            className={`text-[12px] font-black uppercase tracking-widest pb-2 transition-all border-b-2 ${activeTab === tab ? 'text-blue-600 border-blue-600' : 'text-slate-400 border-transparent hover:text-slate-600'}`}
+                            className={`pb-3 border-b-2 transition-colors ${activeTab === tab ? 'border-blue-600 text-slate-900 font-semibold' : 'border-transparent hover:text-slate-800'}`}
                         >
                             {tab}
                         </button>
                     ))}
                 </div>
+            </div>
 
-                <div className="flex-1 p-10">
-                    {activeTab === 'Overview' && (
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-20">
-                            <div className="space-y-8">
-                                <section>
-                                    <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6">Automation Details</h3>
-                                    <div className="space-y-4">
-                                        {[
-                                            { label: 'Profile Status', value: template.status, isStatus: true },
-                                            { label: 'Start Date', value: new Date(template.startDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' }) },
-                                            { label: 'End Date', value: template.endDate ? new Date(template.endDate).toLocaleDateString() : 'Never Expires' },
-                                            { label: 'Repeat Cycle', value: template.frequency },
-                                            { label: 'Payment Terms', value: 'Due on Receipt' }
-                                        ].map(row => (
-                                            <div key={row.label} className="flex justify-between items-center text-sm border-b border-slate-50 pb-3">
-                                                <span className="text-slate-500 font-medium">{row.label}</span>
-                                                <span className={`${row.isStatus ? (row.value === 'Active' ? 'text-emerald-500' : 'text-rose-500') : 'text-slate-900'} font-bold`}>{row.value}</span>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </section>
-
-                                <section>
-                                    <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Billing Configuration</h3>
-                                    <div className="bg-slate-50/50 p-6 rounded-3xl border border-slate-100">
-                                        <div className="flex items-center gap-3 text-slate-600">
-                                            <Info size={16} className="text-blue-500" />
-                                            <p className="text-[13px] font-medium leading-relaxed">
-                                                Invoices will be generated <span className="font-bold text-slate-900">{template.frequency}</span> starting from {new Date(template.startDate).toLocaleDateString()}. 
-                                                Auto-send is {template.autoSend ? 'ENABLED' : 'DISABLED'}.
-                                            </p>
-                                        </div>
-                                    </div>
-                                </section>
-                            </div>
-
-                            <div className="space-y-8">
-                                <section className="bg-blue-600 p-8 rounded-[2rem] text-white shadow-xl shadow-blue-100">
-                                    <div className="flex justify-between items-start mb-8">
-                                        <div>
-                                            <p className="text-[11px] font-bold uppercase tracking-widest opacity-70 mb-1">Total Recurring amount</p>
-                                            <h2 className="text-3xl font-black">₹{parseFloat(template.totalAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</h2>
-                                        </div>
-                                        <Tag size={24} className="opacity-40" />
-                                    </div>
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div className="bg-white/10 p-4 rounded-2xl backdrop-blur-sm">
-                                            <p className="text-[10px] font-bold uppercase tracking-widest opacity-70 mb-1">Cycle</p>
-                                            <p className="text-sm font-black">{template.frequency}</p>
-                                        </div>
-                                        <div className="bg-white/10 p-4 rounded-2xl backdrop-blur-sm">
-                                            <p className="text-[10px] font-bold uppercase tracking-widest opacity-70 mb-1">Next Run</p>
-                                            <p className="text-sm font-black">{new Date(template.nextGenerationDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}</p>
-                                        </div>
-                                    </div>
-                                </section>
-
-                                <section>
-                                    <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Item Snapshot</h3>
-                                    <div className="space-y-3">
-                                        {items.map((item, idx) => (
-                                            <div key={idx} className="flex items-center justify-between p-4 bg-white border border-slate-100 rounded-2xl shadow-sm">
-                                                <div className="flex items-center gap-3">
-                                                    <div className="w-8 h-8 bg-blue-50 text-blue-600 rounded-lg flex items-center justify-center font-bold text-xs">{item.name?.charAt(0)}</div>
-                                                    <div>
-                                                        <p className="text-[13px] font-bold text-slate-800">{item.name}</p>
-                                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">Quantity: {item.quantity}</p>
-                                                    </div>
-                                                </div>
-                                                <span className="text-sm font-bold text-slate-900">₹{parseFloat(item.amount || 0).toLocaleString()}</span>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </section>
-                            </div>
-                        </div>
-                    )}
-
-                    {activeTab === 'Next Invoice' && (
-                        <div className="py-10">
-                            <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-10 text-center">Next Scheduled Invoice Preview</h3>
-                            <div className="max-w-2xl mx-auto bg-white shadow-[0_20px_60px_rgba(0,0,0,0.1)] rounded-xl border border-slate-100 overflow-hidden relative">
-                                <div className="absolute top-0 right-0 p-8">
-                                     <div className="bg-emerald-500 text-white text-[10px] font-black px-4 py-1 rounded-bl-xl uppercase tracking-widest absolute top-0 right-0">ACTIVE</div>
+            {/* Document Body */}
+            <div className="flex-1 overflow-y-auto custom-scrollbar bg-white">
+                {activeTab === 'Overview' && (
+                    <div className="flex h-full">
+                        {/* Left Column - Details */}
+                        <div className="w-[45%] border-r border-slate-200 p-6 flex flex-col gap-8">
+                            
+                            {/* Customer Card */}
+                            <div className="flex items-start gap-4">
+                                <div className="w-12 h-12 bg-slate-200 rounded-md flex items-center justify-center text-white shrink-0">
+                                    <User size={28} className="text-white drop-shadow-sm" />
                                 </div>
-                                <div className="p-12 space-y-12">
-                                    <div className="flex justify-between items-start">
-                                        <div className="space-y-1">
-                                            <h4 className="text-sm font-black text-slate-800 uppercase tracking-tight">Your Company Ltd</h4>
-                                            <p className="text-[11px] text-slate-400 font-medium">Tamil Nadu, India</p>
-                                        </div>
-                                        <h2 className="text-2xl font-black text-slate-800/20 uppercase tracking-tighter">TAX INVOICE</h2>
+                                <div className="flex flex-col gap-0.5">
+                                    <span className="text-[14px] font-medium text-blue-600 cursor-pointer hover:underline">{template.customerName || 'Unknown Customer'}</span>
+                                    <span className="text-[12px] text-slate-500 font-medium">customer@example.com</span>
+                                    <span className="text-[12px] text-slate-500 font-medium flex items-center gap-1 mt-0.5"><Phone size={10}/> +91-0000000000</span>
+                                </div>
+                            </div>
+
+                            {/* DETAILS Section */}
+                            <div>
+                                <h3 className="text-[12px] font-semibold text-slate-500 tracking-wider mb-4 uppercase">Details</h3>
+                                <div className="space-y-3">
+                                    <div className="grid grid-cols-[160px_1fr] items-center text-[13px]">
+                                        <span className="text-slate-500">Profile Status:</span>
+                                        <span className={`px-2 py-0.5 ${statusBg} text-white text-[10px] font-bold uppercase tracking-widest rounded-sm w-max`}>{status}</span>
                                     </div>
-
-                                    <div className="grid grid-cols-2 gap-12 text-[11px]">
-                                        <div className="space-y-4">
-                                            <div className="flex justify-between border-b border-slate-50 pb-2">
-                                                <span className="text-slate-400 font-bold uppercase">#</span>
-                                                <span className="text-slate-800 font-black">Will be generated automatically</span>
-                                            </div>
-                                            <div className="flex justify-between border-b border-slate-50 pb-2">
-                                                <span className="text-slate-400 font-bold uppercase">Invoice Date</span>
-                                                <span className="text-slate-800 font-black">{new Date(template.nextGenerationDate).toLocaleDateString()}</span>
-                                            </div>
-                                            <div className="flex justify-between border-b border-slate-50 pb-2">
-                                                <span className="text-slate-400 font-bold uppercase">Terms</span>
-                                                <span className="text-slate-800 font-black">Due on Receipt</span>
-                                            </div>
-                                        </div>
-                                        <div className="space-y-2">
-                                            <p className="text-slate-400 font-bold uppercase">Bill To</p>
-                                            <p className="text-blue-600 font-black text-xs">{template.customerName}</p>
-                                        </div>
+                                    <div className="grid grid-cols-[160px_1fr] items-center text-[13px]">
+                                        <span className="text-slate-500">Start Date:</span>
+                                        <span className="text-slate-800 font-medium">{startDate}</span>
                                     </div>
+                                    <div className="grid grid-cols-[160px_1fr] items-center text-[13px]">
+                                        <span className="text-slate-500">End Date:</span>
+                                        <span className="text-slate-800 font-medium">{endDate}</span>
+                                    </div>
+                                    <div className="grid grid-cols-[160px_1fr] items-center text-[13px]">
+                                        <span className="text-slate-500">Payment Terms:</span>
+                                        <span className="text-slate-800 font-medium">{template.terms || 'Due on Receipt'}</span>
+                                    </div>
+                                    <div className="grid grid-cols-[160px_1fr] items-center text-[13px]">
+                                        <span className="text-slate-500">Manually Created Invoices:</span>
+                                        <span className="text-slate-800 font-medium">0</span>
+                                    </div>
+                                </div>
+                                
+                                <div className="mt-5 bg-slate-50 border border-slate-100 rounded-lg p-3 flex items-start gap-2">
+                                    <Info size={14} className="text-blue-500 shrink-0 mt-0.5" />
+                                    <p className="text-[12px] text-slate-700 leading-relaxed font-medium">
+                                        Recurring Invoice preference has been set to <span className="font-bold">"Create Invoices as Drafts"</span>
+                                    </p>
+                                </div>
+                            </div>
 
-                                    <table className="w-full text-[11px]">
-                                        <thead>
-                                            <tr className="bg-slate-50 text-slate-400 font-black uppercase text-[9px] border-y border-slate-100">
-                                                <th className="px-4 py-2 text-left"># Item & Description</th>
-                                                <th className="px-4 py-2 text-right">Qty</th>
-                                                <th className="px-4 py-2 text-right">Rate</th>
-                                                <th className="px-4 py-2 text-right">Amount</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {items.map((it, idx) => (
-                                                <tr key={idx} className="border-b border-slate-50">
-                                                    <td className="px-4 py-4 font-bold text-slate-800">{idx + 1}. {it.name}</td>
-                                                    <td className="px-4 py-4 text-right font-medium text-slate-500">{it.quantity}.00</td>
-                                                    <td className="px-4 py-4 text-right font-medium text-slate-500">{parseFloat(it.rate).toLocaleString()}</td>
-                                                    <td className="px-4 py-4 text-right font-black text-slate-800">{parseFloat(it.amount).toLocaleString()}</td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-
-                                    <div className="flex justify-end pt-6">
-                                        <div className="w-64 space-y-3">
-                                            <div className="flex justify-between text-[11px]">
-                                                <span className="text-slate-400 font-bold">Sub Total</span>
-                                                <span className="text-slate-800 font-black">{parseFloat(template.totalAmount - (template.taxAmount || 0)).toLocaleString()}</span>
-                                            </div>
-                                            <div className="flex justify-between text-lg font-black text-slate-900 pt-3 border-t-2 border-slate-900 border-double">
-                                                <span>Total</span>
-                                                <span>₹{parseFloat(template.totalAmount).toLocaleString()}</span>
-                                            </div>
-                                        </div>
+                            {/* ADDRESS Section */}
+                            <div>
+                                <h3 className="text-[12px] font-semibold text-slate-500 tracking-wider mb-4 uppercase">Address</h3>
+                                <div className="space-y-4">
+                                    <div>
+                                        <h4 className="text-[13px] text-slate-800 font-medium mb-1">Billing Address</h4>
+                                        <p className="text-[13px] text-slate-500 leading-tight">No address provided.</p>
+                                    </div>
+                                    <div>
+                                        <h4 className="text-[13px] text-slate-800 font-medium mb-1">Shipping Address</h4>
+                                        <p className="text-[13px] text-slate-500 leading-tight">No address provided.</p>
                                     </div>
                                 </div>
                             </div>
-                        </div>
-                    )}
 
-                    {activeTab === 'Recent Activities' && (
-                        <div className="max-w-3xl mx-auto py-10">
-                            {loadingHistory ? (
-                                <div className="text-center py-20 text-slate-400 animate-pulse font-bold uppercase tracking-widest">Fetching logs...</div>
-                            ) : history.length === 0 ? (
-                                <div className="text-center py-20 text-slate-400">No activities recorded yet.</div>
-                            ) : (
-                                <div className="relative border-l-2 border-slate-100 ml-48 space-y-12">
-                                    {history.map(log => {
-                                        const info = getActivityInfo(log);
-                                        const date = new Date(log.createdAt);
-                                        return (
-                                            <div key={log.id} className="relative">
-                                                <div className="absolute -left-52 top-0 w-48 text-right pr-8">
-                                                    <p className="text-[12px] font-black text-slate-800 uppercase tracking-tight">{date.toLocaleDateString()}</p>
-                                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
-                                                </div>
-                                                <div className={`absolute -left-[11px] top-1.5 w-5 h-5 ${info.icon} rounded-full border-4 border-white shadow-sm`}></div>
-                                                <div className="bg-white border border-slate-100 p-6 rounded-2xl shadow-sm ml-8 transition-all hover:border-blue-200 hover:shadow-md">
-                                                    <p className="text-[13px] font-bold text-slate-800 tracking-tight">{info.title}</p>
-                                                    <p className="text-[11px] text-slate-400 font-medium mt-1 uppercase tracking-tight leading-relaxed">{info.desc}</p>
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            )}
+                            {/* CUSTOMER NOTES Section */}
+                            <div>
+                                <h3 className="text-[12px] font-semibold text-slate-500 tracking-wider mb-3 uppercase">Customer Notes</h3>
+                                <p className="text-[13px] text-slate-800 font-medium">{template.notes || 'Thanks for your business.'}</p>
+                            </div>
                         </div>
-                    )}
-                </div>
+
+                        {/* Right Column - Stats & Child Invoices */}
+                        <div className="w-[55%] p-6 bg-white flex flex-col">
+                            {/* Top Stats Bar */}
+                            <div className="grid grid-cols-3 border-b border-slate-200 pb-6 mb-6">
+                                <div className="text-center border-r border-slate-100 px-2">
+                                    <p className="text-[12px] text-slate-500 mb-1 font-medium">Invoice Amount</p>
+                                    <p className="text-[14px] font-medium text-slate-900">₹{safeTotal}</p>
+                                </div>
+                                <div className="text-center border-r border-slate-100 px-2">
+                                    <p className="text-[12px] text-slate-500 mb-1 font-medium">Next Invoice Date</p>
+                                    <p className="text-[14px] font-medium text-blue-600 cursor-pointer hover:underline">{safeDate}</p>
+                                </div>
+                                <div className="text-center px-2">
+                                    <p className="text-[12px] text-slate-500 mb-1 font-medium">Recurring Period</p>
+                                    <p className="text-[14px] font-medium text-slate-900">{template.frequency || 'Monthly'}</p>
+                                </div>
+                            </div>
+
+                            {/* Child Invoices List */}
+                            <div className="flex-1">
+                                <div className="flex justify-between items-center mb-4">
+                                    <button className="flex items-center gap-1 text-[15px] font-medium text-slate-800 hover:text-blue-600 transition-colors">
+                                        All Child Invoices <ChevronDown size={16} className="text-blue-600" />
+                                    </button>
+                                    <span className="text-[13px] text-slate-500 font-medium">Unpaid Invoices : <span className="text-slate-900 font-semibold">₹0.00</span></span>
+                                </div>
+
+                                <div className="space-y-3 mt-4">
+                                    <div className="p-4 border-b border-slate-100 flex justify-between items-center group hover:bg-slate-50 transition-colors">
+                                        <div className="flex flex-col gap-1">
+                                            <span className="text-[13px] font-medium text-slate-800">{template.customerName}</span>
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-[13px] text-blue-600 hover:underline cursor-pointer font-medium">INV-000001</span>
+                                                <span className="text-[13px] text-slate-500">{startDate}</span>
+                                            </div>
+                                            <span className="text-[11px] text-slate-500 flex items-center gap-1 italic"><Clock size={10}/> Manually Added</span>
+                                        </div>
+                                        <div className="flex flex-col items-end gap-1">
+                                            <span className="text-[13px] font-medium text-slate-900">₹{safeTotal}</span>
+                                            <span className="text-[10px] font-semibold text-slate-500 tracking-widest uppercase">DRAFT</span>
+                                            <button className="px-3 py-1 bg-blue-500 text-white text-[12px] font-medium rounded hover:bg-blue-600 transition-colors mt-1 shadow-sm">
+                                                Record Payment
+                                            </button>
+                                        </div>
+                                    </div>
+                                    {/* Placeholder for empty state if needed */}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+                
+                {activeTab !== 'Overview' && (
+                    <div className="p-12 text-center text-slate-400 font-medium">
+                        This section is currently under development.
+                    </div>
+                )}
             </div>
         </div>
     );
 };
 
-// ─────────────────────────────────────────────────────────────────────────────
-// RECURRING INVOICES VIEW (LIST)
-// ─────────────────────────────────────────────────────────────────────────────
+const RecurringInvoiceDetail = (props) => (
+    <DetailErrorBoundary>
+        <RecurringInvoiceDetailContent {...props} />
+    </DetailErrorBoundary>
+);
 
-const RecurringInvoicesView = ({ companyId }) => {
-  const navigate = useNavigate();
-  const location = useLocation();
-  const { id } = useParams();
-  const { addNotification } = useNotificationStore();
-  
-  const isNew = location.pathname.includes('/new');
-  const isEdit = location.pathname.includes('/edit');
-  const isDetail = location.pathname.includes('/view') || (!isNew && !isEdit && id);
+const RecurringInvoicesView = () => {
+    const navigate = useNavigate();
+    const { id } = useParams();
+    const location = useLocation();
+    const companyId = localStorage.getItem('companyId');
+    const [templates, setTemplates] = useState([]);
+    const [loading, setLoading] = useState(true);
 
-  const [templates, setTemplates] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [running, setRunning] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [deleteId, setDeleteId] = useState(null);
-  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  
-  const fetchTemplates = async () => {
-    if (!companyId) return;
-    try {
-      setLoading(true);
-      const res = await recurringInvoiceAPI.getByCompany(companyId);
-      setTemplates(res.data || []);
-    } catch (err) {
-      console.error('Fetch Templates Error:', err);
-    } finally {
-      setLoading(false);
+    const fetchTemplates = async () => {
+        try {
+            setLoading(true);
+            const res = await recurringInvoiceAPI.getByCompany(companyId);
+            setTemplates(res.data || []);
+        } catch (err) { console.error(err); }
+        finally { setLoading(false); }
+    };
+
+    useEffect(() => { if (companyId) fetchTemplates(); }, [companyId]);
+
+    if (location.pathname === '/recurring-invoices/new' || location.pathname.includes('/edit/')) {
+        return <RecurringInvoiceForm companyId={companyId} navigate={navigate} editId={id} />;
     }
-  };
 
-  useEffect(() => {
-    fetchTemplates();
-  }, [companyId]);
-
-  const handleRunAutomation = async () => {
-    try {
-      setRunning(true);
-      const res = await recurringInvoiceAPI.processDue();
-      addNotification(res.data.message || 'Automation run complete', 'success');
-      fetchTemplates();
-    } catch (err) {
-      addNotification('Automation run failed', 'error');
-    } finally {
-      setRunning(false);
-    }
-  };
-
-  const confirmDelete = async () => {
-    if (!deleteId) return;
-    try {
-      await recurringInvoiceAPI.delete(deleteId);
-      addNotification('Template deleted successfully', 'success');
-      if (id === deleteId) navigate('/recurring-invoices');
-      fetchTemplates();
-    } catch (err) {
-      addNotification('Failed to delete template', 'error');
-    } finally {
-      setIsDeleteModalOpen(false);
-      setDeleteId(null);
-    }
-  };
-
-  const toggleStatus = async (template) => {
-     try {
-        const newStatus = template.status === 'Active' ? 'Paused' : 'Active';
-        await recurringInvoiceAPI.update(template.id, { status: newStatus });
-        addNotification(`Automation ${newStatus === 'Active' ? 'Resumed' : 'Paused'}`, 'success');
-        fetchTemplates();
-     } catch (err) {
-        addNotification('Failed to update status', 'error');
-     }
-  };
-
-  const filtered = templates.filter(t => 
-    t.templateName?.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    t.customerName?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  if (isNew || isEdit) return <RecurringInvoiceForm companyId={companyId} navigate={navigate} editId={id} />;
-
-  return (
-    <div className="flex h-[calc(100vh-64px)] bg-[#f8fafc] overflow-hidden animate-fade-in">
-        <ConfirmModal 
-            isOpen={isDeleteModalOpen}
-            onClose={() => setIsDeleteModalOpen(false)}
-            onConfirm={confirmDelete}
-            title="Terminate Automation"
-            message="Are you sure you want to delete this recurring template?"
-            type="danger"
-        />
-
-        {/* --- MASTER LIST (LEFT SIDE) --- */}
-        <div className={`flex flex-col border-r border-slate-200 transition-all duration-500 overflow-hidden ${isDetail ? 'w-[400px] bg-white' : 'w-full p-8'}`}>
-            <header className={`flex items-center justify-between transition-all duration-300 ${isDetail ? 'p-6 border-b border-slate-100 mb-0' : 'mb-10'}`}>
-                <div className="space-y-1">
-                    <h1 className={`${isDetail ? 'text-lg' : 'text-[28px]'} font-black text-slate-900 tracking-tighter uppercase transition-all`}>
-                        {isDetail ? 'Automation Profiles' : 'Recurring Invoices'}
-                    </h1>
-                    {!isDetail && <p className="text-[12px] font-bold text-slate-400 uppercase tracking-widest mt-1">Automated Billing Profiles</p>}
+    return (
+        <div className="flex h-screen bg-white font-sans overflow-hidden">
+            <div className={`flex flex-col border-r border-slate-100 transition-all duration-300 no-print ${id ? 'w-[380px]' : 'w-[420px]'}`}>
+                <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-white shrink-0">
+                    <div><h2 className="text-[16px] font-black text-slate-900 tracking-tight">Recurring</h2><p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">Automations</p></div>
+                    <button onClick={() => navigate('/recurring-invoices/new')} className="p-2 bg-[#1e61f0] text-white rounded shadow-lg active:scale-95 transition-all"><Plus size={18}/></button>
                 </div>
-                <div className="flex items-center gap-3">
-                    <button 
-                        onClick={() => navigate('/recurring-invoices/new')}
-                        className={`bg-[#1e61f0] text-white rounded-xl font-bold transition-all shadow-lg shadow-blue-100 flex items-center gap-2 hover:bg-blue-700 ${isDetail ? 'p-2' : 'px-8 py-3.5 text-[13px] uppercase tracking-widest'}`}
-                    >
-                        <Plus size={isDetail ? 20 : 18} strokeWidth={2.5} />
-                        {!isDetail && "New Template"}
-                    </button>
-                    {isDetail && (
-                        <button onClick={fetchTemplates} className="p-2 bg-slate-50 text-slate-400 rounded-xl hover:text-blue-600 transition-all">
-                             <RefreshCw size={20} className={loading ? 'animate-spin' : ''} />
-                        </button>
-                    )}
+                <div className="flex-1 overflow-y-auto divide-y divide-slate-50 custom-scrollbar">
+                    {loading ? <div className="p-20 text-center animate-pulse"><Loader2 size={24} className="animate-spin text-blue-100 mx-auto" /></div> : templates.length === 0 ? <div className="p-20 text-center text-slate-200 italic font-bold uppercase tracking-widest text-[10px] opacity-40">No Records Found</div> : templates.map(t => (
+                        <div key={t.id} onClick={() => navigate(`/recurring-invoices/view/${t.id}`)} className={`px-8 py-6 cursor-pointer transition-all border-l-4 ${id === t.id ? 'bg-blue-50 border-blue-600' : 'bg-white border-transparent hover:bg-slate-50'}`}>
+                            <div className="flex justify-between items-start mb-2"><span className="text-[14px] font-black text-slate-900">{t.customerName}</span><span className="text-[14px] font-black text-slate-900 font-mono">₹{parseFloat(t.totalAmount).toLocaleString()}</span></div>
+                            <div className="flex justify-between items-center"><span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t.templateName} | {t.frequency}</span></div>
+                        </div>
+                    ))}
                 </div>
-            </header>
-
-            {!isDetail && (
-                <div className="flex items-center gap-4 mb-8">
-                    <div className="relative group flex-1 max-w-[400px]">
-                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-blue-500 transition-colors" size={18} />
-                        <input 
-                            type="text" 
-                            placeholder="Search automation profiles..." 
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            className="pl-12 pr-6 py-3 bg-white border border-slate-200 rounded-2xl w-full outline-none focus:border-blue-500 transition-all font-semibold text-[14px] shadow-sm"
-                        />
-                    </div>
-                    <button 
-                        onClick={handleRunAutomation}
-                        disabled={running}
-                        className="px-6 py-3.5 bg-white border border-slate-200 text-slate-600 rounded-2xl font-bold text-[13px] hover:bg-slate-50 transition-all flex items-center gap-2 shadow-sm uppercase tracking-widest"
-                    >
-                        {running ? <Loader2 size={18} className="animate-spin text-blue-500" /> : <RefreshCw size={18} className="text-blue-600" />} Cycle
-                    </button>
-                </div>
-            )}
-
-            <div className={`flex-1 overflow-y-auto no-scrollbar bg-white`}>
-                <table className="w-full text-left">
-                    {!isDetail && (
-                        <thead className="sticky top-0 bg-white z-10">
-                            <tr className="bg-white text-[11px] font-black text-slate-300 uppercase tracking-widest border-b border-slate-100">
-                                <th className="px-10 py-5">Profile & Frequency</th>
-                                <th className="px-10 py-5">Customer</th>
-                                <th className="px-10 py-5">Last Run</th>
-                                <th className="px-10 py-5 text-center">Next Run</th>
-                                <th className="px-10 py-5 text-right">Amount</th>
-                                <th className="px-10 py-5 text-center">Status</th>
-                                <th className="px-10 py-5 text-center">Action</th>
-                            </tr>
-                        </thead>
-                    )}
-                    <tbody className="divide-y divide-slate-50">
-                        {loading ? (
-                            <tr><td colSpan="7" className="py-20 text-center font-black text-slate-300 uppercase tracking-widest italic animate-pulse whitespace-nowrap">Syncing Automation...</td></tr>
-                        ) : filtered.length === 0 ? (
-                            <tr><td colSpan="7" className="py-20 text-center text-slate-300 font-black uppercase tracking-widest">No automation profiles defined</td></tr>
-                        ) : filtered.map(t => (
-                            <tr 
-                                key={t.id} 
-                                onClick={() => navigate(`/recurring-invoices/view/${t.id}`)}
-                                className={`transition-all group cursor-pointer ${id === t.id ? 'bg-blue-50/50' : 'hover:bg-blue-50/30'}`}
-                            >
-                                {isDetail ? (
-                                    /* --- COMPACT LIST ITEM (SIDEBAR MODE) --- */
-                                    <td className="px-6 py-5">
-                                        <div className="flex justify-between items-start mb-2">
-                                            <div className="flex flex-col">
-                                                <span className={`text-[13px] font-black ${id === t.id ? 'text-blue-600' : 'text-slate-900'} transition-colors`}>{t.templateName}</span>
-                                                <span className="text-[10px] font-bold text-slate-400 mt-0.5">{t.customerName}</span>
-                                            </div>
-                                            <span className="text-[14px] font-black text-slate-800">₹{parseFloat(t.totalAmount || 0).toLocaleString()}</span>
-                                        </div>
-                                        <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest">
-                                            <span className="text-blue-600">{t.frequency}</span>
-                                            <span className={t.status === 'Active' ? 'text-emerald-500' : 'text-rose-500'}>{t.status}</span>
-                                        </div>
-                                    </td>
-                                ) : (
-                                    /* --- FULL TABLE ROW (TABLE MODE) --- */
-                                    <>
-                                        <td className="px-10 py-6">
-                                            <div className="flex flex-col">
-                                                <span className="text-[14px] font-black text-slate-900 leading-none group-hover:text-blue-600 transition-colors uppercase tracking-tight">{t.templateName}</span>
-                                                <span className="text-[10px] font-black text-blue-500 mt-1.5 uppercase tracking-widest">{t.frequency}</span>
-                                            </div>
-                                        </td>
-                                        <td className="px-10 py-6">
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-9 h-9 bg-slate-50 text-slate-400 rounded-xl flex items-center justify-center font-black text-[14px] shadow-sm">{t.customerName?.charAt(0)}</div>
-                                                <span className="text-[14px] font-black text-slate-900">{t.customerName}</span>
-                                            </div>
-                                        </td>
-                                        <td className="px-10 py-6 text-[13px] font-bold text-slate-500">
-                                            {t.lastGeneratedDate ? new Date(t.lastGeneratedDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }) : 'PENDING'}
-                                        </td>
-                                        <td className="px-10 py-6 text-center text-[13px] font-black text-slate-900">
-                                            {new Date(t.nextGenerationDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
-                                        </td>
-                                        <td className="px-10 py-6 text-right font-black text-slate-900 text-[15px] tracking-tight">
-                                            ₹{parseFloat(t.totalAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                                        </td>
-                                        <td className="px-10 py-6 text-center">
-                                            <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border
-                                                ${t.status === 'Active' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-slate-50 text-slate-500 border-slate-100'}`}>
-                                                {t.status}
-                                            </span>
-                                        </td>
-                                        <td className="px-10 py-6">
-                                            <div className="flex items-center justify-center gap-2 transition-all">
-                                                <button onClick={(e) => { e.stopPropagation(); navigate(`/recurring-invoices/edit/${t.id}`); }} className="p-1.5 hover:bg-white rounded text-blue-600 border border-transparent hover:border-blue-100" title="Edit"><Edit2 size={14}/></button>
-                                                <button onClick={(e) => { e.stopPropagation(); setDeleteId(t.id); setIsDeleteModalOpen(true); }} className="p-1.5 hover:bg-white rounded text-rose-600 border border-transparent hover:border-rose-100" title="Delete"><Trash2 size={14}/></button>
-                                            </div>
-                                        </td>
-                                    </>
-                                )}
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
             </div>
+            {id ? <RecurringInvoiceDetail id={id} navigate={navigate} companyId={companyId} /> : <div className="flex-1 flex flex-col items-center justify-center bg-slate-50/30 text-center p-20"><div className="w-24 h-24 bg-white rounded-[2rem] shadow-xl flex items-center justify-center text-slate-200 mb-8 border border-slate-100"><RefreshCw size={40} strokeWidth={1.5} /></div><h3 className="text-[20px] font-black text-slate-900 tracking-tighter uppercase mb-2">Automation Hub</h3><p className="text-[12px] text-slate-400 font-bold uppercase tracking-widest max-w-[240px]">Select a profile to view details</p></div>}
         </div>
-
-        {/* --- DETAIL AREA (RIGHT SIDE) --- */}
-        {isDetail && (
-            <div className="flex-1 overflow-y-auto no-scrollbar bg-white relative">
-                <RecurringInvoiceDetail id={id} companyId={companyId} navigate={navigate} />
-            </div>
-        )}
-    </div>
-  );
+    );
 };
 
 export default RecurringInvoicesView;

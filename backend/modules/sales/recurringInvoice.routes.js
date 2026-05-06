@@ -7,6 +7,7 @@ router.use(verifyToken, tenantAccess);
 
 router.post('/', recurringController.create);
 router.get('/company/:companyId', recurringController.getByCompany);
+router.get('/:id', recurringController.getById);
 router.put('/:id', recurringController.update);
 router.delete('/:id', recurringController.delete);
 router.post('/process-due', recurringController.processDueInvoices);

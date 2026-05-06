@@ -34,8 +34,10 @@ const CustomersView = () => {
     <CustomerForm 
         standalone={true}
         customerToEdit={customerToEdit}
-        onSaveSuccess={() => navigate('/customers')}
-        onCancel={() => navigate('/customers')}
+        onSaveSuccess={(newCustomer) => {
+            navigate('/customers');
+        }}
+        onCancel={() => window.history.length > 2 ? navigate(-1) : navigate('/customers')}
     />
   );
 };

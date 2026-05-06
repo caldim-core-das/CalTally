@@ -2,8 +2,117 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { 
   Plus, Trash2, Save, Printer, ArrowLeft, 
-  Search, Info, Check, Loader2, X, Settings, ChevronDown, File, AlertTriangle
+  Search, Info, Check, Loader2, X, Settings, ChevronDown, File, AlertTriangle,
+  ShieldCheck, FileText, Edit2, Package, Mail, Phone, ChevronRight
 } from 'lucide-react';
+import { useRef } from 'react';
+
+// ─────────────────────────────────────────────────
+// ITEM SEARCH SELECTOR (FOR TABLE CELLS)
+// ─────────────────────────────────────────────────
+const ItemSearchSelector = ({ value, onChange, items, placeholder }) => {
+    const navigate = useNavigate();
+    const location = useLocation();
+    const [isOpen, setIsOpen] = useState(false);
+    const [search, setSearch] = useState('');
+    const containerRef = useRef(null);
+
+    useEffect(() => {
+        const handleClickOutside = (e) => {
+            if (containerRef.current && !containerRef.current.contains(e.target)) setIsOpen(false);
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    const filtered = (items || []).filter(it => {
+        const n = it.name || '';
+        const d = it.salesDescription || '';
+        const s = search.toLowerCase();
+        return n.toLowerCase().includes(s) || d.toLowerCase().includes(s);
+    });
+
+    return (
+        <div className="relative w-full" ref={containerRef}>
+            <div 
+                onClick={() => setIsOpen(!isOpen)}
+                className="w-full flex items-center justify-between cursor-pointer group"
+            >
+                <div className="flex-1">
+                    {value ? (
+                        <div className="text-[14px] font-bold text-slate-900 tracking-tight">{value}</div>
+                    ) : (
+                        <div className="text-[14px] font-medium text-slate-300 italic">{placeholder}</div>
+                    )}
+                </div>
+                <ChevronDown size={14} className={`text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+            </div>
+
+            {isOpen && (
+                <div className="absolute top-full left-0 mt-2 w-[400px] bg-white border border-slate-200 shadow-[0_20px_50px_rgba(0,0,0,0.15)] rounded-xl z-[100] overflow-hidden animate-fade-in">
+                    <div className="p-3 border-b border-slate-50 bg-slate-50/50">
+                        <div className="relative">
+                            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                            <input 
+                                autoFocus
+                                value={search}
+                                onChange={e => setSearch(e.target.value)}
+                                placeholder="Search items or descriptions..."
+                                className="w-full pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-lg text-[13px] outline-none focus:border-blue-500 transition-all font-medium"
+                            />
+                        </div>
+                    </div>
+                    <div className="max-h-[300px] overflow-y-auto no-scrollbar py-1 flex flex-col">
+                        {filtered.length > 0 ? (
+                            <div className="flex-1">
+                                {filtered.map(it => (
+                                    <div 
+                                        key={it.id}
+                                        onClick={() => {
+                                            onChange(it);
+                                            setIsOpen(false);
+                                            setSearch('');
+                                        }}
+                                        className="px-4 py-3 hover:bg-blue-50 cursor-pointer transition-colors group mx-1 rounded-lg"
+                                    >
+                                        <div className="flex justify-between items-start mb-0.5">
+                                            <div className="text-[14px] font-bold text-slate-800 tracking-tight flex items-center gap-2">
+                                                <Package size={14} className="text-blue-500 opacity-50" />
+                                                {it.name}
+                                            </div>
+                                            <div className="text-[13px] font-bold text-slate-900">₹{parseFloat(it.sellingPrice || 0).toLocaleString()}</div>
+                                        </div>
+                                        <div className="text-[11px] text-slate-400 font-medium whitespace-nowrap overflow-hidden text-ellipsis italic">
+                                            {it.salesDescription || 'No description provided'}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="py-12 text-center flex flex-col items-center justify-center border-b border-slate-50">
+                                <div className="w-12 h-12 bg-slate-50 rounded-full flex items-center justify-center mb-3">
+                                    <Package size={20} className="text-slate-300" />
+                                </div>
+                                <p className="text-[11px] text-slate-400 font-bold uppercase tracking-widest">No matching items</p>
+                            </div>
+                        )}
+                        <div 
+                            onClick={() => {
+                                localStorage.setItem('invoice_draft', JSON.stringify({
+                                   // draft state will be handled in the main component's handleAdd
+                                }));
+                                navigate('/inventory/new', { state: { returnTo: location.pathname } });
+                            }}
+                            className="px-4 py-3 bg-blue-50/50 hover:bg-blue-600 hover:text-white transition-all text-blue-600 font-bold text-[11px] uppercase tracking-widest flex items-center gap-2 cursor-pointer"
+                        >
+                            <Plus size={14} /> Add New Item
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
 
 // ─────────────────────────────────────────────────
 // MANAGE SALESPERSONS MODAL
@@ -40,7 +149,7 @@ const ManageSalespersonsModal = ({ isOpen, onClose, salespersons, onSave, onSele
             <div className="relative bg-white rounded-2xl shadow-[0_30px_80px_rgba(0,0,0,0.2)] w-full max-w-lg overflow-hidden animate-scale-up">
                 {/* Modal Header */}
                 <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between">
-                    <h3 className="text-[18px] font-black text-slate-900 tracking-tight">Manage Salespersons</h3>
+                    <h3 className="text-[18px] font-bold text-slate-900 tracking-tight">Manage Salespersons</h3>
                     <button onClick={onClose} className="p-1.5 hover:bg-slate-100 rounded-full text-slate-400 hover:text-slate-700 transition-colors"><X size={18}/></button>
                 </div>
 
@@ -58,7 +167,7 @@ const ManageSalespersonsModal = ({ isOpen, onClose, salespersons, onSave, onSele
                     </div>
                     <button
                         onClick={() => setShowAddForm(true)}
-                        className="px-4 py-2 bg-[#1e61f0] text-white text-[13px] font-black rounded-lg hover:bg-blue-700 transition-all flex items-center gap-1.5 whitespace-nowrap shadow-md shadow-blue-100"
+                        className="px-4 py-2 bg-[#1e61f0] text-white text-[13px] font-bold rounded-lg hover:bg-blue-700 transition-all flex items-center gap-1.5 whitespace-nowrap shadow-md shadow-blue-100"
                     >
                         <Plus size={14}/> New Salesperson
                     </button>
@@ -69,7 +178,7 @@ const ManageSalespersonsModal = ({ isOpen, onClose, salespersons, onSave, onSele
                     <div className="mx-6 my-4 p-5 bg-slate-50 rounded-xl border border-slate-200">
                         <div className="grid grid-cols-2 gap-4 mb-4">
                             <div>
-                                <label className="block text-[11px] font-black text-red-500 uppercase tracking-widest mb-1.5">Name*</label>
+                                <label className="block text-[11px] font-bold text-red-500 uppercase tracking-widest mb-1.5">Name*</label>
                                 <input
                                     value={newName}
                                     onChange={e => setNewName(e.target.value)}
@@ -77,7 +186,7 @@ const ManageSalespersonsModal = ({ isOpen, onClose, salespersons, onSave, onSele
                                 />
                             </div>
                             <div>
-                                <label className="block text-[11px] font-black text-red-500 uppercase tracking-widest mb-1.5">Email*</label>
+                                <label className="block text-[11px] font-bold text-red-500 uppercase tracking-widest mb-1.5">Email*</label>
                                 <input
                                     type="email"
                                     value={newEmail}
@@ -90,13 +199,13 @@ const ManageSalespersonsModal = ({ isOpen, onClose, salespersons, onSave, onSele
                             <button
                                 onClick={handleSaveAndSelect}
                                 disabled={!newName.trim()}
-                                className="px-5 py-2 bg-[#1e61f0] text-white text-[12px] font-black rounded hover:bg-blue-700 transition-all disabled:opacity-40 shadow-sm"
+                                className="px-5 py-2 bg-[#1e61f0] text-white text-[12px] font-bold rounded hover:bg-blue-700 transition-all disabled:opacity-40 shadow-sm"
                             >
                                 Save and Select
                             </button>
                             <button
                                 onClick={() => { setShowAddForm(false); setNewName(''); setNewEmail(''); }}
-                                className="px-5 py-2 bg-white border border-slate-200 text-slate-600 text-[12px] font-black rounded hover:bg-slate-50 transition-all"
+                                className="px-5 py-2 bg-white border border-slate-200 text-slate-600 text-[12px] font-bold rounded hover:bg-slate-50 transition-all"
                             >
                                 Cancel
                             </button>
@@ -107,8 +216,8 @@ const ManageSalespersonsModal = ({ isOpen, onClose, salespersons, onSave, onSele
                 {/* Table */}
                 <div className="px-6">
                     <div className="grid grid-cols-2 py-3 border-b border-slate-100">
-                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Salesperson Name</span>
-                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Email</span>
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Salesperson Name</span>
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Email</span>
                     </div>
                     <div className="max-h-56 overflow-y-auto no-scrollbar">
                         {filtered.length === 0 ? (
@@ -179,6 +288,10 @@ export default function ProfessionalInvoiceView() {
 
   const [notes,      setNotes]      = useState('Thanks for your business.');
   const [termsText,  setTermsText]  = useState('');
+
+  const [customerSearch, setCustomerSearch] = useState('');
+  const [showCustomerDropdown, setShowCustomerDropdown] = useState(false);
+  const customerDropdownRef = React.useRef(null);
 
   const [isSaving, setIsSaving] = useState(false);
   const [modalConfig, setModalConfig] = useState({ isOpen: false, title: '', message: '', type: 'info', showCancel: false });
@@ -274,12 +387,46 @@ export default function ProfessionalInvoiceView() {
       if (salespersonDropdownRef.current && !salespersonDropdownRef.current.contains(event.target)) {
         setShowSalespersonDropdown(false);
       }
+      if (customerDropdownRef.current && !customerDropdownRef.current.contains(event.target)) {
+        setShowCustomerDropdown(false);
+      }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [companyId, id, location.state]);
 
+  // Restore draft state
+  useEffect(() => {
+    if (!id) {
+        try {
+            const draft = localStorage.getItem('invoice_draft');
+            if (draft) {
+                const parsed = JSON.parse(draft);
+                if (parsed.customerId) setCustomerId(parsed.customerId);
+                if (parsed.invoiceNo) setInvoiceNo(parsed.invoiceNo);
+                if (parsed.orderNo) setOrderNo(parsed.orderNo);
+                if (parsed.invoiceDate) setInvoiceDate(parsed.invoiceDate);
+                if (parsed.dueDate) setDueDate(parsed.dueDate);
+                if (parsed.terms) setTerms(parsed.terms);
+                if (parsed.salesperson) setSalesperson(parsed.salesperson);
+                if (parsed.subject) setSubject(parsed.subject);
+                if (parsed.lineItems) setLineItems(parsed.lineItems);
+                if (parsed.discountPercent) setDiscountPercent(parsed.discountPercent);
+                if (parsed.adjustment) setAdjustment(parsed.adjustment);
+                if (parsed.gstPercent) setGstPercent(parsed.gstPercent);
+                if (parsed.notes) setNotes(parsed.notes);
+                if (parsed.termsText) setTermsText(parsed.termsText);
+                localStorage.removeItem('invoice_draft');
+            }
+        } catch(e) {}
+    }
+  }, [id]);
+
   // ─── Calculation Logic ──────────────────────────────────────────
+  const filteredCustomers = useMemo(() => {
+    return customers.filter(c => c.name.toLowerCase().includes(customerSearch.toLowerCase()));
+  }, [customers, customerSearch]);
+
   const subTotal = useMemo(() => {
     return lineItems.reduce((acc, line) => acc + (parseFloat(line.quantity) * parseFloat(line.rate)), 0);
   }, [lineItems]);
@@ -354,372 +501,413 @@ export default function ProfessionalInvoiceView() {
   if (loading) return <div className="p-20 text-center font-bold text-slate-400">Loading Invoice Interface...</div>;
 
   return (
-    <div className="min-h-screen bg-white text-slate-700 font-sans p-10 max-w-6xl mx-auto">
-      <ManageSalespersonsModal
-        isOpen={showManageSalespersons}
-        onClose={() => setShowManageSalespersons(false)}
-        salespersons={salespersons}
-        onSave={setSalespersons}
-        onSelect={(name) => { setSalesperson(name); }}
-      />
-      {/* Header */}
-      <div className="flex items-center gap-4 mb-10">
-        <button onClick={() => navigate(-1)} className="text-slate-400 hover:text-slate-600"><ArrowLeft size={24} /></button>
-        <h1 className="text-2xl font-semibold text-slate-900">New Invoice</h1>
-      </div>
+    <div className="min-h-screen bg-[#f8fafc] p-12 flex flex-col items-center font-sans">
+      <div className="w-full max-w-5xl bg-white rounded-sm shadow-[0_10px_40px_rgba(0,0,0,0.04)] border border-slate-200 overflow-hidden animate-fade-in mb-20">
+        <header className="px-10 py-6 border-b border-slate-100 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <button 
+              onClick={() => window.history.length > 2 ? navigate(-1) : navigate('/sales-invoices')}
+              className="p-2 -ml-2 text-slate-400 hover:text-slate-900 hover:bg-slate-100 rounded-full transition-all"
+            >
+              <ArrowLeft size={20} />
+            </button>
+            <div className="w-10 h-10 bg-slate-900 rounded flex items-center justify-center text-white">
+              <FileText size={18} />
+            </div>
+            <h2 className="text-[18px] font-bold text-slate-900 tracking-tight uppercase">{id ? 'Edit Invoice' : 'New Invoice'}</h2>
+          </div>
+          <button onClick={() => navigate('/sales-invoices')} className="text-slate-300 hover:text-slate-600 transition-colors"><X size={24} /></button>
+        </header>
 
-      <div className="space-y-8">
-        
-        {/* Main Form Fields */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-20 gap-y-6">
+        <div className="p-12 space-y-12">
           
-          {/* Left Column */}
-          <div className="space-y-6">
-            <div className="flex items-start gap-4">
-              <label className="w-32 text-sm text-rose-500 font-medium pt-2">Customer Name*</label>
-              <div className="flex-1 flex gap-2">
-                  <select 
-                    value={customerId} 
-                    onChange={e => {
-                      if (e.target.value === 'NEW_CUSTOMER') {
-                        navigate('/customers/new');
-                      } else {
-                        setCustomerId(e.target.value);
-                      }
-                    }}
-                    className="flex-1 p-2 border border-slate-200 rounded text-sm focus:border-blue-500 outline-none"
-                  >
-                    <option value="">Select or add a customer</option>
-                    <option value="NEW_CUSTOMER" className="text-blue-600 font-bold">➕ Add New Customer</option>
-                    {customers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                  </select>
-                 <button className="p-2 bg-blue-600 text-white rounded"><Search size={16}/></button>
-              </div>
-            </div>
+          {/* Top Section: Grid Layout */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-20 gap-y-8">
+            <div className="space-y-6">
+              {/* Customer Name */}
+              <div className="flex flex-col gap-2">
+                <label className="text-[11px] font-bold text-red-500 uppercase tracking-widest">Customer Name*</label>
+                <div className="relative" ref={customerDropdownRef}>
+                  <div className="flex shadow-sm">
+                    <input 
+                      type="text"
+                      value={customerSearch}
+                      onChange={(e) => { setCustomerSearch(e.target.value); setShowCustomerDropdown(true); }}
+                      onFocus={() => setShowCustomerDropdown(true)}
+                      placeholder="Select or add a customer"
+                      className="flex-1 h-11 px-4 bg-slate-50 border border-slate-200 rounded-l text-[13px] font-bold text-slate-700 outline-none focus:bg-white focus:border-blue-500 transition-all"
+                    />
+                    <button className="px-4 bg-[#1e61f0] text-white rounded-r flex items-center justify-center">
+                      <Search size={16} />
+                    </button>
+                  </div>
 
-            <div className="flex items-center gap-4">
-              <label className="w-32 text-sm text-rose-500 font-medium">Invoice#*</label>
-              <div className="flex-1 flex items-center gap-2">
-                <input type="text" value={invoiceNo} readOnly className="flex-1 p-2 border border-slate-200 rounded text-sm bg-slate-50" />
-                <button 
-                  onClick={() => setModalConfig({
-                      isOpen: true,
-                      title: 'Configuration',
-                      message: 'Invoice Auto-numbering and prefix settings can be managed in the Settings panel.',
-                      type: 'info',
-                      showCancel: false,
-                      confirmText: 'Close'
-                  })}
-                  className="text-slate-400 hover:text-blue-600 transition-colors"
-                >
-                  <Settings size={18}/>
-                </button>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-4">
-              <label className="w-32 text-sm text-slate-500">Order Number</label>
-              <input type="text" value={orderNo} onChange={e => setOrderNo(e.target.value)} className="flex-1 p-2 border border-slate-200 rounded text-sm outline-none" />
-            </div>
-
-            <div className="flex items-center gap-4">
-              <label className="w-32 text-sm text-rose-500 font-medium">Invoice Date*</label>
-              <div className="flex-1">
-                 <input type="date" value={invoiceDate} onChange={e => setInvoiceDate(e.target.value)} className="w-full p-2 border border-slate-200 rounded text-sm outline-none focus:border-blue-500" />
-              </div>
-            </div>
-
-            <div className="flex items-center gap-4 relative">
-              <label className="w-32 text-sm text-slate-500">Terms</label>
-              <div className="flex-1 relative group/terms">
-                <select 
-                  value={terms} 
-                  onChange={e => {
-                    if (e.target.value === 'CONFIGURE') {
-                       // Logic to open terms configuration
-                    } else {
-                       setTerms(e.target.value);
-                    }
-                  }} 
-                  className="w-full p-2 border border-slate-200 rounded text-sm outline-none appearance-none bg-white pr-8"
-                >
-                   <option>Due on Receipt</option>
-                   <option>Net 15</option>
-                   <option>Net 30</option>
-                   <option>Net 45</option>
-                   <option>Net 60</option>
-                   <option>Due end of the month</option>
-                   <option>Due end of next month</option>
-                   <option disabled>──────────</option>
-                   <option value="CONFIGURE">⚙️ Configure Terms</option>
-                </select>
-                <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 font-black">
-                   <ChevronDown size={14} />
+                  {showCustomerDropdown && (
+                    <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-slate-200 shadow-xl rounded z-50 overflow-hidden">
+                      <div className="max-h-60 overflow-y-auto no-scrollbar">
+                        {filteredCustomers.length === 0 ? (
+                          <div className="p-4 text-center">
+                            <p className="text-[12px] text-slate-400 mb-2">No customers found</p>
+                            <button 
+                              onClick={() => {
+                                localStorage.setItem('invoice_draft', JSON.stringify({
+                                  customerId, invoiceNo, orderNo, invoiceDate, dueDate, terms, salesperson, subject, lineItems, discountPercent, adjustment, taxType, gstPercent, notes, termsText
+                                }));
+                                navigate('/customers/new', { state: { returnTo: location.pathname } });
+                              }} 
+                              className="text-[11px] text-blue-600 font-bold uppercase tracking-widest hover:underline"
+                            >+ Add New</button>
+                          </div>
+                        ) : (
+                          <div className="py-1">
+                            {filteredCustomers.map(c => (
+                              <div 
+                                key={c.id}
+                                onClick={() => { 
+                                  setCustomerId(c.id); 
+                                  setCustomerSearch(c.name); 
+                                  setShowCustomerDropdown(false); 
+                                }}
+                                className={`px-4 py-2 hover:bg-blue-50 cursor-pointer text-[14px] font-medium border-b border-slate-50 last:border-0 ${customerId === c.id ? 'bg-blue-50 text-blue-700' : 'text-slate-700'}`}
+                              >
+                                {c.name}
+                              </div>
+                            ))}
+                            <div 
+                              onClick={() => {
+                                localStorage.setItem('invoice_draft', JSON.stringify({
+                                  customerId, invoiceNo, orderNo, invoiceDate, dueDate, terms, salesperson, subject, lineItems, discountPercent, adjustment, taxType, gstPercent, notes, termsText
+                                }));
+                                navigate('/customers/new', { state: { returnTo: location.pathname } });
+                              }}
+                              className="px-4 py-2.5 bg-blue-50/50 hover:bg-blue-600 text-blue-600 hover:text-white font-bold text-[12px] uppercase tracking-widest cursor-pointer transition-colors"
+                            >
+                              + Add New Customer
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
+
+              {/* Invoice# */}
+              <div className="flex flex-col gap-2">
+                <label className="text-[11px] font-bold text-red-500 uppercase tracking-widest">Invoice#*</label>
+                <div className="relative">
+                  <input type="text" value={invoiceNo} readOnly className="w-full h-11 px-4 bg-slate-50 border border-slate-200 rounded text-[13px] font-bold text-slate-900 outline-none shadow-sm" />
+                  <div 
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 cursor-pointer hover:text-blue-500"
+                    onClick={() => setModalConfig({
+                        isOpen: true,
+                        title: 'Configuration',
+                        message: 'Invoice Auto-numbering and prefix settings can be managed in the Settings panel.',
+                        type: 'info',
+                        showCancel: false,
+                        confirmText: 'Close'
+                    })}
+                  >
+                    <Settings size={14}/>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Order Number</label>
+                <input type="text" value={orderNo} onChange={e => setOrderNo(e.target.value)} className="w-full h-11 px-4 bg-slate-50 border border-slate-200 rounded text-[13px] font-bold text-slate-700 outline-none focus:bg-white focus:border-blue-500 transition-all shadow-sm" />
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <label className="text-[11px] font-bold text-red-500 uppercase tracking-widest">Invoice Date*</label>
+                <input type="date" value={invoiceDate} onChange={e => setInvoiceDate(e.target.value)} className="w-full h-11 px-4 bg-slate-50 border border-slate-200 rounded text-[13px] font-bold text-slate-700 outline-none focus:bg-white focus:border-blue-500 transition-all shadow-sm" />
+              </div>
             </div>
 
-            <div className="flex items-center gap-4">
-              <label className="w-32 text-sm text-slate-500">Due Date</label>
-              <input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} className="flex-1 p-2 border border-slate-200 rounded text-sm bg-slate-50" />
-            </div>
-          </div>
+            <div className="space-y-6">
+              <div className="flex flex-col gap-2">
+                <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Due Date</label>
+                <input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} className="w-full h-11 px-4 bg-slate-50 border border-slate-200 rounded text-[13px] font-bold text-slate-700 outline-none focus:bg-white focus:border-blue-500 transition-all shadow-sm" />
+              </div>
 
-          {/* Right Column */}
-          <div className="space-y-6">
-            <div className="flex items-center gap-4">
-              <label className="w-32 text-sm text-slate-500">Accounts Receivable</label>
-              <select value={arLedger} onChange={e => setArLedger(e.target.value)} className="flex-1 p-2 border border-slate-200 rounded text-sm outline-none">
-                 <option>Accounts Receivable</option>
-              </select>
-            </div>
+              {/* Terms */}
+              <div className="flex flex-col gap-2">
+                <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Terms</label>
+                <div className="relative">
+                  <select 
+                    value={terms} 
+                    onChange={e => {
+                      if (e.target.value === 'CONFIGURE') {
+                         // Logic to open terms configuration
+                      } else {
+                         setTerms(e.target.value);
+                      }
+                    }} 
+                    className="w-full h-11 px-4 bg-slate-50 border border-slate-200 rounded text-[13px] font-bold text-slate-700 outline-none appearance-none focus:bg-white focus:border-blue-500 transition-all pr-9 shadow-sm"
+                  >
+                     <option>Due on Receipt</option>
+                     <option>Net 15</option>
+                     <option>Net 30</option>
+                     <option>Net 45</option>
+                     <option>Net 60</option>
+                     <option>Due end of the month</option>
+                     <option>Due end of next month</option>
+                     <option disabled>──────────</option>
+                     <option value="CONFIGURE">⚙️ Configure Terms</option>
+                  </select>
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                     <ChevronDown size={16} />
+                  </div>
+                </div>
+              </div>
 
-            <div className="flex items-center gap-4">
-              <label className="w-32 text-sm text-slate-500">Salesperson</label>
-              <div className="flex-1 relative" ref={salespersonDropdownRef}>
-                <button
-                  type="button"
-                  onClick={() => { setShowSalespersonDropdown(prev => !prev); setSalespersonSearch(''); }}
-                  className={`w-full h-9 px-3 pr-9 border rounded text-sm text-left shadow-sm flex items-center justify-between transition-colors
-                    ${showSalespersonDropdown ? 'border-blue-500 ring-2 ring-blue-100' : 'border-slate-200 bg-white'}
-                    ${salesperson ? 'text-slate-800' : 'text-slate-400 font-medium'}`}
-                >
-                  <span>{salesperson || 'Select or Add Salesperson'}</span>
-                  <ChevronDown size={14} className={`absolute right-3 text-slate-400 transition-transform ${showSalespersonDropdown ? 'rotate-180' : ''}`} />
-                </button>
+              {/* Salesperson */}
+              <div className="flex flex-col gap-2">
+                <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Salesperson</label>
+                <div className="relative" ref={salespersonDropdownRef}>
+                  <button
+                    type="button"
+                    onClick={() => { setShowSalespersonDropdown(prev => !prev); setSalespersonSearch(''); }}
+                    className={`w-full h-11 px-4 pr-9 border rounded text-[13px] font-bold text-left shadow-sm flex items-center justify-between transition-colors
+                      ${showSalespersonDropdown ? 'border-blue-500 ring-2 ring-blue-100' : 'border-slate-200 bg-slate-50'}
+                      ${salesperson ? 'text-slate-800' : 'text-slate-400 font-medium'}`}
+                  >
+                    <span>{salesperson || 'Select or Add Salesperson'}</span>
+                    <ChevronDown size={14} className={`absolute right-3 text-slate-400 transition-transform ${showSalespersonDropdown ? 'rotate-180' : ''}`} />
+                  </button>
 
-                {showSalespersonDropdown && (
-                  <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-slate-200 shadow-xl rounded-xl z-[200] overflow-hidden animate-fade-in">
-                    {/* Search */}
-                    <div className="p-2 border-b border-slate-100">
-                      <div className="relative">
-                        <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                        <input
-                          autoFocus
-                          value={salespersonSearch}
-                          onChange={e => setSalespersonSearch(e.target.value)}
-                          placeholder="Search"
-                          className="w-full pl-8 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-sm font-medium outline-none focus:border-blue-400 transition-all"
-                        />
+                  {showSalespersonDropdown && (
+                    <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-slate-200 shadow-xl rounded-xl z-[200] overflow-hidden animate-fade-in">
+                      <div className="p-2 border-b border-slate-100">
+                        <div className="relative">
+                          <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                          <input
+                            autoFocus
+                            value={salespersonSearch}
+                            onChange={e => setSalespersonSearch(e.target.value)}
+                            placeholder="Search"
+                            className="w-full pl-8 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-[13px] font-medium outline-none focus:border-blue-400 transition-all"
+                          />
+                        </div>
+                      </div>
+                      <div className="max-h-48 overflow-y-auto no-scrollbar">
+                        {salespersons.filter(s => !salespersonSearch || s.name.toLowerCase().includes(salespersonSearch.toLowerCase())).length === 0 ? (
+                          <div className="py-6 text-center text-xs text-slate-400 font-medium uppercase tracking-widest opacity-60">No Match Found</div>
+                        ) : (
+                          salespersons
+                            .filter(s => !salespersonSearch || s.name.toLowerCase().includes(salespersonSearch.toLowerCase()))
+                            .map(s => (
+                              <div
+                                key={s.id}
+                                onClick={() => { setSalesperson(s.name); setShowSalespersonDropdown(false); }}
+                                className={`px-4 py-2.5 cursor-pointer text-sm font-medium hover:bg-blue-50 transition-colors
+                                  ${salesperson === s.name ? 'bg-blue-50 text-blue-700 font-bold' : 'text-slate-700'}`}
+                              >
+                                {s.name}
+                              </div>
+                            ))
+                        )}
+                      </div>
+                      <div className="border-t border-slate-100">
+                        <button
+                          onClick={() => { setShowSalespersonDropdown(false); setShowManageSalespersons(true); }}
+                          className="w-full flex items-center gap-2 px-4 py-3 text-[13px] font-bold text-[#1e61f0] hover:bg-blue-50 transition-colors"
+                        >
+                          <Plus size={14} /> Manage Salespersons
+                        </button>
                       </div>
                     </div>
+                  )}
+                </div>
+              </div>
 
-                    {/* List */}
-                    <div className="max-h-48 overflow-y-auto no-scrollbar">
-                      {salespersons.filter(s => !salespersonSearch || s.name.toLowerCase().includes(salespersonSearch.toLowerCase())).length === 0 ? (
-                        <div className="py-6 text-center text-xs text-slate-400 font-medium uppercase tracking-widest opacity-60">No Match Found</div>
-                      ) : (
-                        salespersons
-                          .filter(s => !salespersonSearch || s.name.toLowerCase().includes(salespersonSearch.toLowerCase()))
-                          .map(s => (
-                            <div
-                              key={s.id}
-                              onClick={() => { setSalesperson(s.name); setShowSalespersonDropdown(false); }}
-                              className={`px-4 py-2.5 cursor-pointer text-sm font-medium hover:bg-blue-50 transition-colors
-                                ${salesperson === s.name ? 'bg-blue-50 text-blue-700 font-bold' : 'text-slate-700'}`}
-                            >
-                              {s.name}
-                            </div>
-                          ))
-                      )}
-                    </div>
-
-                    {/* Manage Link */}
-                    <div className="border-t border-slate-100">
-                      <button
-                        onClick={() => { setShowSalespersonDropdown(false); setShowManageSalespersons(true); }}
-                        className="w-full flex items-center gap-2 px-4 py-3 text-sm font-bold text-[#1e61f0] hover:bg-blue-50 transition-colors"
-                      >
-                        <Plus size={14} /> Manage Salespersons
-                      </button>
-                    </div>
-                  </div>
-                )}
+              {/* Subject */}
+              <div className="flex flex-col gap-2">
+                <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">Subject <Info size={14} className="text-slate-400" /></label>
+                <input 
+                  type="text"
+                  value={subject} 
+                  onChange={e => setSubject(e.target.value)} 
+                  placeholder="Let your customer know what this invoice is for"
+                  className="w-full h-11 px-4 bg-slate-50 border border-slate-200 rounded text-[13px] font-bold text-slate-700 outline-none focus:bg-white focus:border-blue-500 transition-all shadow-sm"
+                />
               </div>
             </div>
           </div>
-        </div>
 
-        {/* Subject */}
-        <div className="flex items-start gap-4">
-           <label className="w-32 text-sm text-slate-500 pt-2">Subject</label>
-           <textarea 
-             value={subject} 
-             onChange={e => setSubject(e.target.value)} 
-             placeholder="Let your customer know what this invoice is for"
-             className="flex-1 p-2 border border-slate-200 rounded text-sm outline-none h-16 resize-none"
-           />
-        </div>
-
-        {/* Item Table */}
-        <div className="mt-10">
-          <table className="w-full border-collapse">
-            <thead>
-              <tr className="bg-slate-50 text-slate-500 text-[11px] font-bold uppercase border-y border-slate-200">
-                <th className="px-4 py-3 text-left">Item Details</th>
-                <th className="px-4 py-3 text-right w-28">Quantity</th>
-                <th className="px-4 py-3 text-right w-36">Rate</th>
-                <th className="px-4 py-3 text-right w-40">Amount</th>
-                <th className="px-4 py-3 w-12"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {lineItems.map(line => (
-                <tr key={line.id} className="border-b border-slate-100 group">
-                  <td className="px-4 py-4">
-                    <div className="relative">
-                      <select 
-                        value={line.itemId} 
-                        onChange={e => {
-                          if (e.target.value === 'NEW_ITEM') {
-                             navigate('/inventory/new');
-                          } else {
-                             updateLine(line.id, 'itemId', e.target.value);
-                          }
-                        }}
-                        className="w-full p-2 border border-transparent hover:border-slate-200 border-dashed rounded text-sm outline-none bg-transparent appearance-none transition-all"
-                      >
-                        <option value="">Type or click to select an item.</option>
-                        {items.map(it => (
-                          <option key={it.id} value={it.id}>
-                            {it.name} (Rate: ₹{parseFloat(it.sellingPrice || 0).toLocaleString()})
-                          </option>
-                        ))}
-                        <option disabled>──────────</option>
-                        <option value="NEW_ITEM" className="text-blue-600 font-bold">➕ Add New Item</option>
-                      </select>
-                      <div className="text-[11px] text-slate-400 pl-2 mt-1">
-                        {items.find(i => i.id === line.itemId)?.description || 'Additional description...'}
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-4 py-4 text-right align-top">
-                    <input type="number" value={line.quantity} onChange={e => updateLine(line.id, 'quantity', e.target.value)} className="w-full p-2 text-right text-sm outline-none bg-transparent border border-transparent focus:border-slate-200 rounded transition-all" />
-                  </td>
-                  <td className="px-4 py-4 text-right align-top">
-                    <input type="number" value={line.rate} onChange={e => updateLine(line.id, 'rate', e.target.value)} className="w-full p-2 text-right text-sm outline-none bg-transparent border border-transparent focus:border-slate-200 rounded transition-all" />
-                  </td>
-                  <td className="px-4 py-4 text-right align-top">
-                    <div className="p-2 text-sm font-bold text-slate-900">
-                      {(line.quantity * line.rate).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                    </div>
-                  </td>
-                  <td className="px-4 py-4 text-center align-top">
-                    <button onClick={() => removeLine(line.id)} className="mt-2 text-slate-300 hover:text-rose-500 transition-all"><X size={16}/></button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          
-          <div className="mt-4 flex gap-4">
-            <button onClick={addLine} className="px-4 py-1 border border-slate-200 rounded text-xs font-medium text-slate-600 hover:bg-slate-50 flex items-center gap-1">
-              <Plus size={14} className="text-blue-600" /> Add New Row
+        {/* Item Table Section */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-[14px] font-bold text-slate-900 uppercase tracking-tight">Item Table</h3>
+            <button className="text-[11px] font-bold text-[#1e61f0] flex items-center gap-2 hover:bg-blue-50 px-3 py-1.5 rounded-lg transition-all">
+              <Settings size={14} /> Bulk Actions
             </button>
           </div>
+
+          <div className="border border-slate-200 rounded overflow-hidden shadow-sm bg-white">
+            <table className="w-full border-collapse">
+              <thead>
+                <tr className="bg-slate-50 border-b border-slate-200 text-[10px] text-slate-400 font-bold uppercase tracking-[0.1em]">
+                  <th className="px-6 py-4 text-left font-bold">Item Details</th>
+                  <th className="px-6 py-4 text-right w-28 font-bold">Quantity</th>
+                  <th className="px-6 py-4 text-right w-36 font-bold">Rate</th>
+                  <th className="px-6 py-4 text-right w-40 font-bold">Amount</th>
+                  <th className="w-12"></th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {lineItems.map(line => (
+                  <tr key={line.id} className="group hover:bg-slate-50/50 transition-colors">
+                    <td className="px-6 py-5">
+                      <ItemSearchSelector 
+                        items={items}
+                        value={items.find(it => it.id === line.itemId)?.name || ''}
+                        onChange={(selected) => {
+                          updateLine(line.id, 'itemId', selected.id);
+                          updateLine(line.id, 'rate', selected.sellingPrice || 0);
+                        }}
+                        placeholder="Type or click to select an item."
+                      />
+                      <div className="text-[11px] text-slate-400 pl-4 mt-1 italic">
+                        {items.find(i => i.id === line.itemId)?.description || 'No additional description'}
+                      </div>
+                    </td>
+                    <td className="px-6 py-5 align-top">
+                      <input type="number" value={line.quantity} onChange={e => updateLine(line.id, 'quantity', e.target.value)} className="w-full text-right bg-transparent border-none outline-none text-[13px] font-bold text-slate-600 focus:bg-white rounded transition-all" />
+                    </td>
+                    <td className="px-6 py-5 align-top font-mono">
+                      <input type="number" value={line.rate} onChange={e => updateLine(line.id, 'rate', e.target.value)} className="w-full text-right bg-transparent border-none outline-none text-[13px] font-bold text-slate-600 focus:bg-white rounded transition-all" />
+                    </td>
+                    <td className="px-6 py-5 text-right align-top font-mono">
+                      <span className="text-[13px] font-bold text-slate-900">{parseFloat(line.amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                    </td>
+                    <td className="px-4 py-5 text-center align-top">
+                      <button onClick={() => removeLine(line.id)} className="text-slate-300 hover:text-red-500 transition-colors"><Trash2 size={16}/></button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          
+          <button onClick={addLine} className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-[#1e61f0] text-[12px] font-bold rounded shadow-sm hover:bg-slate-50 transition-all">
+            <Plus size={14} strokeWidth={3}/> Add New Row
+          </button>
         </div>
 
-        {/* Totals & Notes */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-20 pt-10">
-           {/* Left: Notes */}
-           <div className="space-y-6">
-              <div className="space-y-2">
-                 <label className="text-sm font-medium text-slate-500">Customer Notes</label>
-                 <textarea value={notes} onChange={e => setNotes(e.target.value)} className="w-full p-2 border border-slate-200 rounded text-sm outline-none h-24 italic" />
-                 <p className="text-[10px] text-slate-400 italic">Will be displayed on the invoice</p>
+        {/* Bottom Section */}
+        <div className="flex justify-between items-start pt-12 border-t border-slate-100 gap-20">
+           <div className="flex-1 max-w-md space-y-8">
+              <div className="space-y-3">
+                 <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Customer Notes</label>
+                 <textarea 
+                    value={notes} 
+                    onChange={e => setNotes(e.target.value)} 
+                    placeholder="Will be displayed on the invoice"
+                    className="w-full h-24 p-4 bg-slate-50 border border-slate-200 rounded text-[13px] font-medium text-slate-600 outline-none focus:bg-white focus:border-blue-500 transition-all resize-none shadow-sm" 
+                 />
+              </div>
+
+              <div className="space-y-3">
+                 <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Terms & Conditions</label>
+                 <textarea 
+                   value={termsText} 
+                   onChange={e => setTermsText(e.target.value)} 
+                   placeholder="Business terms..." 
+                   className="w-full h-24 bg-slate-50 border border-slate-200 rounded text-[13px] font-medium text-slate-600 outline-none focus:bg-white focus:border-blue-500 transition-all resize-none shadow-sm" 
+                 />
               </div>
            </div>
 
-           {/* Right: Totals */}
-           <div className="space-y-4 bg-slate-50/50 p-6 rounded-lg">
-              <div className="flex justify-between text-sm">
-                <span>Sub Total</span>
-                <span className="font-medium">{subTotal.toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between items-center gap-4 text-sm">
-                <div className="flex items-center gap-2">
-                   <span>Discount</span>
-                   <input type="number" value={discountPercent} onChange={e => setDiscountPercent(e.target.value)} className="w-12 p-1 border border-slate-200 rounded text-xs text-right" />
-                   <span>%</span>
-                </div>
-                <span className="font-medium text-slate-500">{discountAmount.toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between items-center gap-4 text-sm">
-                <div className="flex items-center gap-2">
-                   <span>GST</span>
-                   <select 
-                     value={gstPercent} 
-                     onChange={e => setGstPercent(parseFloat(e.target.value))}
-                     className="ml-2 p-1 border border-slate-200 rounded text-xs outline-none"
-                   >
-                      <option value="0">GST (0%)</option>
-                      <option value="5">GST (5%)</option>
-                      <option value="12">GST (12%)</option>
-                      <option value="18">GST (18%)</option>
-                      <option value="28">GST (28%)</option>
-                   </select>
-                </div>
-                <span className="font-medium text-slate-500">{gstAmount.toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between items-center text-sm">
-                <div className="flex items-center gap-2 border-b border-slate-200 border-dashed">
-                   <span>Adjustment</span>
-                   <Info size={12} className="text-slate-400" />
-                </div>
-                <input type="number" value={adjustment} onChange={e => setAdjustment(e.target.value)} className="w-24 p-1 border border-slate-200 rounded text-right text-xs" />
+           <div className="w-80 space-y-4">
+              <div className="flex justify-between text-[13px]">
+                <span className="font-bold text-slate-500 uppercase tracking-widest">Sub Total</span>
+                <span className="font-bold text-slate-900 font-mono">₹{subTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
               </div>
 
-              <div className="flex justify-between text-lg font-bold text-slate-900 pt-4 border-t border-slate-200">
-                <span>Total ( ₹ )</span>
-                <span>{total.toFixed(2)}</span>
+              <div className="flex justify-between items-center text-[13px]">
+                <label className="text-slate-500 font-bold uppercase tracking-widest">Discount (%)</label>
+                <div className="flex items-center gap-4">
+                   <input type="number" value={discountPercent} onChange={e => setDiscountPercent(e.target.value)} className="w-16 h-8 px-2 bg-slate-50 border border-slate-200 rounded text-right font-bold outline-none" />
+                </div>
+              </div>
+
+              <div className="flex justify-between items-center text-[13px]">
+                <label className="text-slate-500 font-bold uppercase tracking-widest">Tax / GST (%)</label>
+                <select 
+                  value={gstPercent} 
+                  onChange={e => setGstPercent(parseFloat(e.target.value))}
+                  className="w-24 h-8 px-2 bg-slate-50 border border-slate-200 rounded text-[12px] font-bold text-slate-700 outline-none"
+                >
+                   <option value="0">0%</option>
+                   <option value="5">5%</option>
+                   <option value="12">12%</option>
+                   <option value="18">18%</option>
+                   <option value="28">28%</option>
+                </select>
+              </div>
+
+              <div className="flex justify-between items-center text-[13px]">
+                <span className="text-slate-500 font-bold uppercase tracking-widest">Adjustment</span>
+                <input type="number" value={adjustment} onChange={e => setAdjustment(e.target.value)} className="w-24 h-8 px-2 bg-slate-50 border border-slate-200 rounded text-right font-bold outline-none" />
+              </div>
+
+              <div className="pt-6 border-t border-slate-200 flex justify-between items-center bg-slate-50 -mx-8 px-8 py-4 mt-6">
+                <span className="text-[14px] font-bold text-slate-500 uppercase tracking-widest">Total Amount</span>
+                <span className="text-[24px] font-bold text-[#1e61f0] tracking-tighter font-mono">₹{total.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
               </div>
            </div>
-        </div>
-
-        {/* Footer */}
-        <div className="pt-10 space-y-4">
-           <div className="space-y-1">
-             <label className="text-sm font-medium text-slate-500">Terms & Conditions</label>
-             <textarea value={termsText} onChange={e => setTermsText(e.target.value)} placeholder="Enter the terms and conditions of your business to be displayed in your transaction" className="w-full p-2 border border-slate-200 rounded text-sm outline-none h-20" />
-           </div>
-        </div>
-
-        {/* Action Buttons */}
-        <div className="sticky bottom-0 bg-white border-t border-slate-100 py-4 flex gap-4">
-          {status === 'Confirmed' ? (
-            <div className="flex items-center gap-2 px-4 py-2 bg-emerald-50 text-emerald-600 rounded-xl border border-emerald-100 animate-fade-in shadow-sm">
-              <Check size={18} strokeWidth={3} />
-              <span className="text-[13px] font-black uppercase tracking-widest">RECORDED</span>
-            </div>
-          ) : (
-            <>
-              <button 
-                onClick={() => handleSave('Draft')}
-                className="flex items-center gap-2 px-6 py-2.5 bg-white border border-slate-200 rounded-xl text-[13px] font-black text-slate-600 hover:bg-slate-50 hover:border-slate-300 transition-all shadow-sm"
-              >
-                <File size={16} /> Save as Draft
-              </button>
-              <button 
-                onClick={() => handleSave('Confirmed')}
-                className="px-6 py-2.5 bg-blue-600 text-white rounded-xl font-black text-[13px] hover:bg-blue-700 transition-all shadow-sm shadow-blue-200"
-              >
-                Save and Send
-              </button>
-            </>
-          )}
-           <button onClick={() => navigate(-1)} className="px-6 py-2 border border-slate-200 rounded text-sm font-medium hover:bg-slate-50">Cancel</button>
         </div>
       </div>
-      
-      <ConfirmModal 
-        isOpen={modalConfig.isOpen}
-        onClose={() => setModalConfig({ ...modalConfig, isOpen: false })}
-        title={modalConfig.title}
-        message={modalConfig.message}
-        type={modalConfig.type}
-        showCancel={modalConfig.showCancel}
-        confirmText={modalConfig.confirmText}
-      />
+    </div>
+
+    {/* Footer Action Bar */}
+    <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-100 px-12 py-4 flex items-center justify-between z-[100] shadow-[0_-10px_40px_rgba(0,0,0,0.04)]">
+      <div className="flex items-center gap-2 text-slate-400 text-[11px] font-bold uppercase tracking-widest">
+        <ShieldCheck size={14} className="text-emerald-500" />
+        Encrypted & Secure Record Storage
+      </div>
+      <div className="flex items-center gap-4">
+        <button 
+          onClick={() => navigate('/sales-invoices')}
+          className="px-6 py-2.5 text-slate-500 text-[13px] font-bold hover:bg-slate-100 rounded transition-all"
+        >
+          Discard
+        </button>
+        <button 
+          onClick={() => handleSave('Draft')}
+          className="px-6 py-2.5 bg-slate-100 text-slate-600 text-[13px] font-bold hover:bg-slate-200 rounded transition-all"
+        >
+          Save as Draft
+        </button>
+        <button 
+          onClick={() => handleSave('Confirmed')}
+          disabled={isSaving}
+          className="px-10 py-2.5 bg-[#1e61f0] text-white rounded font-bold text-[13px] hover:bg-blue-700 shadow-xl shadow-blue-500/20 transition-all uppercase tracking-widest flex items-center gap-2"
+        >
+          {isSaving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+          {isSaving ? 'Saving...' : 'Save and Send'}
+        </button>
+      </div>
+    </div>
+
+    <ManageSalespersonsModal
+      isOpen={showManageSalespersons}
+      onClose={() => setShowManageSalespersons(false)}
+      salespersons={salespersons}
+      onSave={setSalespersons}
+      onSelect={(name) => { setSalesperson(name); }}
+    />
+
+    <ConfirmModal 
+      isOpen={modalConfig.isOpen}
+      onClose={() => setModalConfig({ ...modalConfig, isOpen: false })}
+      title={modalConfig.title}
+      message={modalConfig.message}
+      type={modalConfig.type}
+      showCancel={modalConfig.showCancel}
+      confirmText={modalConfig.confirmText}
+    />
     </div>
   );
 }
