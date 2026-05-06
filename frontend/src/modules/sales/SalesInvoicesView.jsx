@@ -54,7 +54,7 @@ const InvoicesList = ({ invoices, loading, selectedId, onSelect, navigate, onRef
             <div className="p-4 border-b border-slate-100 space-y-4">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                        <button className="text-[16px] font-black text-slate-900 flex items-center gap-1.5 uppercase tracking-tighter">
+                        <button className="text-[16px] font-bold text-slate-900 flex items-center gap-1.5 uppercase tracking-tight">
                             Unpaid Invoices <ChevronDown size={16} className="text-slate-400" />
                         </button>
                     </div>
@@ -88,7 +88,7 @@ const InvoicesList = ({ invoices, loading, selectedId, onSelect, navigate, onRef
                 {loading ? (
                     <div className="p-10 text-center space-y-3 opacity-40">
                         <Loader2 size={24} className="animate-spin mx-auto text-blue-600" />
-                        <p className="text-[11px] font-black uppercase tracking-widest">Hydrating Records...</p>
+                        <p className="text-[11px] font-bold uppercase tracking-widest">Hydrating Records...</p>
                     </div>
                 ) : filtered.length === 0 ? (
                     <div className="p-20 text-center opacity-30 italic text-[13px]">No matching invoices</div>
@@ -104,10 +104,10 @@ const InvoicesList = ({ invoices, loading, selectedId, onSelect, navigate, onRef
                                         ${isSelected ? 'bg-blue-50 border-l-blue-600' : 'hover:bg-slate-50 border-l-transparent'}`}
                                 >
                                     <div className="flex justify-between items-start">
-                                        <div className={`text-[13px] font-black tracking-tight ${isSelected ? 'text-blue-700' : 'text-slate-900'}`}>
+                                        <div className={`text-[13px] font-bold tracking-tight ${isSelected ? 'text-blue-700' : 'text-slate-900'}`}>
                                             {inv.CustomerLedger?.name}
                                         </div>
-                                        <div className="text-[14px] font-black text-slate-900 tracking-tighter">
+                                        <div className="text-[14px] font-bold text-slate-900 tracking-tight">
                                             ₹{parseFloat(inv.totalAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                                         </div>
                                     </div>
@@ -118,7 +118,7 @@ const InvoicesList = ({ invoices, loading, selectedId, onSelect, navigate, onRef
                                         </span>
                                     </div>
                                     {inv.dueDate && (
-                                        <div className="text-[10px] font-black text-rose-500 uppercase tracking-tighter">
+                                        <div className="text-[10px] font-bold text-rose-500 uppercase tracking-widest">
                                             DUE TODAY
                                         </div>
                                     )}
@@ -172,7 +172,7 @@ const InvoiceEmailView = ({ invoice, company, onCancel, onSent }) => {
         <div className="flex-1 bg-[#f8fafc] flex flex-col h-full animate-fade-in no-print">
             <header className="px-10 py-6 bg-white border-b border-slate-200 flex items-center justify-between">
                 <div>
-                   <h2 className="text-2xl font-black text-slate-900 italic tracking-tighter">Email To {invoice.CustomerLedger?.name}</h2>
+                   <h2 className="text-2xl font-bold text-slate-900 italic tracking-tight">Email To {invoice.CustomerLedger?.name}</h2>
                 </div>
                 <button onClick={onCancel} className="p-2 hover:bg-slate-50 rounded-full transition-colors text-slate-400">
                     <X size={24} />
@@ -185,22 +185,22 @@ const InvoiceEmailView = ({ invoice, company, onCancel, onSent }) => {
                     <div className="bg-white rounded-2xl border border-slate-200 shadow-xl overflow-hidden">
                         <div className="p-6 space-y-4">
                             <div className="flex items-center gap-4">
-                                <label className="w-20 text-[11px] font-black text-slate-400 uppercase tracking-widest">From</label>
+                                <label className="w-20 text-[11px] font-bold text-slate-400 uppercase tracking-widest">From</label>
                                 <div className="flex-1 p-2 bg-slate-50 border border-slate-100 rounded text-[13px] font-bold text-slate-500 italic">
                                     Organization &lt;calbuy160@gmail.com&gt;
                                 </div>
                             </div>
                             <div className="flex items-center gap-4">
-                                <label className="w-20 text-[11px] font-black text-slate-400 uppercase tracking-widest">Send To</label>
+                                <label className="w-20 text-[11px] font-bold text-slate-400 uppercase tracking-widest">Send To</label>
                                 <div className="flex-1 flex gap-2">
-                                   <div className="flex-1 p-2 border border-slate-200 rounded-lg text-[13px] font-black text-slate-700 bg-white flex items-center gap-2">
+                                   <div className="flex-1 p-2 border border-slate-200 rounded-lg text-[13px] font-bold text-slate-700 bg-white flex items-center gap-2">
                                       <span className="bg-slate-100 px-2 py-0.5 rounded text-slate-500 text-[11px]">{invoice.CustomerLedger?.name?.[0]}</span>
                                       {invoice.CustomerLedger?.name} &lt;{to}&gt;
                                    </div>
                                 </div>
                             </div>
                             <div className="flex items-center gap-4">
-                                <label className="w-20 text-[11px] font-black text-slate-400 uppercase tracking-widest">Subject</label>
+                                <label className="w-20 text-[11px] font-bold text-slate-400 uppercase tracking-widest">Subject</label>
                                 <input 
                                     type="text" 
                                     value={subject}
@@ -222,16 +222,16 @@ const InvoiceEmailView = ({ invoice, company, onCancel, onSent }) => {
                              <div className="pt-4 border-t border-slate-100 bg-slate-50 -mx-6 -mb-6 p-6">
                                  <div className="flex flex-wrap items-center gap-3">
                                     <div className="bg-white border border-slate-200 rounded-lg p-2 pr-4 flex items-center gap-3 shadow-sm group hover:border-blue-200 transition-all">
-                                        <div className="w-8 h-10 bg-rose-50 rounded flex items-center justify-center text-rose-500 font-black text-[8px] uppercase tracking-tighter shadow-inner">
+                                        <div className="w-8 h-10 bg-rose-50 rounded flex items-center justify-center text-rose-500 font-bold text-[8px] uppercase tracking-widest shadow-inner">
                                             PDF
                                         </div>
                                         <div className="space-y-0.5">
-                                            <p className="text-[11px] font-black text-slate-700 tracking-tight">Invoice_{invoice.invoiceNumber}.pdf</p>
+                                            <p className="text-[11px] font-bold text-slate-700 tracking-tight">Invoice_{invoice.invoiceNumber}.pdf</p>
                                             <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Automatic Attachment</p>
                                         </div>
                                     </div>
                                     <div className="w-px h-10 bg-slate-200 mx-2" />
-                                    <button className="text-[12px] font-black text-blue-600 hover:underline uppercase tracking-widest flex items-center gap-2">
+                                    <button className="text-[12px] font-bold text-blue-600 hover:underline uppercase tracking-widest flex items-center gap-2">
                                        <Plus size={14} /> Add More
                                     </button>
                                  </div>
@@ -243,21 +243,21 @@ const InvoiceEmailView = ({ invoice, company, onCancel, onSent }) => {
                         <button 
                             onClick={handleSend}
                             disabled={isSending}
-                            className="px-10 py-3 bg-blue-600 text-white rounded-xl text-[14px] font-black hover:bg-blue-700 shadow-2xl shadow-blue-600/30 transition-all flex items-center gap-2 uppercase tracking-widest"
+                            className="px-10 py-3 bg-blue-600 text-white rounded-xl text-[14px] font-bold hover:bg-blue-700 shadow-2xl shadow-blue-600/30 transition-all flex items-center gap-2 uppercase tracking-widest"
                         >
                             {isSending ? <Loader2 size={18} className="animate-spin" /> : <><Send size={18}/> Send Message</>}
                         </button>
-                        <button onClick={onCancel} className="text-[13px] font-black text-slate-400 hover:text-slate-900 tracking-widest uppercase">Cancel</button>
+                        <button onClick={onCancel} className="text-[13px] font-bold text-slate-400 hover:text-slate-900 tracking-widest uppercase">Cancel</button>
                     </div>
                 </div>
 
                 {/* Live Preview Panel (Reflecting user's text request) */}
                 <div className="flex-1 space-y-4">
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Live Template Preview</p>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Live Template Preview</p>
                     <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl p-12 space-y-12 min-h-[700px]">
                         {/* Header Box */}
                         <div className="bg-blue-600 text-white p-8 rounded-2xl text-center shadow-xl shadow-blue-100">
-                             <h4 className="text-[18px] font-black uppercase tracking-widest opacity-80">Invoice #{invoice.invoiceNumber}</h4>
+                             <h4 className="text-[18px] font-bold uppercase tracking-widest opacity-80">Invoice #{invoice.invoiceNumber}</h4>
                         </div>
 
                         {/* Content */}
@@ -270,23 +270,23 @@ const InvoiceEmailView = ({ invoice, company, onCancel, onSent }) => {
                             {/* Requested Template Block */}
                             <div className="bg-[#fffcf0] border border-amber-100 py-10 px-6 space-y-6">
                                 <div>
-                                    <p className="text-[11px] font-black text-slate-400 uppercase tracking-[0.3em] mb-2">Invoice Amount</p>
-                                    <h1 className="text-4xl font-black text-slate-900 italic tracking-tighter">₹ {parseFloat(invoice.totalAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</h1>
+                                    <p className="text-[11px] font-bold text-slate-400 uppercase tracking-[0.3em] mb-2">Invoice Amount</p>
+                                    <h1 className="text-4xl font-bold text-slate-900 italic tracking-tight">₹ {parseFloat(invoice.totalAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</h1>
                                 </div>
                                 
                                 <div className="grid grid-cols-2 gap-y-3 max-w-[280px] mx-auto pt-6 border-t border-amber-200/50">
                                     <div className="text-left text-[12px] font-bold text-slate-400">Invoice No</div>
-                                    <div className="text-right text-[12px] font-black text-slate-900">{invoice.invoiceNumber}</div>
+                                    <div className="text-right text-[12px] font-bold text-slate-900">{invoice.invoiceNumber}</div>
                                     
                                     <div className="text-left text-[12px] font-bold text-slate-400">Invoice Date</div>
-                                    <div className="text-right text-[12px] font-black text-slate-900">{new Date(invoice.date).toLocaleDateString('en-GB')}</div>
+                                    <div className="text-right text-[12px] font-bold text-slate-900">{new Date(invoice.date).toLocaleDateString('en-GB')}</div>
                                     
                                     <div className="text-left text-[12px] font-bold text-slate-400">Due Date</div>
-                                    <div className="text-right text-[12px] font-black text-slate-900">{new Date(invoice.dueDate || invoice.date).toLocaleDateString('en-GB')}</div>
+                                    <div className="text-right text-[12px] font-bold text-slate-900">{new Date(invoice.dueDate || invoice.date).toLocaleDateString('en-GB')}</div>
                                 </div>
 
                                 <div className="pt-8">
-                                    <button className="px-10 py-4 bg-emerald-600 text-white rounded-xl text-[14px] font-black hover:bg-emerald-700 shadow-2xl shadow-emerald-100 transition-all uppercase tracking-widest">
+                                    <button className="px-10 py-4 bg-emerald-600 text-white rounded-xl text-[14px] font-bold hover:bg-emerald-700 shadow-2xl shadow-emerald-100 transition-all uppercase tracking-widest">
                                         PAY NOW
                                     </button>
                                 </div>
@@ -296,7 +296,7 @@ const InvoiceEmailView = ({ invoice, company, onCancel, onSent }) => {
                         {/* Regards */}
                         <div className="pt-10 border-t border-slate-100">
                              <p className="text-slate-400 text-[13px] italic">Regards,</p>
-                             <p className="text-slate-900 font-black text-[15px] italic tracking-tight">{senderName}</p>
+                             <p className="text-slate-900 font-bold text-[15px] italic tracking-tight">{senderName}</p>
                              <p className="text-slate-500 font-bold text-[13px] uppercase tracking-widest">{companyName}</p>
                         </div>
                     </div>
@@ -337,8 +337,8 @@ const InvoiceDetail = ({ id, company, navigate, onRefresh }) => {
         }
     };
 
-    if (loading) return <div className="flex-1 flex items-center justify-center text-slate-300 font-black animate-pulse">HYDRATING DOCUMENT...</div>;
-    if (!invoice) return <div className="flex-1 flex items-center justify-center text-slate-200 text-4xl font-black uppercase italic tracking-tighter opacity-20">Document Not Found</div>;
+    if (loading) return <div className="flex-1 flex items-center justify-center text-slate-300 font-bold animate-pulse">HYDRATING DOCUMENT...</div>;
+    if (!invoice) return <div className="flex-1 flex items-center justify-center text-slate-200 text-4xl font-bold uppercase italic tracking-tight opacity-20">Document Not Found</div>;
 
     if (currentView === 'email') return <InvoiceEmailView invoice={invoice} company={company} onCancel={() => setCurrentView('detail')} onSent={() => { addNotification('Email queued for delivery', 'success'); setCurrentView('detail'); }} />;
 
@@ -353,7 +353,7 @@ const InvoiceDetail = ({ id, company, navigate, onRefresh }) => {
                        <ArrowLeft size={16} /> All Invoices
                     </button>
                     <span className="text-slate-300">|</span>
-                    <span className="text-[13px] font-black text-slate-800">{invoice.invoiceNumber}</span>
+                    <span className="text-[13px] font-bold text-slate-800">{invoice.invoiceNumber}</span>
                 </div>
                 <div className="flex items-center gap-3">
                     <button className="p-2 text-slate-400 hover:text-slate-600 transition-colors"><Edit2 size={16}/></button>
@@ -366,10 +366,10 @@ const InvoiceDetail = ({ id, company, navigate, onRefresh }) => {
 
             {/* Sub-Toolbar (Zoho Style) */}
             <div className="px-6 py-2.5 bg-white border-b border-slate-100 flex items-center gap-3 no-print">
-                 <button onClick={() => navigate(`/sales/edit-invoice/${invoice.id}`)} className="px-3 py-1.5 border border-slate-200 rounded text-[12px] font-black text-slate-600 hover:bg-slate-50 transition-all uppercase tracking-widest shadow-sm">Edit</button>
-                 <button onClick={() => setCurrentView('email')} className="px-3 py-1.5 border border-slate-200 rounded text-[12px] font-black text-slate-600 hover:bg-slate-50 transition-all uppercase tracking-widest shadow-sm flex items-center gap-2"><Send size={14}/> Send Email</button>
-                 <button className="px-3 py-1.5 border border-slate-200 rounded text-[12px] font-black text-slate-600 hover:bg-slate-50 transition-all uppercase tracking-widest shadow-sm">PDF/Print <ChevronDown size={14}/></button>
-                 <button className="px-3 py-1.5 border border-slate-200 rounded text-[12px] font-black text-slate-600 hover:bg-slate-50 transition-all uppercase tracking-widest shadow-sm flex items-center gap-2"><DollarSign size={14}/> Record Payment</button>
+                 <button onClick={() => navigate(`/sales/edit-invoice/${invoice.id}`)} className="px-3 py-1.5 border border-slate-200 rounded text-[12px] font-bold text-slate-600 hover:bg-slate-50 transition-all uppercase tracking-widest shadow-sm">Edit</button>
+                 <button onClick={() => setCurrentView('email')} className="px-3 py-1.5 border border-slate-200 rounded text-[12px] font-bold text-slate-600 hover:bg-slate-50 transition-all uppercase tracking-widest shadow-sm flex items-center gap-2"><Send size={14}/> Send Email</button>
+                 <button className="px-3 py-1.5 border border-slate-200 rounded text-[12px] font-bold text-slate-600 hover:bg-slate-50 transition-all uppercase tracking-widest shadow-sm">PDF/Print <ChevronDown size={14}/></button>
+                 <button className="px-3 py-1.5 border border-slate-200 rounded text-[12px] font-bold text-slate-600 hover:bg-slate-50 transition-all uppercase tracking-widest shadow-sm flex items-center gap-2"><DollarSign size={14}/> Record Payment</button>
             </div>
 
             {/* Document Scrolling Area */}
@@ -378,7 +378,7 @@ const InvoiceDetail = ({ id, company, navigate, onRefresh }) => {
                  <div className="bg-white shadow-[0_25px_60px_rgba(0,0,0,0.1)] rounded-md w-full max-w-4xl p-16 relative border border-slate-100 min-h-[1050px] animate-fade-up">
                     
                     {/* Status Ribbon */}
-                    <div className={`absolute top-8 -right-12 w-48 py-2 text-[10px] font-black uppercase tracking-[0.2em] transform rotate-45 text-center shadow-lg text-white no-print
+                    <div className={`absolute top-8 -right-12 w-48 py-2 text-[10px] font-bold uppercase tracking-[0.2em] transform rotate-45 text-center shadow-lg text-white no-print
                         ${invoice.status === 'Confirmed' || invoice.status === 'Sent' ? 'bg-emerald-600' : 'bg-slate-400'}`}>
                         {invoice.status?.toUpperCase() || 'DRAFT'}
                     </div>
@@ -386,17 +386,17 @@ const InvoiceDetail = ({ id, company, navigate, onRefresh }) => {
                     {/* Header */}
                     <div className="flex justify-between items-start mb-16">
                         <div className="space-y-4">
-                            <div className="w-14 h-14 bg-slate-900 rounded-2xl flex items-center justify-center text-white text-2xl font-black shadow-xl">
+                            <div className="w-14 h-14 bg-slate-900 rounded-2xl flex items-center justify-center text-white text-2xl font-bold shadow-xl">
                                 {company?.name?.[0]?.toUpperCase() || 'C'}
                             </div>
                             <div>
-                                <h3 className="text-xl font-black text-slate-900 tracking-tighter uppercase">{company?.name || 'Indus CAI private Ltd'}</h3>
+                                <h3 className="text-xl font-bold text-slate-900 tracking-tight uppercase">{company?.name || 'Indus CAI private Ltd'}</h3>
                                 <p className="text-[12px] text-slate-400 font-bold uppercase tracking-widest mt-1">Tamil Nadu, India</p>
                                 <p className="text-[12px] text-blue-600 font-bold lowercase tracking-wide mt-0.5">{company?.email || 'support@induscai.com'}</p>
                             </div>
                         </div>
                         <div className="text-right pt-6">
-                            <h1 className="text-5xl font-black text-slate-900 tracking-tighter uppercase opacity-90 italic">TAX INVOICE</h1>
+                            <h1 className="text-5xl font-bold text-slate-900 tracking-tight uppercase opacity-90 italic">TAX INVOICE</h1>
                             <div className="h-1.5 w-32 bg-blue-600 ml-auto mt-4 rounded-full"></div>
                         </div>
                     </div>
@@ -405,8 +405,8 @@ const InvoiceDetail = ({ id, company, navigate, onRefresh }) => {
                     <div className="grid grid-cols-12 gap-10 mb-16 border-y border-slate-100 py-10">
                         <div className="col-span-7 space-y-6">
                             <div className="space-y-1">
-                                <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Bill To</p>
-                                <h4 className="text-[18px] font-black text-blue-600 leading-tight">
+                                <p className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">Bill To</p>
+                                <h4 className="text-[18px] font-bold text-blue-600 leading-tight">
                                     {invoice.CustomerLedger?.name || 'Customer Name'}
                                 </h4>
                                 <div className="text-[12px] text-slate-500 font-medium leading-relaxed max-w-[320px] whitespace-pre-wrap">
@@ -416,17 +416,17 @@ const InvoiceDetail = ({ id, company, navigate, onRefresh }) => {
                         </div>
                         <div className="col-span-5 flex flex-col items-end gap-3 text-right">
                             <div className="grid grid-cols-2 gap-x-8 gap-y-3 w-fit">
-                                <span className="text-[11px] font-black text-slate-300 uppercase tracking-widest pt-1">Invoice Number</span>
-                                <span className="text-[14px] font-black text-slate-900">: {invoice.invoiceNumber}</span>
+                                <span className="text-[11px] font-bold text-slate-300 uppercase tracking-widest pt-1">Invoice Number</span>
+                                <span className="text-[14px] font-bold text-slate-900">: {invoice.invoiceNumber}</span>
                                 
-                                <span className="text-[11px] font-black text-slate-300 uppercase tracking-widest pt-1">Invoice Date</span>
-                                <span className="text-[14px] font-black text-slate-900">: {new Date(invoice.date).toLocaleDateString('en-GB')}</span>
+                                <span className="text-[11px] font-bold text-slate-300 uppercase tracking-widest pt-1">Invoice Date</span>
+                                <span className="text-[14px] font-bold text-slate-900">: {new Date(invoice.date).toLocaleDateString('en-GB')}</span>
                                 
-                                <span className="text-[11px] font-black text-slate-300 uppercase tracking-widest pt-1">Terms</span>
-                                <span className="text-[14px] font-black text-slate-900">: {invoice.terms || 'Due on Receipt'}</span>
+                                <span className="text-[11px] font-bold text-slate-300 uppercase tracking-widest pt-1">Terms</span>
+                                <span className="text-[14px] font-bold text-slate-900">: {invoice.terms || 'Due on Receipt'}</span>
                                 
-                                <span className="text-[11px] font-black text-slate-300 uppercase tracking-widest pt-1">Due Date</span>
-                                <span className="text-[14px] font-black text-slate-900">: {new Date(invoice.dueDate || invoice.date).toLocaleDateString('en-GB')}</span>
+                                <span className="text-[11px] font-bold text-slate-300 uppercase tracking-widest pt-1">Due Date</span>
+                                <span className="text-[14px] font-bold text-slate-900">: {new Date(invoice.dueDate || invoice.date).toLocaleDateString('en-GB')}</span>
                             </div>
                         </div>
                     </div>
@@ -435,7 +435,7 @@ const InvoiceDetail = ({ id, company, navigate, onRefresh }) => {
                     <div className="mb-10 overflow-hidden border border-slate-200 rounded-sm">
                         <table className="w-full border-collapse">
                             <thead>
-                                <tr className="bg-slate-900 text-[10px] font-black text-white uppercase tracking-widest">
+                                <tr className="bg-slate-900 text-[10px] font-bold text-white uppercase tracking-widest">
                                     <th className="py-4 px-4 w-12 text-center">#</th>
                                     <th className="py-4 px-4 text-left">Item & Description</th>
                                     <th className="py-4 px-4 w-24 text-center">Qty</th>
@@ -448,12 +448,12 @@ const InvoiceDetail = ({ id, company, navigate, onRefresh }) => {
                                     <tr key={idx} className="text-[12px] font-medium text-slate-700 hover:bg-slate-50 transition-colors">
                                         <td className="p-4 text-center font-bold text-slate-400 border-r border-slate-50">{idx + 1}</td>
                                         <td className="p-4 border-r border-slate-50">
-                                            <p className="font-black text-slate-900 text-[13px]">{it.Item?.name || 'Service Component'}</p>
+                                            <p className="font-bold text-slate-900 text-[13px]">{it.Item?.name || 'Service Component'}</p>
                                             <p className="text-[11px] text-slate-400 mt-0.5">{it.description}</p>
                                         </td>
-                                        <td className="p-4 text-center font-black border-r border-slate-50">{parseFloat(it.quantity).toFixed(2)}</td>
+                                        <td className="p-4 text-center font-bold border-r border-slate-50">{parseFloat(it.quantity).toFixed(2)}</td>
                                         <td className="p-4 text-right font-bold text-slate-500 border-r border-slate-50">{parseFloat(it.rate).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
-                                        <td className="p-4 text-right font-black text-slate-900">{parseFloat(it.amount || (it.quantity * it.rate)).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                                        <td className="p-4 text-right font-bold text-slate-900">{parseFloat(it.amount || (it.quantity * it.rate)).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
                                     </tr>
                                 ))}
                                 {/* Fillers */}
@@ -473,7 +473,7 @@ const InvoiceDetail = ({ id, company, navigate, onRefresh }) => {
                             <div className="space-y-4">
                                 <div className="flex items-center gap-3">
                                     <div className="h-px w-6 bg-slate-200" />
-                                    <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest italic">Notes</span>
+                                    <span className="text-[10px] font-bold text-slate-300 uppercase tracking-widest italic">Notes</span>
                                 </div>
                                 <p className="text-[12px] text-slate-500 italic max-w-sm pl-9">{invoice.customerNotes || 'Thanks for your business.'}</p>
                             </div>
@@ -492,16 +492,16 @@ const InvoiceDetail = ({ id, company, navigate, onRefresh }) => {
                             <div className="p-8 space-y-4">
                                 <div className="flex justify-between items-center text-[12px] font-bold text-slate-400 uppercase tracking-widest">
                                     <span>Sub Total</span>
-                                    <span className="text-slate-900 font-black">₹{parseFloat(invoice.subTotal || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                                    <span className="text-slate-900 font-bold">₹{parseFloat(invoice.subTotal || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                                 </div>
                                 <div className="flex justify-between items-center text-[12px] font-bold text-slate-400 uppercase tracking-widest">
                                     <span>GST (18%)</span>
-                                    <span className="text-slate-900 font-black">₹{parseFloat(invoice.gstAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                                    <span className="text-slate-900 font-bold">₹{parseFloat(invoice.gstAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                                 </div>
                                 
                                 <div className="pt-8 mt-4 border-t border-slate-200 flex flex-col items-end">
-                                    <div className="text-[10px] font-black text-slate-300 uppercase tracking-[0.3em] mb-1">Grand Total</div>
-                                    <div className="text-4xl font-black text-slate-900 italic tracking-tighter">
+                                    <div className="text-[10px] font-bold text-slate-300 uppercase tracking-[0.3em] mb-1">Grand Total</div>
+                                    <div className="text-4xl font-bold text-slate-900 italic tracking-tight">
                                         ₹{parseFloat(invoice.totalAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                                     </div>
                                     <div className="text-[9px] font-bold text-blue-500 uppercase tracking-widest mt-1">INR (₹) / Total Payable</div>
@@ -510,10 +510,10 @@ const InvoiceDetail = ({ id, company, navigate, onRefresh }) => {
                                 <div className="pt-6">
                                     <div className="bg-white/80 p-5 rounded-2xl border border-blue-50 flex justify-between items-center">
                                          <div className="space-y-0.5">
-                                            <p className="text-[9px] font-black text-slate-300 uppercase tracking-widest">Balance Due</p>
-                                            <p className="text-[14px] font-black text-blue-600 italic tracking-tight">AVAILABLE</p>
+                                            <p className="text-[9px] font-bold text-slate-300 uppercase tracking-widest">Balance Due</p>
+                                            <p className="text-[14px] font-bold text-blue-600 italic tracking-tight">AVAILABLE</p>
                                          </div>
-                                         <span className="text-[20px] font-black text-blue-600 italic">₹{parseFloat(invoice.totalAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                                         <span className="text-[20px] font-bold text-blue-600 italic">₹{parseFloat(invoice.totalAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                                     </div>
                                 </div>
                             </div>
@@ -523,20 +523,20 @@ const InvoiceDetail = ({ id, company, navigate, onRefresh }) => {
                     {/* Footer Area */}
                     <div className="mt-20 pt-10 border-t border-slate-50 flex justify-between items-end">
                          <div className="space-y-3">
-                             <p className="text-[11px] font-black text-slate-900 italic uppercase">Scan to Pay</p>
-                             <div className="w-24 h-24 bg-slate-50 border border-slate-100 rounded-lg flex items-center justify-center text-[8px] font-black text-slate-300 p-2 text-center uppercase">
+                             <p className="text-[11px] font-bold text-slate-900 italic uppercase">Scan to Pay</p>
+                             <div className="w-24 h-24 bg-slate-50 border border-slate-100 rounded-lg flex items-center justify-center text-[8px] font-bold text-slate-300 p-2 text-center uppercase">
                                 UPI QR<br/>SECURE GATEWAY
                              </div>
                          </div>
                          <div className="text-right">
                              <div className="w-56 ml-auto h-1 border-b border-slate-200 border-dashed mb-6"></div>
-                             <p className="text-[12px] font-black text-slate-900 uppercase tracking-[0.2em]">{company?.name || 'Authorized Signatory'}</p>
+                             <p className="text-[12px] font-bold text-slate-900 uppercase tracking-widest">{company?.name || 'Authorized Signatory'}</p>
                              <p className="text-[10px] font-bold text-slate-400 mt-0.5 uppercase tracking-widest">Authorized Signatory</p>
                          </div>
                     </div>
                  </div>
 
-                 <div className="mt-8 mb-20 text-[11px] font-black text-slate-300 uppercase tracking-[0.3em] flex items-center gap-3 no-print opacity-50">
+                 <div className="mt-8 mb-20 text-[11px] font-bold text-slate-300 uppercase tracking-[0.3em] flex items-center gap-3 no-print opacity-50">
                      Document ID: {invoice.id} <ChevronDown size={14} />
                  </div>
             </div>
@@ -557,77 +557,163 @@ const InvoiceDetail = ({ id, company, navigate, onRefresh }) => {
 // FULL TABLE VIEW (INITIAL STATE)
 // ─────────────────────────────────────────────────────────────────────────────
 
-const InvoicesTableView = ({ invoices, loading, onSelect, navigate }) => {
+const InvoicesTableView = ({ invoices, loading, onSelect, navigate, fetchInvoices, filterType }) => {
+    const [searchQuery, setSearchQuery] = useState('');
+    
+    const filtered = invoices.filter(inv => {
+        const matchesSearch = inv.invoiceNumber?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                            inv.CustomerLedger?.name?.toLowerCase().includes(searchQuery.toLowerCase());
+        
+        if (filterType === 'unpaid') {
+            return matchesSearch && parseFloat(inv.balance || inv.totalAmount) > 0;
+        }
+        return matchesSearch;
+    });
+
     return (
         <div className="flex-1 flex flex-col h-full bg-white animate-fade-in overflow-hidden">
-            <div className="p-8 flex items-center justify-between border-b border-slate-100">
-                <div>
-                   <h1 className="text-[28px] font-black text-slate-900 tracking-tighter uppercase">Sales Invoices</h1>
-                   <p className="text-[12px] font-bold text-slate-400 uppercase tracking-widest mt-1">Manage and track your customer billing</p>
+            {/* HEADER: Synchronized with Customers/Quotes */}
+            <div className="flex items-center justify-between px-8 py-4 border-b border-slate-100">
+                <div className="flex items-center gap-4">
+                    {filterType === 'unpaid' && (
+                        <button 
+                            onClick={() => navigate(-1)}
+                            className="p-2 -ml-2 text-slate-400 hover:text-slate-900 hover:bg-slate-100 rounded-full transition-all"
+                            title="Back"
+                        >
+                            <ArrowLeft size={20} />
+                        </button>
+                    )}
+                    <div className="flex items-center gap-2 group cursor-pointer">
+                        <h1 className="text-[20px] font-bold text-slate-900">
+                            {filterType === 'unpaid' ? 'Unpaid Invoices' : 'All Invoices'}
+                        </h1>
+                        <ChevronDown size={18} className="text-blue-600 mt-1" />
+                    </div>
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
                    <button 
                       onClick={() => navigate('/sales/new-invoice')}
-                      className="px-6 py-2.5 bg-blue-600 text-white rounded-[4px] font-black text-[13px] hover:bg-blue-700 shadow-lg shadow-blue-100 transition-all flex items-center gap-2 uppercase tracking-widest"
+                      className="bg-[#1e61f0] hover:bg-[#1a54d1] text-white px-4 py-2 rounded-md font-medium flex items-center gap-1.5 transition-all shadow-sm"
                    >
-                      <Plus size={18} /> New Invoice
+                      <Plus size={18} strokeWidth={2.5}/> New Invoice
                    </button>
-                   <button className="p-2.5 border border-slate-200 rounded text-slate-400 hover:bg-slate-50 transition-colors"><MoreHorizontal size={20}/></button>
+                   <div className="relative">
+                      <button className="p-2 text-slate-500 hover:text-slate-800 border border-slate-200 bg-white rounded-md hover:bg-slate-50 transition-colors shadow-sm">
+                         <MoreHorizontal size={18} />
+                      </button>
+                   </div>
                 </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto no-scrollbar">
-                {loading ? (
-                    <div className="p-20 text-center space-y-4 opacity-40">
-                        <Loader2 size={48} className="animate-spin mx-auto text-blue-600" />
-                        <p className="text-[14px] font-black uppercase tracking-[0.3em]">Synching with Ledger...</p>
+            {/* SEARCH/FILTER BAR */}
+            <div className="px-8 py-4 bg-slate-50/50 flex items-center justify-between border-b border-slate-100">
+                <div className="flex items-center gap-4">
+                    <div className="relative group w-64">
+                        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#1e61f0] transition-colors" />
+                        <input 
+                            value={searchQuery}
+                            onChange={e => setSearchQuery(e.target.value)}
+                            placeholder="Search records..."
+                            className="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded text-[13px] font-medium text-slate-700 outline-none focus:border-[#1e61f0] shadow-sm transition-all"
+                        />
                     </div>
+                    <button 
+                        onClick={fetchInvoices}
+                        className="p-2 text-slate-400 hover:text-[#1e61f0] transition-colors"
+                        title="Refresh"
+                    >
+                        <History size={18} className={loading ? 'animate-spin' : ''} />
+                    </button>
+                </div>
+
+                <div className="flex items-center gap-3">
+                    <button className="flex items-center gap-1.5 text-slate-500 text-[13px] font-medium hover:text-slate-900 transition-colors">
+                        <Tag size={14} /> Filter
+                    </button>
+                    <div className="w-px h-4 bg-slate-200 mx-2" />
+                    <button className="h-9 px-4 flex items-center gap-2 bg-white border border-slate-200 text-slate-600 rounded-[4px] text-[11px] font-bold uppercase tracking-widest hover:bg-slate-50 transition-all shadow-sm">
+                        <Download size={14} /> Export
+                    </button>
+                </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto no-scrollbar p-8">
+                {loading ? (
+                    <div className="py-24 text-center font-bold text-slate-400 animate-pulse uppercase tracking-widest">Syncing...</div>
                 ) : (
                     <table className="w-full text-left">
-                        <thead className="sticky top-0 bg-white z-10">
-                            <tr className="border-b border-slate-100">
-                                <th className="px-8 py-4 text-[11px] font-black text-slate-300 uppercase tracking-widest">Date</th>
-                                <th className="px-8 py-4 text-[11px] font-black text-slate-300 uppercase tracking-widest">Invoice #</th>
-                                <th className="px-8 py-4 text-[11px] font-black text-slate-300 uppercase tracking-widest">Customer</th>
-                                <th className="px-8 py-4 text-[11px] font-black text-slate-300 uppercase tracking-widest">Status</th>
-                                <th className="px-8 py-4 text-[11px] font-black text-slate-300 uppercase tracking-widest text-right">Amount</th>
-                                <th className="px-8 py-4 text-[11px] font-black text-slate-300 uppercase tracking-widest text-center">Actions</th>
+                        <thead className="bg-slate-50 text-[11px] font-bold text-slate-500 uppercase tracking-widest border-b border-slate-200 sticky top-0 z-10">
+                            <tr>
+                                <th className="px-6 py-4">Date</th>
+                                <th className="px-6 py-4">Invoice #</th>
+                                <th className="px-6 py-4">Customer</th>
+                                <th className="px-6 py-4 text-center">Status</th>
+                                <th className="px-6 py-4 text-right">Amount</th>
+                                <th className="px-6 py-4 text-center">Actions</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-50">
-                            {invoices.map(inv => (
-                                <tr 
-                                    key={inv.id} 
-                                    onClick={() => onSelect(inv.id)}
-                                    className="hover:bg-blue-50/30 cursor-pointer group transition-all"
-                                >
-                                    <td className="px-8 py-5 text-[14px] font-bold text-slate-500">
-                                        {new Date(inv.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
-                                    </td>
-                                    <td className="px-8 py-5 text-[14px] font-black text-slate-900 group-hover:text-blue-600 transition-colors">
-                                        {inv.invoiceNumber}
-                                    </td>
-                                    <td className="px-8 py-5">
-                                        <div className="text-[14px] font-black text-slate-800">{inv.CustomerLedger?.name}</div>
-                                        <div className="text-[11px] text-slate-400 font-bold uppercase tracking-tighter">ID: {inv.customerLedgerId}</div>
-                                    </td>
-                                    <td className="px-8 py-5">
-                                        <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border
-                                            ${inv.status === 'Sent' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-slate-50 text-slate-500 border-slate-100'}`}>
-                                            {inv.status || 'Draft'}
-                                        </span>
-                                    </td>
-                                    <td className="px-8 py-5 text-right font-black text-slate-900 text-[15px] tracking-tight">
-                                        ₹{parseFloat(inv.totalAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                                    </td>
-                                    <td className="px-8 py-5 text-center">
-                                         <div className="flex items-center justify-center gap-2 transition-all">
-                                            <button className="p-1.5 hover:bg-white rounded text-blue-600 border border-transparent hover:border-blue-100" title="Edit"><Edit2 size={14}/></button>
-                                            <button className="p-1.5 hover:bg-white rounded text-rose-600 border border-transparent hover:border-rose-100" title="Delete"><Trash2 size={14}/></button>
-                                         </div>
+                        <tbody className="divide-y divide-slate-100">
+                            {filtered.length === 0 ? (
+                                <tr>
+                                    <td colSpan="6" className="py-20 text-center">
+                                       <div className="flex flex-col items-center justify-center gap-3">
+                                          <div className="w-12 h-12 bg-slate-50 rounded-full flex items-center justify-center text-slate-300">
+                                             <FileText size={24} />
+                                          </div>
+                                          <p className="text-slate-500 text-[14px]">No invoices found.</p>
+                                          <button onClick={() => navigate('/sales/new-invoice')} className="text-blue-600 text-[13px] font-medium hover:underline">Create an invoice</button>
+                                       </div>
                                     </td>
                                 </tr>
-                            ))}
+                            ) : (
+                                filtered.map(inv => (
+                                    <tr 
+                                        key={inv.id} 
+                                        onClick={() => onSelect(inv.id)}
+                                        className="hover:bg-slate-50 cursor-pointer group transition-colors"
+                                    >
+                                        <td className="px-6 py-4 text-[13px] text-slate-500 font-medium whitespace-nowrap">
+                                            {new Date(inv.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <div className="text-[14px] font-medium text-blue-600 group-hover:underline">
+                                                {inv.invoiceNumber}
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <div className="text-[14px] font-medium text-slate-800">{inv.CustomerLedger?.name}</div>
+                                        </td>
+                                        <td className="px-6 py-4 text-center">
+                                            <span className={`px-2 py-0.5 rounded uppercase text-[10px] font-bold tracking-widest border
+                                                ${inv.status === 'Sent' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-slate-50 text-slate-500 border-slate-100'}`}>
+                                                {inv.status || 'Draft'}
+                                            </span>
+                                        </td>
+                                        <td className="px-6 py-4 text-right whitespace-nowrap">
+                                            <span className="text-[14px] text-slate-900 font-medium">
+                                                ₹{parseFloat(inv.totalAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                            </span>
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <div className="flex items-center justify-center gap-2">
+                                                <button 
+                                                    onClick={(e) => { e.stopPropagation(); navigate(`/sales/edit-invoice/${inv.id}`); }} 
+                                                    className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 text-slate-600 hover:text-blue-600 hover:border-blue-200 rounded shadow-sm transition-all text-[12px] font-medium"
+                                                >
+                                                    <Edit2 size={13} /> Edit
+                                                </button>
+                                                <button 
+                                                    className="flex items-center justify-center p-1.5 bg-white border border-slate-200 text-slate-400 hover:text-red-600 hover:border-red-200 hover:bg-red-50 rounded shadow-sm transition-all"
+                                                    title="Delete Invoice"
+                                                >
+                                                    <Trash2 size={16} />
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))
+                            )}
                         </tbody>
                     </table>
                 )}
@@ -643,10 +729,13 @@ const InvoicesTableView = ({ invoices, loading, onSelect, navigate }) => {
 const SalesInvoicesView = ({ companyId }) => {
     const navigate = useNavigate();
     const params = useParams();
+    const location = useLocation();
     const [invoices, setInvoices] = useState([]);
     const [company, setCompany] = useState(null);
     const [loading, setLoading] = useState(true);
     const [selectedId, setSelectedId] = useState(null);
+
+    const filterType = location.state?.filter;
 
     const fetchInvoices = async () => {
         try {
@@ -691,6 +780,8 @@ const SalesInvoicesView = ({ companyId }) => {
                     loading={loading} 
                     onSelect={handleSelect}
                     navigate={navigate}
+                    fetchInvoices={fetchInvoices}
+                    filterType={filterType}
                 />
             </div>
         );

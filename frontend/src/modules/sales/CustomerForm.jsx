@@ -150,22 +150,33 @@ const CustomerForm = ({ onSaveSuccess, onCancel, customerToEdit = null, standalo
   return (
     <div className={`flex flex-col ${standalone ? 'min-h-screen bg-white' : 'h-full bg-white overflow-hidden'}`}>
         {standalone && (
-            <header className="px-8 py-3 border-b border-slate-100 flex items-center justify-between sticky top-0 bg-white z-50">
+            <header className="px-6 py-3 border-b border-slate-200 flex items-center justify-between sticky top-0 bg-white z-50 shadow-sm">
                 <div className="flex items-center gap-3">
-                    <button onClick={onCancel} className="p-2 hover:bg-slate-50 rounded-full text-slate-400">
+                    <button 
+                        onClick={onCancel} 
+                        className="p-1.5 bg-slate-100 hover:bg-slate-200 rounded text-slate-600 transition-colors"
+                        title="Go Back"
+                    >
                         <ArrowLeft size={18} />
                     </button>
                     <div className="flex items-center gap-2">
                         <div className="bg-slate-100 p-1.5 rounded">
                             <User size={16} className="text-slate-600" />
                         </div>
-                        <h2 className="text-[17px] font-bold text-slate-800">{customerToEdit ? 'Edit Customer' : 'New Customer'}</h2>
+                        <h2 className="text-[17px] font-bold text-slate-800 tracking-tight">{customerToEdit ? 'Edit Customer' : 'New Customer'}</h2>
                     </div>
                 </div>
-                <div className="flex items-center gap-2">
-                    <button onClick={onCancel} className="px-4 py-1.5 text-slate-600 text-[13px] font-medium hover:bg-slate-50 rounded border border-slate-200">Cancel</button>
-                    <button onClick={handleSave} disabled={loading} className="px-6 py-1.5 bg-blue-600 text-white text-[13px] font-bold rounded hover:bg-blue-700 shadow-sm transition-all">
-                        {loading ? 'Saving...' : 'Save'}
+                <div className="flex items-center gap-3">
+                    <button onClick={onCancel} className="px-6 py-2 text-sm font-bold text-slate-500 hover:bg-slate-50 rounded-xl transition-all">
+                        Cancel
+                    </button>
+                    <button 
+                        onClick={handleSave} 
+                        disabled={loading} 
+                        className="px-8 py-2.5 bg-[#1e61f0] text-white text-sm font-black rounded-xl hover:bg-[#1a54d1] shadow-lg shadow-blue-600/20 transition-all active:scale-95 disabled:opacity-50 flex items-center gap-2"
+                    >
+                        {loading ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+                        {customerToEdit ? 'UPDATE CUSTOMER' : 'SAVE CUSTOMER'}
                     </button>
                 </div>
             </header>
@@ -183,7 +194,7 @@ const CustomerForm = ({ onSaveSuccess, onCancel, customerToEdit = null, standalo
                     <div className="space-y-6">
                         {/* Customer Type */}
                         <div className="flex items-center">
-                            <label className="w-48 text-[13px] font-medium text-slate-500">Customer Type</label>
+                            <label className="w-48 text-[11px] font-black text-slate-500 uppercase tracking-widest">Customer Type</label>
                             <div className="flex gap-4">
                                 {['Business', 'Individual'].map(t => (
                                     <label key={t} className="flex items-center gap-2 cursor-pointer group">
@@ -201,7 +212,7 @@ const CustomerForm = ({ onSaveSuccess, onCancel, customerToEdit = null, standalo
 
                         {/* Primary Name */}
                         <div className="flex items-start">
-                            <label className="w-48 text-[13px] font-medium text-red-500 mt-2">Primary Contact*</label>
+                            <label className="w-48 text-[11px] font-black text-rose-500 uppercase tracking-widest mt-2">Primary Contact*</label>
                             <div className="flex-1 max-w-2xl space-y-4">
                                 <div className="grid grid-cols-12 gap-3 pb-4">
                                     <div className="col-span-2">
@@ -231,14 +242,14 @@ const CustomerForm = ({ onSaveSuccess, onCancel, customerToEdit = null, standalo
                                 </div>
                                 <div className="space-y-4">
                                     <div className="flex items-center">
-                                        <label className="w-48 text-[13px] font-medium text-slate-500 shrink-0">Company Name</label>
+                                        <label className="w-48 text-[11px] font-black text-slate-500 uppercase tracking-widest shrink-0">Company Name</label>
                                         <input 
                                             value={companyName} onChange={e => setCompanyName(e.target.value)}
                                             className="flex-1 h-9 px-3 border border-slate-200 rounded text-[13px] outline-none focus:border-blue-400 font-medium" 
                                         />
                                     </div>
                                     <div className="flex items-center">
-                                        <label className="w-48 text-[13px] font-medium text-slate-500 shrink-0">Display Name*</label>
+                                        <label className="w-48 text-[11px] font-black text-rose-500 uppercase tracking-widest shrink-0">Display Name*</label>
                                         <div className="flex-1 relative">
                                             <select 
                                                 value={displayName} 
@@ -260,7 +271,7 @@ const CustomerForm = ({ onSaveSuccess, onCancel, customerToEdit = null, standalo
 
                         {/* Email */}
                         <div className="flex items-center">
-                            <label className="w-48 text-[13px] font-medium text-slate-500">Customer Email</label>
+                            <label className="w-48 text-[11px] font-black text-slate-500 uppercase tracking-widest">Customer Email</label>
                             <input 
                                 type="email" value={email} onChange={e => setEmail(e.target.value)}
                                 className="flex-1 max-w-lg h-9 px-3 border border-slate-200 rounded text-[13px] outline-none focus:border-blue-400 font-medium" 
@@ -269,7 +280,7 @@ const CustomerForm = ({ onSaveSuccess, onCancel, customerToEdit = null, standalo
 
                         {/* Phone */}
                         <div className="flex items-center">
-                            <label className="w-48 text-[13px] font-medium text-slate-500">Customer Phone</label>
+                            <label className="w-48 text-[11px] font-black text-slate-500 uppercase tracking-widest">Customer Phone</label>
                             <div className="flex flex-1 max-w-lg gap-4">
                                 <input 
                                     placeholder="Work Phone"
@@ -290,7 +301,7 @@ const CustomerForm = ({ onSaveSuccess, onCancel, customerToEdit = null, standalo
 
                         {/* Website */}
                         <div className="flex items-center">
-                            <label className="w-48 text-[13px] font-medium text-slate-500">Website</label>
+                            <label className="w-48 text-[11px] font-black text-slate-500 uppercase tracking-widest">Website</label>
                             <input 
                                 type="text" value={website} onChange={e => setWebsite(e.target.value)}
                                 className="flex-1 max-w-lg h-9 px-3 border border-slate-200 rounded text-[13px] outline-none focus:border-blue-400 font-medium text-blue-600" 
@@ -403,14 +414,14 @@ const CustomerForm = ({ onSaveSuccess, onCancel, customerToEdit = null, standalo
 
                     <div className="space-y-6">
                         <div className="flex items-center">
-                            <label className="w-48 text-[13px] font-medium text-slate-500">Currency</label>
+                            <label className="w-48 text-[11px] font-black text-slate-500 uppercase tracking-widest">Currency</label>
                             <select value={currency} onChange={e => setCurrency(e.target.value)} className="flex-1 max-w-lg h-9 px-3 border border-slate-200 rounded text-[13px] outline-none bg-white font-medium">
                                 {CURRENCIES.map(c => <option key={c.code} value={c.display}>{c.display}</option>)}
                             </select>
                         </div>
 
                         <div className="flex items-center">
-                            <label className="w-48 text-[13px] font-medium text-slate-500">Payment Terms</label>
+                            <label className="w-48 text-[11px] font-black text-slate-500 uppercase tracking-widest">Payment Terms</label>
                             <select value={paymentTerms} onChange={e => setPaymentTerms(e.target.value)} className="flex-1 max-w-lg h-9 px-3 border border-slate-200 rounded text-[13px] outline-none bg-white font-medium">
                                 <option value="Due on Receipt">Due on Receipt</option>
                                 <option value="Net 15">Net 15</option>
@@ -420,7 +431,7 @@ const CustomerForm = ({ onSaveSuccess, onCancel, customerToEdit = null, standalo
                         </div>
 
                         <div className="flex items-center">
-                            <label className="w-48 text-[13px] font-medium text-red-500">PAN Number</label>
+                            <label className="w-48 text-[11px] font-black text-rose-500 uppercase tracking-widest">PAN Number</label>
                             <input 
                                 value={pan} onChange={e => setPan(e.target.value)}
                                 className="flex-1 max-w-lg h-9 px-3 border border-slate-200 rounded text-[13px] outline-none focus:border-blue-400 capitalize font-bold text-slate-700" 

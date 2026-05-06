@@ -105,84 +105,117 @@ const InventoryView = () => {
       
       {/* ── VIEW MODE: TABLE (IMAGE 2) ───────────────────────────── */}
       {viewMode === 'table' && (
-        <div className="flex flex-col h-screen animate-fade-in">
-          {/* Main Header Bar */}
-          <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-white">
-            <div className="flex items-center gap-2 cursor-pointer group">
-              <h1 className="text-[18px] font-bold text-slate-800">Active Items</h1>
-              <ChevronDown size={14} className="text-[#1e61f0] mt-0.5" />
-            </div>
-            <div className="flex items-center gap-3">
-              <button 
-                onClick={() => navigate('/inventory/new')}
-                className="bg-[#1e61f0] text-white px-4 py-2 rounded-md font-bold text-[12px] flex items-center gap-1.5 hover:bg-[#1a54d1] shadow-sm transition-all"
-              >
-                <Plus size={16} strokeWidth={3}/> New
-              </button>
+        <div className="flex-1 flex flex-col h-full bg-white animate-fade-in overflow-hidden">
+          {/* HEADER: Synchronized with Customers/Quotes */}
+          <div className="flex items-center justify-between px-8 py-4 border-b border-slate-100">
+              <div className="flex items-center gap-2 group cursor-pointer">
+                  <h1 className="text-[20px] font-bold text-slate-900">All Items</h1>
+                  <ChevronDown size={18} className="text-blue-600 mt-1" />
+              </div>
+              <div className="flex items-center gap-2">
+                 <button 
+                   onClick={() => navigate('/inventory/new')}
+                   className="bg-[#1e61f0] hover:bg-[#1a54d1] text-white px-4 py-2 rounded-md font-medium flex items-center gap-1.5 transition-all shadow-sm"
+                 >
+                    <Plus size={18} strokeWidth={2.5}/> New Item
+                 </button>
+                 <div className="relative">
+                    <button className="p-2 text-slate-500 hover:text-slate-800 border border-slate-200 bg-white rounded-md hover:bg-slate-50 transition-colors shadow-sm">
+                       <MoreVertical size={18} />
+                    </button>
+                 </div>
+              </div>
+          </div>
 
+          {/* SEARCH/FILTER BAR */}
+          <div className="px-8 py-4 bg-slate-50/50 flex items-center justify-between border-b border-slate-100">
+            <div className="flex items-center gap-4">
+                <div className="relative group w-64">
+                    <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#1e61f0] transition-colors" />
+                    <input 
+                        value={searchQuery}
+                        onChange={e => setSearchQuery(e.target.value)}
+                        placeholder="Search records..."
+                        className="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded text-[13px] font-bold text-slate-700 outline-none focus:border-[#1e61f0] shadow-sm transition-all"
+                    />
+                </div>
+                <button 
+                    onClick={fetchData}
+                    className="p-2 text-slate-400 hover:text-[#1e61f0] transition-colors"
+                    title="Refresh"
+                >
+                    <RefreshCcw size={18} className={loading ? 'animate-spin' : ''} />
+                </button>
+            </div>
+
+            <div className="flex items-center gap-3">
+                <button className="flex items-center gap-1.5 text-slate-500 text-[13px] font-medium hover:text-slate-900 transition-colors">
+                    <AlertTriangle size={14} /> Filter
+                </button>
+                <div className="w-px h-4 bg-slate-200 mx-2" />
+                <button className="h-9 px-4 flex items-center gap-2 bg-white border border-slate-200 text-slate-600 rounded-[4px] text-[11px] font-black uppercase tracking-widest hover:bg-slate-50 transition-all shadow-sm">
+                    <RefreshCcw size={14} /> Sync
+                </button>
             </div>
           </div>
 
           {/* Data Table */}
-          <div className="flex-1 overflow-auto custom-scrollbar">
-            <table className="w-full text-left border-collapse min-w-[1200px]">
-              <thead className="bg-[#f8fafc] sticky top-0 z-10">
-                <tr className="border-b border-slate-200 h-11">
-                    <th className="pl-6 w-10">
-                       <input type="checkbox" className="w-3.5 h-3.5 rounded border-slate-300 accent-[#1e61f0]" />
-                    </th>
-                    <th className="px-3 text-left text-[10px] font-bold text-slate-500 uppercase tracking-tight w-[200px]">Name</th>
-                    <th className="px-3 text-left text-[10px] font-bold text-slate-500 uppercase tracking-tight w-[350px]">Purchase Description</th>
-                    <th className="px-3 text-right text-[10px] font-bold text-slate-500 uppercase tracking-tight w-[160px]">Purchase Rate</th>
-                    <th className="px-3 text-left text-[10px] font-bold text-slate-500 uppercase tracking-tight w-[200px]">Description</th>
-                    <th className="px-3 text-right text-[10px] font-bold text-slate-500 uppercase tracking-tight w-[130px]">Sales Rate</th>
-                    <th className="px-3 text-left text-[10px] font-bold text-slate-500 uppercase tracking-tight w-[100px]">Usage Unit</th>
-                    <th className="px-3 pr-6 text-center w-24 tracking-[0.2em] font-black uppercase text-slate-400 text-[9px]">Actions</th>
+          <div className="flex-1 overflow-y-auto no-scrollbar p-8">
+            <table className="w-full text-left">
+              <thead className="bg-slate-50 text-[11px] font-bold text-slate-500 uppercase tracking-widest border-b border-slate-200 sticky top-0 z-10">
+                <tr>
+                    <th className="px-6 py-4">Name</th>
+                    <th className="px-6 py-4">Purchase Rate</th>
+                    <th className="px-6 py-4">Sales Rate</th>
+                    <th className="px-6 py-4">Usage Unit</th>
+                    <th className="px-6 py-4 text-center">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-50">
+              <tbody className="divide-y divide-slate-100">
                 {loading ? (
-                  <tr><td colSpan="8" className="py-20 text-center text-slate-300 uppercase tracking-[0.2em] font-black animate-pulse">Loading Records...</td></tr>
+                    <tr><td colSpan="5" className="py-24 text-center font-bold text-slate-400 animate-pulse uppercase tracking-widest">Syncing...</td></tr>
                 ) : filteredItems.length === 0 ? (
-                  <tr><td colSpan="8" className="py-20 text-center text-slate-400 italic">No inventory items found.</td></tr>
+                  <tr>
+                      <td colSpan="5" className="py-20 text-center">
+                         <div className="flex flex-col items-center justify-center gap-3">
+                            <div className="w-12 h-12 bg-slate-50 rounded-full flex items-center justify-center text-slate-300">
+                               <Package size={24} />
+                            </div>
+                            <p className="text-slate-500 text-[14px]">No items found.</p>
+                            <button onClick={() => navigate('/inventory/new')} className="text-blue-600 text-[13px] font-medium hover:underline">Create an item</button>
+                         </div>
+                      </td>
+                  </tr>
                 ) : (
                   filteredItems.map((item) => (
-                    <tr key={item.id} className="hover:bg-[#f8fafc] transition-colors group h-11">
-                      <td className="pl-6">
-                         <input type="checkbox" className="w-3.5 h-3.5 rounded border-slate-300 accent-[#1e61f0]" />
+                    <tr key={item.id} className="hover:bg-slate-50 transition-colors cursor-pointer group" onClick={() => handleItemClick(item)}>
+                      <td className="px-6 py-4">
+                        <div className="text-[14px] font-medium text-blue-600 group-hover:underline">{item.name}</div>
+                        {item.type && <div className="text-[10px] text-slate-400 font-bold uppercase tracking-tight mt-0.5">{item.type}</div>}
                       </td>
-                      <td 
-                        onClick={() => handleItemClick(item)}
-                        className="px-3 text-[13px] text-[#1e61f0] font-medium cursor-pointer hover:underline"
-                      >
-                        {item.name}
-                      </td>
-                      <td className="px-3 text-[13px] text-slate-500 truncate">{item.purchaseDescription || '—'}</td>
-                      <td className="px-3 text-[13px] text-slate-700 font-bold text-right">
+                      <td className="px-6 py-4 text-[14px] text-slate-700 font-medium">
                         {item.costPrice ? formatCurrency(item.costPrice) : '—'}
                       </td>
-                      <td className="px-3 text-[13px] text-slate-500 truncate">{item.salesDescription || '—'}</td>
-                      <td className="px-3 text-[13px] text-slate-700 font-bold text-right">
+                      <td className="px-6 py-4 text-[14px] text-slate-700 font-medium">
                         {item.sellingPrice ? formatCurrency(item.sellingPrice) : '—'}
                       </td>
-                      <td className="px-3 text-[13px] text-slate-500">
+                      <td className="px-6 py-4 text-[13px] text-slate-500 font-medium">
                         {(!item.unit || item.unit === 'Select or type to add') ? '—' : item.unit}
                       </td>
-                      <td className="px-3 pr-6 text-center">
+                      <td className="px-6 py-4" onClick={e => e.stopPropagation()}>
                         <div className="flex items-center justify-center gap-2">
                           <button
-                            onClick={(e) => { e.stopPropagation(); handleEdit(item); }}
-                            className="p-1.5 rounded-md text-slate-400 hover:text-[#1e61f0] hover:bg-blue-50 transition-all"
-                            title="Edit Item"
+                            onClick={() => handleEdit(item)}
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 text-slate-600 hover:text-blue-600 hover:border-blue-200 rounded shadow-sm transition-all text-[12px] font-medium"
                           >
-                            <Edit2 size={14} />
+                            <Edit2 size={13} /> Edit
                           </button>
                           <button
-                            onClick={(e) => { e.stopPropagation(); handleDeleteItem(item); }}
-                            className="p-1.5 rounded-md text-slate-400 hover:text-rose-500 hover:bg-rose-50 transition-all"
+                            onClick={() => handleDeleteItem(item)}
+                            className="flex items-center justify-center p-1.5 bg-white border border-slate-200 text-slate-400 hover:text-red-600 hover:border-red-200 hover:bg-red-50 rounded shadow-sm transition-all"
                             title="Delete Item"
                           >
-                            <Trash2 size={14} />
+                            <Trash2 size={16} />
                           </button>
                         </div>
                       </td>
