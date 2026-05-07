@@ -24,6 +24,14 @@ module.exports = (sequelize, DataTypes) => {
     voucherNumber: {
       type: DataTypes.STRING,
       allowNull: false
+    },
+    ProjectId: {
+      type: DataTypes.UUID,
+      allowNull: true
+    },
+    CompanyId: {
+      type: DataTypes.UUID,
+      allowNull: true
     }
   }, {
     paranoid: true

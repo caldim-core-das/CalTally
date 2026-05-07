@@ -5,7 +5,7 @@ const AuditService = require('../../services/AuditService');
 exports.createVoucher = async (req, res) => {
   const t = await sequelize.transaction();
   try {
-    const { companyId, voucherType, date, narration, entries } = req.body;
+    const { companyId, voucherType, date, narration, entries, projectId } = req.body;
 
     if (!entries || entries.length < 2) {
       return res.status(400).json({ error: 'Minimum 2 entries required for double-entry.' });
@@ -22,7 +22,8 @@ exports.createVoucher = async (req, res) => {
         debit: parseFloat(e.debit || 0),
         credit: parseFloat(e.credit || 0)
       })),
-      userId: req.user?.id
+      userId: req.user?.id,
+      projectId // Added this
     }, t);
 
     await t.commit();
