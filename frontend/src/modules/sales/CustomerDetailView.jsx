@@ -18,6 +18,7 @@ import useNotificationStore from '../../store/notificationStore';
 import ConfirmModal from '../../components/ConfirmModal';
 import ComposeMailModal from '../../components/ComposeMailModal';
 import { getCurrencyDisplay, CURRENCIES } from '../../utils/currencies';
+import CustomerOverviewSidebar from './CustomerOverviewSidebar';
 
 const CustomerDetailView = ({ companyId }) => {
   const { id } = useParams();
@@ -424,7 +425,7 @@ const CustomerDetailView = ({ companyId }) => {
       `}</style>
 
       {/* ─── SIDEBAR ─────────────────────────────────────── */}
-      <div className={`${id ? (isSideListCollapsed ? 'w-0 opacity-0 overflow-hidden' : 'w-[320px]') : 'w-full'} border-r border-slate-200 bg-[#f8fbff] flex flex-col shrink-0 transition-all duration-300 relative`}>
+      <div className={`${id ? (isSideListCollapsed ? 'w-0 opacity-0 overflow-hidden' : 'w-[320px]') : 'w-full'} border-r border-slate-200 bg-white flex flex-col shrink-0 transition-all duration-300 relative`}>
         {!isSideListCollapsed && id && (
           <button 
             onClick={() => setIsSideListCollapsed(true)}
@@ -433,43 +434,71 @@ const CustomerDetailView = ({ companyId }) => {
             <ChevronLeft size={14} strokeWidth={3} />
           </button>
         )}
-        <div className="p-5 border-b border-slate-100 bg-white space-y-4">
+        <div className="p-4 border-b border-slate-100 space-y-3">
           <div className="flex items-center justify-between">
-            <h2 className="text-[14px] font-bold text-slate-900 tracking-tight">Active Customers <ChevronDown size={14} className="inline ml-1 text-blue-600"/></h2>
+            {/* Active Customers Dropdown */}
+            <div className="flex items-center gap-1.5 cursor-pointer hover:opacity-80 transition-opacity">
+              <span className="text-[17px] font-bold text-slate-900 tracking-tight">Active Customers</span>
+              <ChevronDown size={15} className="text-blue-600 mt-0.5 stroke-[2.5]" />
+            </div>
+            
+            {/* Action Buttons */}
             <div className="flex items-center gap-2">
-              <button onClick={() => setIsQuickAddOpen(true)} className="w-8 h-8 flex items-center justify-center rounded-lg bg-blue-600 text-white shadow-lg shadow-blue-100 hover:bg-blue-700 transition-all">
-                <Plus size={16} strokeWidth={3}/>
+              <button 
+                onClick={() => setIsQuickAddOpen(true)} 
+                className="w-8 h-8 rounded-lg bg-blue-500 hover:bg-blue-600 text-white flex items-center justify-center transition-all hover:scale-105 active:scale-95 shadow-sm shadow-blue-100"
+                title="New Customer"
+              >
+                <Plus size={16} strokeWidth={3} />
               </button>
-              <button className="p-1.5 text-slate-400 hover:text-slate-600 border border-slate-100 rounded-lg bg-slate-50/50 transition-colors">
-                <MoreHorizontal size={16}/>
+              <button 
+                className="w-8 h-8 rounded-lg bg-slate-50 border border-slate-200/60 text-slate-700 flex items-center justify-center transition-all hover:bg-slate-100 hover:text-slate-900 active:scale-95"
+                title="Options"
+              >
+                <MoreHorizontal size={16} strokeWidth={2.5} />
               </button>
             </div>
           </div>
-          <div className="relative group">
-             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-600 transition-colors" />
+          
+          {/* Search bar */}
+          <div className="relative">
+             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 stroke-[2]" />
              <input 
-                type="text" 
-                placeholder="Search Customers ( / )" 
-                className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-100 rounded-xl text-[13px] font-medium outline-none transition-all focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-50" 
+               type="text" 
+               placeholder="Search Customers" 
+               className="w-full pl-9 pr-3 py-1.5 text-[13px] bg-slate-50/50 border border-slate-200/80 rounded outline-none transition-all focus:bg-white focus:border-blue-500 focus:ring-1 focus:ring-blue-100" 
              />
           </div>
         </div>
-        <div className="flex-1 overflow-y-auto no-scrollbar py-2">
+        
+        {/* Customer List */}
+        <div className="flex-1 overflow-y-auto no-scrollbar scroll-smooth">
           {customers.length === 0 ? (
-            <div className="p-10 text-center text-[10px] text-slate-300 font-bold uppercase tracking-widest opacity-50 mt-20">EMPTY ARCHIVE</div>
+            <div className="p-10 text-center text-[12px] text-slate-400 font-semibold uppercase tracking-widest opacity-45 mt-20">NO CUSTOMERS FOUND</div>
           ) : customers.map(c => (
             <div 
               key={c.id} 
               onClick={() => handleCustomerSelect(c.id)} 
-              className={`px-6 py-4 cursor-pointer transition-all border-b border-slate-50 flex flex-col gap-1 relative overflow-hidden
-                ${String(c.id) === String(selectedId) ? 'bg-white shadow-xl shadow-slate-100/50 z-10 translate-x-1' : 'hover:bg-white/50'}`}
+              className={`px-5 py-4 cursor-pointer border-b border-slate-100/60 transition-all flex items-start gap-3.5 ${String(c.id) === String(selectedId) ? 'bg-[#f4f7fd]' : 'hover:bg-slate-50/60'}`}
             >
-              {String(c.id) === String(selectedId) && <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-600 rounded-r-full shadow-[2px_0_10px_rgba(37,99,235,0.3)]"></div>}
-              <div className={`text-[13px] font-bold tracking-tight truncate ${String(c.id) === String(selectedId) ? 'text-blue-600' : 'text-slate-700 group-hover:text-blue-600'}`}>
-                {c.name}
+              {/* Checkbox on the left */}
+              <div className="pt-0.5" onClick={e => e.stopPropagation()}>
+                <input 
+                  type="checkbox" 
+                  checked={String(c.id) === String(selectedId)}
+                  onChange={() => handleCustomerSelect(c.id)}
+                  className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                />
               </div>
-              <div className="text-[12px] font-black text-slate-400 italic tracking-tighter">
-                {getCurrencyDisplay(c.currency)} {parseFloat(c.currentBalance || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+
+              {/* Text Stack on the right */}
+              <div className="flex-1 min-w-0 space-y-0.5">
+                <p className={`text-[14px] font-medium truncate ${String(c.id) === String(selectedId) ? 'text-slate-900 font-semibold' : 'text-slate-800'}`}>
+                  {c.name}
+                </p>
+                <p className="text-[13px] font-medium text-slate-500 font-sans tracking-tight">
+                  {getCurrencyDisplay(c.currency)} {parseFloat(c.currentBalance || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                </p>
               </div>
             </div>
           ))}
@@ -506,7 +535,7 @@ const CustomerDetailView = ({ companyId }) => {
                      More <ChevronDown size={16} className="text-slate-400"/>
                   </button>
                   <div className="w-px h-6 bg-slate-200 mx-1"></div>
-                  <button className="p-2 text-slate-300 hover:text-slate-500 transition-colors" onClick={() => navigate(-1)}><X size={24}/></button>
+                  <button className="p-1.5 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-full transition-colors duration-150" onClick={() => navigate('/customers')}><X size={20}/></button>
                </div>
             </header>
 
@@ -901,7 +930,25 @@ const CustomerDetailView = ({ companyId }) => {
               {activeTab === 'Overview' && (
                 <div className="p-8 flex gap-10 animate-fade-in group">
                   {/* Left Column Profile */}
-                  <div className="w-[420px] shrink-0 space-y-12">
+                  <div className="w-[420px] shrink-0 space-y-6 relative animate-fade-in">
+                     <CustomerOverviewSidebar 
+                        customer={customer}
+                        onEditAddress={(type) => navigate(`/customers/${customer.id}`)}
+                        onInvitePortal={() => addNotification("Portal invitation sent successfully!", "success")}
+                        onAddContact={() => navigate(`/customers/${customer.id}`)}
+                        onSettingsClick={() => setIsSettingsOpen(!isSettingsOpen)}
+                        onEnablePortal={() => addNotification("Customer Portal has been enabled!", "success")}
+                     />
+                     
+                     {isSettingsOpen && (
+                        <div className="absolute right-6 top-[72px] w-48 bg-white border border-slate-200 rounded-lg shadow-2xl z-50 py-2 animate-fade-down overflow-hidden">
+                           <div className="px-4 py-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest border-b border-slate-50 mb-1">Record Actions</div>
+                           <button onClick={() => { setIsSettingsOpen(false); navigate(`/customers/${customer.id}`); }} className="w-full text-left px-4 py-2.5 text-[13px] font-bold text-slate-700 hover:bg-slate-50 flex items-center gap-3"><Edit size={16} className="text-blue-500" /> Edit Profile</button>
+                           <button onClick={() => { setIsSettingsOpen(false); handleDeleteCustomer(); }} className="w-full text-left px-4 py-2.5 text-[13px] font-bold text-rose-600 hover:bg-rose-50 flex items-center gap-3"><Trash2 size={16} /> Delete Customer</button>
+                        </div>
+                     )}
+                  </div>
+                  <div className="hidden">
                     <div className="flex gap-6 relative">
                        <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleImageUpload} />
                        <div className="relative group">
