@@ -52,7 +52,6 @@ async function updateBillsForPayment(paymentVoucherId, transaction = null) {
         await bill.update({ status: billStatus }, { transaction });
     }
 }
-
 exports.getNextPaymentNumber = async (req, res) => {
     try {
         const { companyId } = req.params;
@@ -63,12 +62,16 @@ exports.getNextPaymentNumber = async (req, res) => {
             attributes: ['voucherNumber']
         });
 
-        // Only consider purely numeric voucherNumbers (sequential ones we assigned)
         let maxNum = 0;
         payments.forEach(p => {
-            const num = parseInt(p.voucherNumber, 10);
-            if (!isNaN(num) && String(num) === p.voucherNumber && num > maxNum) {
-                maxNum = num;
+            if (!p.voucherNumber) return;
+            // Extract the last sequential numeric part of the voucherNumber (e.g. from "PAY-2026-0004" -> "0004" -> 4; from "PAY-9" -> "9" -> 9; from "1" -> "1" -> 1)
+            const match = p.voucherNumber.match(/(\d+)(?!.*\d)/);
+            if (match) {
+                const num = parseInt(match[1], 10);
+                if (!isNaN(num) && num > maxNum) {
+                    maxNum = num;
+                }
             }
         });
 

@@ -22,8 +22,12 @@ exports.sendEmail = async (req, res) => {
 
     const smtpHost = process.env.SMTP_HOST || 'smtp.gmail.com';
     const smtpPort = process.env.SMTP_PORT ? parseInt(process.env.SMTP_PORT) : 587;
-    const userEmail = process.env.SMTP_USER || process.env.MAIL_USER || 'calbuy160@gmail.com';
-    const userPass = process.env.SMTP_PASS || process.env.MAIL_PASS || 'jwyeljvzgsselddo';
+    const userEmail = process.env.SMTP_USER || process.env.MAIL_USER;
+    const userPass = process.env.SMTP_PASS || process.env.MAIL_PASS;
+
+    if (!userEmail || !userPass) {
+        return res.status(400).json({ error: 'SMTP credentials are not configured on the server. Please define SMTP_USER and SMTP_PASS in your .env file.' });
+    }
 
     const transporter = nodemailer.createTransport({
       host: smtpHost,

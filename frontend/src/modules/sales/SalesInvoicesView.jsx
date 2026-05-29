@@ -236,12 +236,13 @@ const InvoiceEmailView = ({ invoice, company, onCancel, onSent }) => {
                             </div>
                             <div className="flex items-center gap-4">
                                 <label className="w-20 text-[11px] font-bold text-slate-400 uppercase tracking-widest">Send To</label>
-                                <div className="flex-1 flex gap-2">
-                                   <div className="flex-1 p-2 border border-slate-200 rounded-lg text-[13px] font-bold text-slate-700 bg-white flex items-center gap-2">
-                                      <span className="bg-slate-100 px-2 py-0.5 rounded text-slate-500 text-[11px]">{invoice.CustomerLedger?.name?.[0]}</span>
-                                      {invoice.CustomerLedger?.displayName || invoice.CustomerLedger?.name} &lt;{to}&gt;
-                                   </div>
-                                </div>
+                                <input 
+                                    type="email" 
+                                    value={to}
+                                    onChange={e => setTo(e.target.value)}
+                                    placeholder="Enter customer email address..."
+                                    className="flex-1 p-2.5 border border-slate-200 rounded-lg text-[13px] font-bold text-slate-800 outline-none focus:border-blue-500 transition-all"
+                                />
                             </div>
                             <div className="flex items-center gap-4">
                                 <label className="w-20 text-[11px] font-bold text-slate-400 uppercase tracking-widest">Subject</label>

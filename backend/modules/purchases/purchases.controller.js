@@ -1,4 +1,4 @@
-const { PurchaseOrder, Ledger, Group, sequelize, Voucher, Transaction } = require('../../models');
+const { PurchaseOrder, Ledger, Group, sequelize, Voucher, Transaction, VendorCredit } = require('../../models');
 const { Op } = require('sequelize');
 
 exports.getVendors = async (req, res) => {
@@ -31,7 +31,56 @@ exports.getVendors = async (req, res) => {
       },
       order: [['name', 'ASC']]
     });
-    res.json(vendors);
+
+    // Dynamically calculate Unused Credits for each vendor in parallel
+    const vendorsWithCredits = await Promise.all(vendors.map(async (vendor) => {
+      // 1. Sum of remaining/unapplied Vendor Credit notes where status is 'Open'
+      const openCredits = await VendorCredit.findAll({
+        where: {
+          vendorLedgerId: vendor.id,
+          CompanyId: companyId,
+          status: 'Open'
+        }
+      });
+
+      const totalCredits = openCredits.reduce((sum, c) => {
+        // Safe check for balance/remainingAmount/totalAmount field
+        const amt = c.remainingAmount !== undefined ? c.remainingAmount : (c.balance !== undefined ? c.balance : c.totalAmount);
+        return sum + parseFloat(amt || 0);
+      }, 0);
+
+      // 2. Sum of unallocated/advance payments
+      // Sum the debit amounts from ledger transaction lines belonging to Payment vouchers with status = 'Paid'
+      // where there is NO associated Bill Foreign Key (no BILL_REF: in description)
+      const advanceTransactions = await Transaction.findAll({
+        where: {
+          LedgerId: vendor.id,
+          debit: { [Op.gt]: 0 }
+        },
+        include: [{
+          model: Voucher,
+          where: {
+            CompanyId: companyId,
+            voucherType: 'Payment',
+            status: 'Paid'
+          }
+        }]
+      });
+
+      const totalAdvances = advanceTransactions
+        .filter(t => !t.description || !t.description.includes('BILL_REF:'))
+        .reduce((sum, t) => sum + parseFloat(t.debit || 0), 0);
+
+      // Total Unused Credits = Total Open/Partially Used Credits + Total Advance/Unallocated Payments
+      const unusedCredits = totalCredits + totalAdvances;
+
+      return {
+        ...vendor.toJSON(),
+        unusedCredits: parseFloat(unusedCredits.toFixed(2))
+      };
+    }));
+
+    res.json(vendorsWithCredits);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

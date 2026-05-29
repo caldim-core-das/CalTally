@@ -181,16 +181,31 @@ const NAV = [
   },
 ];
 
+// Helper to compute active paths, accounting for nested routing and context highlights
+const isPathActive = (itemPath, pathname, location) => {
+  const queryParams = new URLSearchParams(location?.search || '');
+  const backTo = location?.state?.backTo || queryParams.get('backTo') || '';
+  
+  if (itemPath === '/vendors' && (pathname.startsWith('/vendors') || (pathname.startsWith('/bill-payments') && backTo === 'vendors'))) {
+    return true;
+  }
+  if (itemPath === '/payments-made' && (pathname.startsWith('/payments-made') || (pathname.startsWith('/bill-payments') && backTo !== 'vendors'))) {
+    return true;
+  }
+  
+  return pathname === itemPath || (itemPath !== '/dashboard' && pathname.startsWith(itemPath));
+};
+
 // ═══════════════════════════════════════════════════════════════════
 // SIDEBAR GROUP
 // ═══════════════════════════════════════════════════════════════════
-const NavGroup = ({ group, icon: Icon, items, collapsed, pathname, navigate }) => {
+const NavGroup = ({ group, icon: Icon, items, collapsed, pathname, location, navigate }) => {
   const [expanded, setExpanded] = useState(
     pathname.includes(group.toLowerCase().replace(' ', '-')) ||
-    items.some(it => pathname === it.path || pathname.startsWith(it.path))
+    items.some(it => isPathActive(it.path, pathname, location))
   );
 
-  const isActive = items.some(item => pathname === item.path || (item.path !== '/dashboard' && pathname.startsWith(item.path)));
+  const isActive = items.some(item => isPathActive(item.path, pathname, location));
 
   const [isHovered, setIsHovered] = useState(false);
 
@@ -221,7 +236,7 @@ const NavGroup = ({ group, icon: Icon, items, collapsed, pathname, navigate }) =
             </div>
             <div className="space-y-1">
               {items.map(item => {
-                const active = pathname === item.path || (item.path !== '/dashboard' && pathname.startsWith(item.path));
+                const active = isPathActive(item.path, pathname, location);
                 return (
                   <div 
                     key={item.path} 
@@ -257,7 +272,7 @@ const NavGroup = ({ group, icon: Icon, items, collapsed, pathname, navigate }) =
         key={item.path}
         icon={item.icon}
         label={item.label}
-        active={pathname === item.path || (item.path !== '/dashboard' && pathname.startsWith(item.path))}
+        active={isPathActive(item.path, pathname, location)}
         onClick={() => navigate(item.path)}
         collapsed={collapsed}
       />
@@ -285,7 +300,7 @@ const NavGroup = ({ group, icon: Icon, items, collapsed, pathname, navigate }) =
       {expanded && (
         <div className="ml-8 space-y-0.5 mt-0.5">
           {items.map(item => {
-            const active = pathname === item.path || (item.path !== '/dashboard' && pathname.startsWith(item.path));
+            const active = isPathActive(item.path, pathname, location);
             return (
               <div 
                 key={item.path} 
@@ -367,7 +382,8 @@ const NavItem = ({ icon: Icon, label, active, onClick, onPlusClick, collapsed, s
 // ═══════════════════════════════════════════════════════════════════
 const AppShell = ({ children, onLogout, companies = [], currentCompanyId, onCompanyChange }) => {
   const navigate   = useNavigate();
-  const { pathname } = useLocation();
+  const location   = useLocation();
+  const { pathname } = location;
   const [collapsed, setCollapsed] = useState(false);
   const user = useMemo(() => { try { return JSON.parse(localStorage.getItem('user') || '{}'); } catch { return {}; } }, []);
 
@@ -443,6 +459,7 @@ const AppShell = ({ children, onLogout, companies = [], currentCompanyId, onComp
               items={section.items}
               collapsed={collapsed}
               pathname={pathname}
+              location={location}
               navigate={navigate}
             />
           ))}
@@ -701,6 +718,7 @@ function AuthenticatedApp() {
       <Route path="/purchase-orders/new" element={shell(PurchaseOrderEntryView)} />
       <Route path="/payments-made"       element={shell(PaymentsMadeListView)} />
       <Route path="/payments-made/new"   element={shell(PaymentsMadeEntryView)} />
+      <Route path="/bill-payments/new"   element={shell(PaymentsMadeEntryView)} />
       <Route path="/payments-made/edit/:id" element={shell(PaymentsMadeEntryView)} />
       <Route path="/vendor-credits"      element={shell(VendorCreditsView)} />
       <Route path="/vendor-credits/new"  element={shell(VendorCreditsView)} />

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { 
   Plus, Trash2, ShoppingBag, PlusCircle, 
   ChevronDown, Search, Filter, MoreHorizontal,
@@ -21,6 +21,9 @@ import { COUNTRY_CODES } from '../../utils/countryCodes';
 const BillEntryView = ({ companyId }) => {
   const navigate = useNavigate();
   const { id } = useParams();
+  const { search } = useLocation();
+  const queryParams = useMemo(() => new URLSearchParams(search), [search]);
+  const queryVendorId = queryParams.get('vendorId');
   // ── Form State ──────────────────────────────────────────────────
   const [formData, setFormData] = useState({
     vendorName: '',
@@ -151,6 +154,20 @@ const BillEntryView = ({ companyId }) => {
       });
     }
   }, [companyId]);
+
+  useEffect(() => {
+    if (queryVendorId && vendors.length > 0) {
+      const match = vendors.find(v => String(v.id) === String(queryVendorId));
+      if (match) {
+        setFormData(prev => ({
+          ...prev,
+          vendorId: match.id,
+          vendorName: match.name
+        }));
+        setSelectedVendor(match);
+      }
+    }
+  }, [queryVendorId, vendors]);
 
   useEffect(() => {
     if (id && companyId) {
@@ -443,6 +460,16 @@ const BillEntryView = ({ companyId }) => {
     }
   };
 
+  const handleCancel = () => {
+    const backTo = queryParams.get('backTo');
+    const vendorId = queryParams.get('vendorId');
+    if (backTo === 'vendors' && vendorId) {
+      navigate(`/vendors/view/${vendorId}`);
+    } else {
+      navigate('/bills');
+    }
+  };
+
   return (
     <div className="bg-white min-h-screen text-[13px] text-slate-800 font-medium pb-24">
        {/* Top Bar */}
@@ -461,7 +488,7 @@ const BillEntryView = ({ companyId }) => {
                    <ArrowRight size={14} />
                 </button>
              )}
-             <button onClick={() => navigate('/bills')} className="text-slate-400 hover:text-slate-600 transition-colors">
+             <button onClick={handleCancel} className="text-slate-400 hover:text-slate-600 transition-colors">
                 <X size={20} />
              </button>
           </div>
@@ -495,6 +522,11 @@ const BillEntryView = ({ companyId }) => {
                             <Search size={14} />
                          </button>
                       </div>
+                      {selectedVendor && (
+                          <div className="flex items-center justify-center border border-emerald-500 text-emerald-600 bg-emerald-50 px-2.5 h-7 rounded text-[11px] font-bold tracking-wider uppercase animate-fade-in">
+                             {selectedVendor.currency || 'INR'}
+                          </div>
+                       )}
                    </div>
 
                    {selectedVendor && (() => {
@@ -781,7 +813,7 @@ const BillEntryView = ({ companyId }) => {
        <div className="fixed bottom-0 left-0 right-0 h-16 bg-white border-t border-slate-200 flex items-center justify-between px-8 z-50">
           <div className="flex items-center gap-3">
              <button onClick={() => handleSaveOrder(false)} disabled={isSaving} className="px-6 h-8 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded transition-colors shadow-sm disabled:opacity-50">{isSaving ? 'Saving...' : 'Save'}</button>
-             <button onClick={() => navigate('/bills')} className="px-5 h-8 bg-white hover:bg-slate-50 text-slate-600 font-bold rounded border border-slate-200 transition-colors">Cancel</button>
+             <button onClick={handleCancel} className="px-5 h-8 bg-white hover:bg-slate-50 text-slate-600 font-bold rounded border border-slate-200 transition-colors">Cancel</button>
           </div>
        </div>
 

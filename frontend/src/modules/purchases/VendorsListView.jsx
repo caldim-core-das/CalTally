@@ -25,7 +25,7 @@ const VendorsListView = ({ companyId }) => {
   const sortedVendors = [...vendors].sort((a, b) => {
     let aValue = a[sortConfig.key] || '';
     let bValue = b[sortConfig.key] || '';
-    if (sortConfig.key === 'currentBalance') {
+    if (sortConfig.key === 'currentBalance' || sortConfig.key === 'unusedCredits') {
        aValue = parseFloat(aValue || 0);
        bValue = parseFloat(bValue || 0);
     } else {
@@ -141,6 +141,7 @@ const VendorsListView = ({ companyId }) => {
                               <SortOption label="Name" sortKey="name" />
                               <SortOption label="Company Name" sortKey="companyName" />
                               <SortOption label="Payables" sortKey="currentBalance" />
+                              <SortOption label="Unused Credits" sortKey="unusedCredits" />
                            </div>
                         )}
                      </div>
@@ -164,6 +165,7 @@ const VendorsListView = ({ companyId }) => {
                    <th className="px-6 py-4">Email</th>
                    <th className="px-6 py-4">Work Phone</th>
                    <th className="px-6 py-4 text-right">Payables</th>
+                   <th className="px-6 py-4 text-right">Unused Credits (BCY)</th>
                    <th className="px-6 py-4 text-center">Actions</th>
                 </tr>
              </thead>
@@ -182,6 +184,11 @@ const VendorsListView = ({ companyId }) => {
                         <td className="px-6 py-4 text-right">
                            <span className="text-[14px] text-slate-900 font-medium whitespace-nowrap">
                               ₹ {v.currentBalance?.toLocaleString() || '0.00'}
+                           </span>
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                           <span className="text-[14px] text-slate-900 font-medium whitespace-nowrap">
+                              ₹ {(parseFloat(v.unusedCredits || 0)).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                            </span>
                         </td>
                         <td className="px-6 py-4">
@@ -204,7 +211,7 @@ const VendorsListView = ({ companyId }) => {
                    ))
                  ) : (
                    <tr>
-                     <td colSpan="6" className="px-6 py-40 text-center bg-white">
+                     <td colSpan="7" className="px-6 py-40 text-center bg-white">
                         <div className="flex flex-col items-center justify-center max-w-[600px] mx-auto animate-fade-in">
                            <div className="relative mb-10 group">
                              <div className="w-28 h-28 bg-blue-50/50 rounded-[2.5rem] flex items-center justify-center text-[#1e61f0] border border-blue-100 shadow-sm transition-transform duration-500 group-hover:scale-105 group-hover:rotate-3">

@@ -6,7 +6,7 @@ import {
   Info, CreditCard, Clock, Activity, ArrowRight,
   ChevronDown, MessageSquare, History, FileText, Send, HelpCircle,
   Camera, Image as ImageIcon, X, LayoutDashboard, Share2,
-  Sparkles, DollarSign, Printer, Download, Filter, Save, Loader2,
+  Sparkles, DollarSign, Printer, Download, Filter, Save, Loader2, MoreVertical,
   ChevronRight, Calendar, User, Users, Briefcase, Bold, Italic, Underline, Truck, CheckCircle2, AlertCircle, ChevronUp, Eye, Landmark, EyeOff
 } from 'lucide-react';
 import { 
@@ -16,6 +16,7 @@ import {
 import useNotificationStore from '../../store/notificationStore';
 import ConfirmModal from '../../components/ConfirmModal';
 import ComposeMailModal from '../../components/ComposeMailModal';
+import VendorOverviewSidebar from './VendorOverviewSidebar';
 
 const DetailRow = ({ label, value }) => (
   <div className="flex justify-between items-center py-1">
@@ -58,6 +59,7 @@ const VendorDetailView = ({ companyId }) => {
 
   // UI state
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isNewTxnOpen, setIsNewTxnOpen] = useState(false);
   const [isEditingPaymentTerms, setIsEditingPaymentTerms] = useState(false);
   const [paymentTerms, setPaymentTerms] = useState('');
   const [isEditingBalance, setIsEditingBalance] = useState(false);
@@ -145,6 +147,20 @@ const VendorDetailView = ({ companyId }) => {
   
   const fileInputRef = useRef(null);
   const settingsRef = useRef(null);
+  const newTxnRef = useRef(null);
+
+  useEffect(() => {
+    const handleOutsideClick = (e) => {
+      if (settingsRef.current && !settingsRef.current.contains(e.target)) {
+        setIsSettingsOpen(false);
+      }
+      if (newTxnRef.current && !newTxnRef.current.contains(e.target)) {
+        setIsNewTxnOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleOutsideClick);
+    return () => document.removeEventListener('mousedown', handleOutsideClick);
+  }, []);
 
   const activeCompanyId = companyId || localStorage.getItem('companyId');
 
@@ -441,28 +457,69 @@ const VendorDetailView = ({ companyId }) => {
       <div className={`${id ? 'w-[350px]' : 'w-full'} border-r border-slate-200 bg-white flex flex-col shrink-0 transition-all duration-300`}>
         <div className="p-4 border-b border-slate-100 space-y-3">
           <div className="flex items-center justify-between">
-            <h2 className={`${id ? 'text-[14px]' : 'text-[24px]'} font-bold text-slate-900 transition-all`}>Active Vendors</h2>
-            <button onClick={() => setIsQuickAddOpen(true)} className={`${id ? 'w-7 h-7' : 'px-4 py-2'} flex items-center justify-center rounded bg-blue-600 text-white font-bold transition-all shadow-lg shadow-blue-100 hover:scale-105 active:scale-95`}>
-              <Plus size={id ? 16 : 18} className={id ? '' : 'mr-2'}/> {!id && 'New Vendor'}
-            </button>
+            {/* Active Vendors Dropdown */}
+            <div className="flex items-center gap-1.5 cursor-pointer hover:opacity-80 transition-opacity">
+              <span className="text-[17px] font-bold text-slate-900 tracking-tight">Active Vendors</span>
+              <ChevronDown size={15} className="text-blue-600 mt-0.5 stroke-[2.5]" />
+            </div>
+            
+            {/* Action Buttons */}
+            <div className="flex items-center gap-2">
+              <button 
+                onClick={() => setIsQuickAddOpen(true)} 
+                className="w-8 h-8 rounded-lg bg-blue-500 hover:bg-blue-600 text-white flex items-center justify-center transition-all hover:scale-105 active:scale-95 shadow-sm shadow-blue-100"
+                title="New Vendor"
+              >
+                <Plus size={16} strokeWidth={3} />
+              </button>
+              <button 
+                className="w-8 h-8 rounded-lg bg-slate-50 border border-slate-200/60 text-slate-700 flex items-center justify-center transition-all hover:bg-slate-100 hover:text-slate-900 active:scale-95"
+                title="Options"
+              >
+                <MoreHorizontal size={16} strokeWidth={2.5} />
+              </button>
+            </div>
           </div>
+          
+          {/* Search bar */}
           <div className="relative">
-             <Search size={id ? 14 : 18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-             <input type="text" placeholder="Search Vendors" className={`w-full ${id ? 'pl-9 pr-3 py-1.5 text-[13px]' : 'pl-12 pr-4 py-3 text-[16px]'} bg-white border border-slate-200 rounded outline-none transition-all focus:border-blue-600`} />
+             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 stroke-[2]" />
+             <input 
+               type="text" 
+               placeholder="Search Vendors" 
+               className="w-full pl-9 pr-3 py-1.5 text-[13px] bg-slate-50/50 border border-slate-200/80 rounded outline-none transition-all focus:bg-white focus:border-blue-500 focus:ring-1 focus:ring-blue-100" 
+             />
           </div>
         </div>
+        
+        {/* Vendor List */}
         <div className="flex-1 overflow-y-auto no-scrollbar scroll-smooth">
           {vendors.length === 0 ? (
-            <div className="p-10 text-center text-[12px] text-slate-400 font-bold uppercase tracking-widest opacity-30 mt-20">NO VENDORS FOUND</div>
+            <div className="p-10 text-center text-[12px] text-slate-400 font-semibold uppercase tracking-widest opacity-45 mt-20">NO VENDORS FOUND</div>
           ) : vendors.map(v => (
-            <div key={v.id} onClick={() => handleVendorSelect(v.id)} className={`px-5 py-4 cursor-pointer border-b border-slate-50 transition-all border-l-[4px] ${String(v.id) === String(selectedId) ? 'bg-[#f0f5ff] border-l-blue-600' : 'hover:bg-slate-50 border-l-transparent'}`}>
-              <div className="flex justify-between items-start mb-2">
-                <span className={`text-[13px] font-bold truncate max-w-[140px] ${String(v.id) === String(selectedId) ? 'text-blue-600' : 'text-slate-700'}`}>{v.name}</span>
-                <span className="text-[14px] font-bold text-slate-900 tracking-tighter italic">₹{parseFloat(v.currentBalance || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+            <div 
+              key={v.id} 
+              onClick={() => handleVendorSelect(v.id)} 
+              className={`px-5 py-4 cursor-pointer border-b border-slate-100/60 transition-all flex items-start gap-3.5 ${String(v.id) === String(selectedId) ? 'bg-[#f4f7fd]' : 'hover:bg-slate-50/60'}`}
+            >
+              {/* Checkbox on the left */}
+              <div className="pt-0.5" onClick={e => e.stopPropagation()}>
+                <input 
+                  type="checkbox" 
+                  checked={String(v.id) === String(selectedId)}
+                  onChange={() => handleVendorSelect(v.id)}
+                  className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                />
               </div>
-              <div className="flex items-center gap-2">
-                 <div className={`w-2 h-2 rounded-full ${parseFloat(v.currentBalance || 0) > 0 ? 'bg-orange-400' : 'bg-green-400'}`}></div>
-                 <div className="text-[11px] text-slate-400 font-bold tracking-widest truncate">{v.email || 'NO_MAIL_ID'}</div>
+
+              {/* Text Stack on the right */}
+              <div className="flex-1 min-w-0 space-y-0.5">
+                <p className={`text-[14px] font-medium truncate ${String(v.id) === String(selectedId) ? 'text-slate-900 font-semibold' : 'text-slate-800'}`}>
+                  {v.name}
+                </p>
+                <p className="text-[13px] font-medium text-slate-500 font-sans tracking-tight">
+                  ₹{parseFloat(v.currentBalance || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                </p>
               </div>
             </div>
           ))}
@@ -475,7 +532,7 @@ const VendorDetailView = ({ companyId }) => {
           <>
             <header className="px-8 py-5 flex items-center justify-between border-b border-slate-50 bg-[#fbfcff]">
                <div className="flex items-center gap-4">
-                  <button onClick={() => navigate(-1)} className="p-1.5 rounded hover:bg-slate-100"><ChevronLeft size={18}/></button>
+                  <button onClick={() => navigate('/vendors')} className="p-1.5 rounded hover:bg-slate-100"><ChevronLeft size={18}/></button>
                   <h1 className="text-[20px] font-bold text-slate-900 tracking-tight">{vendor.name}</h1>
                </div>
                <div className="flex items-center gap-2.5">
@@ -486,14 +543,61 @@ const VendorDetailView = ({ companyId }) => {
                   <div className="w-px h-6 bg-slate-200 mx-1"></div>
                   <button onClick={() => navigate(`/vendors/${vendor.id}`)} className="px-4 py-1.5 border border-slate-200 rounded text-[13px] font-bold text-slate-700 hover:bg-white shadow-sm">Edit</button>
                   <button className="p-2 border border-slate-200 rounded text-slate-400 hover:text-slate-600"><Paperclip size={16}/></button>
-                  <div className="bg-blue-600 text-white rounded-md flex items-center shadow-lg shadow-blue-100 overflow-hidden">
-                     <button className="px-5 py-2 text-[13px] font-bold border-r border-blue-500/30 hover:bg-blue-700">New Transaction</button>
-                     <button className="px-2 py-2 hover:bg-blue-700"><ChevronDown size={16}/></button>
+                  <div className="relative" ref={newTxnRef}>
+                     <div className="bg-blue-600 text-white rounded-md flex items-center shadow-lg shadow-blue-100 overflow-hidden">
+                        <button 
+                          onClick={() => setIsNewTxnOpen(!isNewTxnOpen)}
+                          className="px-5 py-2 text-[13px] font-bold border-r border-blue-500/30 hover:bg-blue-700 transition-colors"
+                        >
+                           New Transaction
+                        </button>
+                        <button 
+                          onClick={() => setIsNewTxnOpen(!isNewTxnOpen)}
+                          className="px-2 py-2 hover:bg-blue-700 transition-colors"
+                        >
+                           <ChevronDown size={16}/>
+                        </button>
+                     </div>
+                     
+                     {isNewTxnOpen && (
+                        <div className="absolute right-0 mt-2 w-56 bg-white border border-slate-200/80 rounded-xl shadow-xl shadow-slate-200/50 z-50 p-1.5 animate-fade-down overflow-hidden">
+                           <div className="px-3 py-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-widest border-b border-slate-50 mb-1">
+                              Purchases
+                           </div>
+                           {[
+                              { label: 'Bill', path: `/bills/new` },
+                              { label: 'Bill Payment', path: `/bill-payments/new` },
+                              { label: 'Expense', path: `/expenses/new` },
+                              { label: 'Recurring Bill', path: `/recurring-bills/new` },
+                              { label: 'Recurring Expense', path: `/recurring-expenses/new` },
+                              { label: 'Purchase Order', path: `/purchase-orders/new` },
+                              { label: 'Vendor Credit', path: `/vendor-credits/new` },
+                              { label: 'Journal', path: `/journals/new` },
+                              { label: 'Pay Bill via Check', path: `/pay-bill-check/new` }
+                           ].map((item, idx) => (
+                              <button 
+                                 key={idx}
+                                 onClick={() => {
+                                    setIsNewTxnOpen(false);
+                                    navigate(`${item.path}?vendorId=${vendor.id}&backTo=vendors`, {
+                                       state: {
+                                          vendorId: vendor.id,
+                                          vendorName: vendor.name
+                                       }
+                                    });
+                                 }}
+                                 className="w-full text-left px-3 py-2 text-[13px] font-medium text-slate-700 rounded-lg hover:bg-blue-600 hover:text-white transition-all duration-150 flex items-center"
+                              >
+                                 {item.label}
+                              </button>
+                           ))}
+                        </div>
+                     )}
                   </div>
                   <button className="px-4 py-1.5 border border-slate-200 rounded text-[13px] font-bold text-slate-700 flex items-center gap-1.5 hover:bg-white shadow-sm">
                      More <ChevronDown size={14}/>
                   </button>
-                  <button className="p-1.5 text-slate-300 hover:text-slate-500" onClick={() => navigate(-1)}><X size={20}/></button>
+                  <button className="p-1.5 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-full transition-colors duration-150" onClick={() => navigate('/vendors')}><X size={20}/></button>
                </div>
             </header>
 
@@ -851,105 +955,37 @@ const VendorDetailView = ({ companyId }) => {
                 <div className="p-8 flex gap-10 animate-fade-in group">
                   {/* Left Column Profile */}
                   <div className="w-[420px] shrink-0 space-y-12">
-                    <div className="flex gap-6 relative">
-                       <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleImageUpload} />
-                       <div className="relative group cursor-pointer" onClick={() => fileInputRef.current.click()}>
-                          <div className="w-24 h-24 rounded-2xl bg-slate-900 flex items-center justify-center text-white overflow-hidden shadow-2xl border-4 border-white transition-transform hover:scale-105">
-                             {vendor.image ? <img src={vendor.image} className="w-full h-full object-cover" /> : <ImageIcon size={48} strokeWidth={1} className="opacity-40"/>}
-                          </div>
-                       </div>
-                       <div className="space-y-1.5 pt-1">
-                          <h3 className="text-[17px] font-bold text-slate-900 leading-tight">{vendor.salutation} {vendor.firstName} {vendor.lastName}</h3>
-                          <div className="flex items-center gap-2 text-[13px] text-blue-600 font-bold hover:underline cursor-pointer"><Mail size={14}/> <span>{vendor.email || 'No email'}</span></div>
-                          {vendor.phone && <div className="flex items-center gap-2 text-[13px] text-slate-500 font-medium"><Phone size={14}/> <span>{vendor.phone}</span></div>}
-                          {vendor.mobile && <div className="flex items-center gap-2 text-[13px] text-slate-500 font-medium"><Smartphone size={14}/> <span>{vendor.mobile}</span></div>}
-                          {!vendor.phone && !vendor.mobile && <div className="flex items-center gap-2 text-[13px] text-slate-400 font-medium"><Phone size={14}/> <span>No contact</span></div>}
-                       </div>
+                     <VendorOverviewSidebar 
+                       vendor={vendor} 
+                       onEditAddress={(type) => {
+                         navigate(`/vendors/${vendor.id}`);
+                       }}
+                       onInvitePortal={() => {
+                         addNotification({ message: 'Portal invitation sent successfully!', type: 'success' });
+                       }}
+                       onAddContact={() => {
+                         navigate(`/vendors/${vendor.id}`);
+                       }}
+                       onSettingsClick={() => {
+                         setIsSettingsOpen(!isSettingsOpen);
+                       }}
+                     />
 
-                       <div className="ml-auto absolute top-0 right-0" ref={settingsRef}>
-                          <button onClick={() => setIsSettingsOpen(!isSettingsOpen)} className={`p-2 rounded-full transition-colors ${isSettingsOpen ? 'bg-slate-100 text-blue-600' : 'hover:bg-slate-100 text-slate-400'}`}><Settings size={20}/></button>
-                          {isSettingsOpen && (
-                             <div className="absolute right-0 mt-2 w-48 bg-white border border-slate-200 rounded-lg shadow-2xl z-50 py-2 animate-fade-down overflow-hidden">
-                                <button onClick={() => { setIsSettingsOpen(false); navigate(`/vendors/${vendor.id}`); }} className="w-full text-left px-4 py-2.5 text-[13px] font-bold text-slate-700 hover:bg-slate-50 flex items-center gap-3"><Edit size={16} className="text-blue-500" /> Edit Profile</button>
-                                <button onClick={() => { setIsSettingsOpen(false); handleDeleteVendor(); }} className="w-full text-left px-4 py-2.5 text-[13px] font-bold text-rose-600 hover:bg-rose-50 flex items-center gap-3"><Trash2 size={16} /> Delete Vendor</button>
-                             </div>
-                          )}
-                       </div>
-                    </div>
-
-                    <div className="space-y-6">
-                       <h4 className="text-[11px] font-bold text-slate-700 uppercase tracking-[0.3em] border-b border-slate-50 pb-3">ADDRESS</h4>
-                       <div className="grid grid-cols-2 gap-10 pt-2">
-                           {/* Billing Address */}
-                           {(() => {
-                              let billing = null;
-                              try { billing = vendor.billingAddressJson ? JSON.parse(vendor.billingAddressJson) : (vendor.billingAddress ? JSON.parse(vendor.billingAddress) : null); } catch(e) {}
-                              const hasAddr = billing && (billing.street1 || billing.city || billing.state || billing.attention || billing.country || billing.pinCode);
-                              return (
-                                <div className="space-y-3">
-                                   <p className="text-[13px] font-bold text-slate-800 uppercase tracking-tighter">Billing Address</p>
-                                   {hasAddr ? (
-                                     <div className="text-[13px] text-slate-800 font-semibold leading-relaxed space-y-1">
-                                       {billing.attention && <p className="font-bold text-slate-900">{billing.attention}</p>}
-                                       {billing.street1 && <p>{billing.street1}</p>}
-                                       {billing.street2 && <p>{billing.street2}</p>}
-                                       {(billing.city || billing.state || billing.pinCode) && <p>{[billing.city, billing.state, billing.pinCode].filter(Boolean).join(', ')}</p>}
-                                       {billing.country && <p>{billing.country}</p>}
-                                       {billing.phone && <p className="mt-1 text-slate-800">Ph: {billing.phone}</p>}
-                                     </div>
-                                   ) : (
-                                     <p className="text-[12px] text-slate-400 italic leading-relaxed">No Billing Address - <span className="text-blue-600 not-italic font-bold hover:underline cursor-pointer" onClick={() => navigate(`/vendors/${vendor.id}`)}>New Address</span></p>
-                                   )}
-                                </div>
-                              );
-                           })()}
-
-                           {/* Shipping Address */}
-                           {(() => {
-                              let shipping = null;
-                              try { shipping = vendor.shippingAddressJson ? JSON.parse(vendor.shippingAddressJson) : (vendor.shippingAddress ? JSON.parse(vendor.shippingAddress) : null); } catch(e) {}
-                              const hasAddr = shipping && (shipping.street1 || shipping.city || shipping.state || shipping.attention || shipping.country || shipping.pinCode);
-                              return (
-                                <div className="space-y-3">
-                                   <p className="text-[13px] font-bold text-slate-800 uppercase tracking-tighter">Shipping Address</p>
-                                   {hasAddr ? (
-                                     <div className="text-[13px] text-slate-800 font-semibold leading-relaxed space-y-1">
-                                       {shipping.attention && <p className="font-bold text-slate-900">{shipping.attention}</p>}
-                                       {shipping.street1 && <p>{shipping.street1}</p>}
-                                       {shipping.street2 && <p>{shipping.street2}</p>}
-                                       {(shipping.city || shipping.state || shipping.pinCode) && <p>{[shipping.city, shipping.state, shipping.pinCode].filter(Boolean).join(', ')}</p>}
-                                       {shipping.country && <p>{shipping.country}</p>}
-                                       {shipping.phone && <p className="mt-1 text-slate-800">Ph: {shipping.phone}</p>}
-                                     </div>
-                                   ) : (
-                                     <p className="text-[12px] text-slate-400 italic leading-relaxed">No Shipping Address - <span className="text-blue-600 not-italic font-bold hover:underline cursor-pointer" onClick={() => navigate(`/vendors/${vendor.id}`)}>New Address</span></p>
-                                   )}
-                                </div>
-                              );
-                           })()}
-                       </div>
-                    </div>
+                     {isSettingsOpen && (
+                        <div className="relative">
+                           <div className="absolute right-0 top-0 w-48 bg-white border border-slate-200 rounded-lg shadow-2xl z-50 py-2 animate-fade-down overflow-hidden">
+                              <button onClick={() => { setIsSettingsOpen(false); navigate(`/vendors/${vendor.id}`); }} className="w-full text-left px-4 py-2.5 text-[13px] font-bold text-slate-700 hover:bg-slate-50 flex items-center gap-3"><Edit size={16} className="text-blue-500" /> Edit Profile</button>
+                              <button onClick={() => { setIsSettingsOpen(false); handleDeleteVendor(); }} className="w-full text-left px-4 py-2.5 text-[13px] font-bold text-rose-600 hover:bg-rose-50 flex items-center gap-3"><Trash2 size={16} /> Delete Vendor</button>
+                           </div>
+                        </div>
+                     )}
 
                     <div className="space-y-6">
                        <div className="flex items-center justify-between border-b border-slate-50 pb-3">
-                          <h4 className="text-[11px] font-bold text-slate-700 uppercase tracking-[0.3em]">OTHER DETAILS</h4>
-                          <ChevronUp size={18} className="text-blue-600 cursor-pointer" />
-                       </div>
-                       <div className="space-y-6 pt-2">
-                          <DetailRow label="Vendor Type" value={vendor.customerType || 'Business'} />
-                          <DetailRow label="Currency" value={vendor.currency || 'INR'} />
-                          <DetailRow label="Payment Terms" value={vendor.paymentTerms || 'Due on Receipt'} />
-                       </div>
-                    </div>
-
-
-
-                    <div className="space-y-6">
-                       <div className="flex items-center justify-between border-b border-slate-50 pb-3">
-                          <h4 className="text-[11px] font-bold text-slate-700 uppercase tracking-[0.3em]">BANK ACCOUNT DETAILS</h4>
+                          <h4 className="text-[12px] font-bold text-slate-800 uppercase tracking-[0.05em]">BANK ACCOUNT DETAILS</h4>
                           <div className="flex items-center gap-2 cursor-pointer">
                              <Plus onClick={() => { handleBankFormReset(); setIsBankModalOpen(true); }} size={18} className="bg-blue-600 text-white rounded-full p-0.5 shadow-sm hover:scale-105 transition-transform" strokeWidth={2.5} />
-                             <ChevronUp size={18} className="text-blue-600" />
+                             <ChevronUp size={14} className="text-blue-600 stroke-[2.5]" />
                           </div>
                        </div>
                        <div className="space-y-6 pt-2">
@@ -1031,8 +1067,8 @@ const VendorDetailView = ({ companyId }) => {
 
                     <div className="space-y-6">
                        <div className="flex items-center justify-between border-b border-slate-50 pb-3">
-                          <h4 className="text-[11px] font-bold text-slate-700 uppercase tracking-[0.3em]">RECORD INFO</h4>
-                          <ChevronUp size={18} className="text-blue-600 cursor-pointer" />
+                          <h4 className="text-[12px] font-bold text-slate-800 uppercase tracking-[0.05em]">RECORD INFO</h4>
+                          <ChevronUp size={14} className="text-blue-600 cursor-pointer stroke-[2.5]" />
                        </div>
                        <div className="space-y-6 pt-2">
                           <DetailRow label="Vendor ID" value={vendor.id} />
@@ -1043,27 +1079,118 @@ const VendorDetailView = ({ companyId }) => {
                   </div>
 
                   {/* Right Column Financials */}
-                  <div className="flex-1 space-y-12 border-l border-slate-50 pl-10 pb-20">
-                     <div className="p-8 bg-slate-900 rounded-2xl text-white relative overflow-hidden shadow-2xl shadow-slate-200">
-                        <div className="relative z-10 flex items-start justify-between gap-10">
-                           <div className="space-y-3">
-                              <div className="flex items-center gap-2 text-[14px] font-bold italic tracking-widest text-slate-400 uppercase"><Truck size={16} /> PROCUREMENT STATUS</div>
-                              <p className="text-[16px] text-white/90 font-medium leading-relaxed">View all your pending bills and purchase orders for this vendor.</p>
+                  <div className="flex-1 space-y-8 pl-10 pb-20 font-sans">
+                     {/* WHAT'S NEXT Banner */}
+                     <div className="p-5 border border-slate-200 rounded-lg flex items-center justify-between bg-white shadow-sm relative overflow-hidden group hover:border-slate-300 transition-all duration-200">
+                        <div className="space-y-1">
+                           <div className="flex items-center gap-1.5 text-[11px] font-bold text-[#6259ca] uppercase tracking-widest">
+                              <Sparkles size={13} className="text-[#6259ca]" />
+                              WHAT'S NEXT?
                            </div>
-                           <div className="flex flex-col gap-2 shrink-0">
-                              <button onClick={() => navigate('/bills/new')} className="px-6 py-2 bg-white text-slate-900 rounded-lg text-[13px] font-bold hover:bg-slate-50 transition-all shadow-xl">New Bill</button>
-                               <button onClick={() => navigate('/purchase-orders/new')} className="px-6 py-2 bg-white/10 text-white border border-white/20 rounded-lg text-[13px] font-bold hover:bg-white/20 transition-all">New PO</button>
-                           </div>
+                           <p className="text-[13px] text-slate-600 font-medium">
+                              Create a <span className="font-bold text-slate-700">purchase order</span> or <span className="font-bold text-slate-700">record a bill</span> for your vendor purchases.
+                           </p>
+                        </div>
+                        <div className="flex items-center gap-2.5 shrink-0">
+                           <button 
+                              onClick={() => navigate(`/bills/new?vendorId=${vendor.id}&backTo=vendors`)} 
+                              className="px-4 py-1.5 bg-[#2684ff] hover:bg-[#0052cc] text-white font-bold rounded text-[13px] transition-all shadow-sm"
+                           >
+                              New Bill
+                           </button>
+                           <button 
+                              onClick={() => navigate('/purchase-orders/new')} 
+                              className="px-4 py-1.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 font-bold rounded text-[13px] transition-all shadow-sm"
+                           >
+                              New Purchase Order
+                           </button>
+                           <button className="p-1.5 text-slate-400 hover:text-slate-600 rounded-md transition-colors">
+                              <MoreVertical size={16} />
+                           </button>
                         </div>
                      </div>
 
-                     <div className="space-y-6">
-                        <h4 className="text-[20px] font-bold text-slate-900 tracking-tight flex items-center gap-3">Payables <div className="h-0.5 flex-1 bg-slate-50"></div></h4>
-                        <div className="border border-slate-100 rounded-2xl overflow-hidden shadow-2xl shadow-slate-100 bg-white">
-                           <table className="w-full text-left">
-                              <thead><tr className="bg-slate-50/50 border-b border-slate-100 font-bold text-[11px] text-slate-400 uppercase tracking-[0.2em]"><th className="px-8 py-5">CURRENCY</th><th className="px-8 py-5 text-right">OUTSTANDING</th><th className="px-8 py-5 text-right">UNUSED PAYMENTS</th></tr></thead>
-                              <tbody><tr><td className="px-8 py-8 font-bold text-slate-700">{vendor.currency || 'INR'}</td><td className="px-8 py-8 text-right font-bold text-[24px] text-slate-900">₹{parseFloat(vendor.currentBalance || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td><td className="px-8 py-8 text-right text-slate-300 font-mono font-bold">₹0.00</td></tr></tbody>
+                     {/* Payment Due Period */}
+                     <div className="space-y-1 pt-1">
+                        <div className="text-[12px] text-slate-400 font-bold uppercase tracking-wider">Payment due period</div>
+                        {isEditingPaymentTerms ? (
+                           <div className="flex items-center gap-2">
+                              <select 
+                                 value={paymentTerms} 
+                                 onChange={e => handleUpdateField('paymentTerms', e.target.value)}
+                                 className="px-2 py-1 text-[13px] border border-slate-300 rounded focus:border-blue-500 outline-none font-sans font-bold"
+                              >
+                                 {['Due on Receipt', 'Net 15', 'Net 30', 'Net 45', 'Net 60'].map(term => (
+                                    <option key={term} value={term}>{term}</option>
+                                 ))}
+                              </select>
+                              <button onClick={() => setIsEditingPaymentTerms(false)} className="text-[11px] font-bold text-slate-400 hover:text-slate-600">Cancel</button>
+                           </div>
+                        ) : (
+                           <div className="flex items-center gap-2 group/term">
+                              <span className="text-[14px] text-slate-800 font-bold">{paymentTerms || 'Due on Receipt'}</span>
+                              <button 
+                                 onClick={() => setIsEditingPaymentTerms(true)}
+                                 className="p-1 text-slate-400 hover:text-slate-600 opacity-0 group-hover/term:opacity-100 transition-opacity"
+                              >
+                                 <Edit size={12} />
+                              </button>
+                           </div>
+                        )}
+                     </div>
+
+                     {/* Payables Table Section */}
+                     <div className="space-y-4 pt-4">
+                        <h3 className="text-[18px] font-bold text-slate-800 tracking-tight">Payables</h3>
+                        <div className="w-full border-t border-slate-200">
+                           <table className="w-full text-left font-sans">
+                              <thead>
+                                 <tr className="bg-slate-50/50 border-b border-slate-200">
+                                    <th className="px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest w-1/3">CURRENCY</th>
+                                    <th className="px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-right w-1/3">OUTSTANDING PAYABLES</th>
+                                    <th className="px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-right w-1/3">UNUSED CREDITS</th>
+                                 </tr>
+                              </thead>
+                              <tbody>
+                                 <tr className="border-b border-slate-100 text-[13px] text-slate-700">
+                                    <td className="px-4 py-4 font-medium">{vendor.currency || 'INR'} - Indian Rupee</td>
+                                    <td className="px-4 py-4 text-right font-medium text-slate-800">
+                                       ₹{parseFloat(vendor.currentBalance || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                    </td>
+                                    <td className="px-4 py-4 text-right font-medium text-slate-800">
+                                       ₹{parseFloat(vendor.unusedCredits || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                    </td>
+                                 </tr>
+                              </tbody>
                            </table>
+                        </div>
+
+                        {/* Enter Opening Balance */}
+                        <div className="pt-1">
+                           {isEditingBalance ? (
+                              <div className="flex items-center gap-2">
+                                 <input 
+                                    type="number" 
+                                    value={openingBalance} 
+                                    onChange={e => setOpeningBalance(e.target.value)}
+                                    className="px-2 py-1 text-[13px] border border-slate-300 rounded focus:border-blue-500 outline-none w-32 font-sans font-bold" 
+                                 />
+                                 <button 
+                                    onClick={() => handleUpdateField('openingBalance', openingBalance)}
+                                    className="px-3 py-1 bg-blue-600 text-white rounded text-[11px] font-bold hover:bg-blue-700"
+                                  >
+                                    Save
+                                 </button>
+                                 <button onClick={() => setIsEditingBalance(false)} className="text-[11px] font-bold text-slate-400 hover:text-slate-600">Cancel</button>
+                              </div>
+                           ) : (
+                              <button 
+                                 onClick={() => setIsEditingBalance(true)}
+                                 className="text-[13px] font-semibold text-blue-600 hover:text-blue-800 hover:underline transition-all"
+                              >
+                                 Enter Opening Balance
+                              </button>
+                           )}
                         </div>
                      </div>
                   </div>
