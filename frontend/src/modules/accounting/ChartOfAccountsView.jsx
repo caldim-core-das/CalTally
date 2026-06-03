@@ -15,17 +15,36 @@ export default function ChartOfAccountsView() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    Promise.all([
-      groupAPI.getByCompany(companyId),
-      ledgerAPI.getByCompany(companyId)
-    ]).then(([gRes, lRes]) => {
-      setGroups(Array.isArray(gRes.data) ? gRes.data : []);
-      setLedgers(Array.isArray(lRes.data) ? lRes.data : []);
+    if (!companyId || companyId === 'null' || companyId === 'undefined') {
       setLoading(false);
-    }).catch(err => {
-      console.error(err);
-      setLoading(false);
-    });
+      return;
+    }
+
+    setLoading(true);
+    groupAPI.getByCompany(companyId)
+      .then(gRes => {
+        const fetchedGroups = Array.isArray(gRes.data) ? gRes.data : [];
+        if (fetchedGroups.length === 0) {
+          console.log(`No groups found for company ${companyId}. Auto-seeding default Tally groups...`);
+          return groupAPI.seedStandard(companyId)
+            .then(() => {
+              return groupAPI.getByCompany(companyId);
+            });
+        }
+        return gRes;
+      })
+      .then(gRes => {
+        setGroups(Array.isArray(gRes.data) ? gRes.data : []);
+        return ledgerAPI.getByCompany(companyId);
+      })
+      .then(lRes => {
+        setLedgers(Array.isArray(lRes.data) ? lRes.data : []);
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error("Error loading Chart of Accounts:", err);
+        setLoading(false);
+      });
   }, [companyId]);
 
   const toggleExpand = (id) => {

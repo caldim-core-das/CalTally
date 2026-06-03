@@ -19,6 +19,29 @@ const validatePAN = (pan) => {
   return regex.test(pan.toUpperCase());
 };
 
+const INDUSTRY_OPTIONS = [
+  "General Business",
+  "Trading",
+  "Manufacturing",
+  "Services",
+  "Retail",
+  "Wholesale",
+  "Construction & Real Estate",
+  "Transport & Logistics",
+  "Healthcare & Pharmacy",
+  "Education & Training",
+  "Hotel & Restaurant",
+  "Agriculture & Farming",
+  "Textile & Garments",
+  "Jewellery & Gold",
+  "IT & Software Services",
+  "Printing & Publishing",
+  "Automobile & Auto Parts",
+  "Electronics & Electrical",
+  "Food & Beverages",
+  "Professional Services (CA, Lawyer, Consultant)"
+];
+
 const TabButton = ({ active, label, onClick }) => (
   <button
     onClick={onClick}
@@ -80,7 +103,7 @@ const CompanyInfoView = ({ firstTime = false, onCompanyCreated }) => {
   
   const [formData, setFormData] = useState({
     name: '',
-    industry: 'Computer Software',
+    industry: 'General Business',
     location: 'India',
     street1: '',
     street2: '',
@@ -107,7 +130,7 @@ const CompanyInfoView = ({ firstTime = false, onCompanyCreated }) => {
 
   const [createData, setCreateData] = useState({
     name: '',
-    industry: 'Computer Software',
+    industry: 'General Business',
     location: 'India',
     street1: '',
     street2: '',
@@ -272,7 +295,7 @@ const CompanyInfoView = ({ firstTime = false, onCompanyCreated }) => {
         // Reset creation form
         setCreateData({
           name: '',
-          industry: 'Computer Software',
+          industry: 'General Business',
           location: 'India',
           street1: '',
           street2: '',
@@ -488,7 +511,8 @@ const CompanyInfoView = ({ firstTime = false, onCompanyCreated }) => {
 
             <div className="space-y-2">
               <InputRow label="Organization Name" keyName="name" value={createData.name} onChange={handleCreateField} required={true} placeholder="e.g. Acme Corp Pvt Ltd" />
-              <SelectRow label="Industry" keyName="industry" value={createData.industry} onChange={handleCreateField} options={["Computer Software", "Accounting", "Manufacturing", "Retail", "Services", "Construction", "Distribution"]} />
+              <SelectRow label="Industry" keyName="industry" value={createData.industry} onChange={handleCreateField} options={INDUSTRY_OPTIONS} />
+              <SelectRow label="State" keyName="state" value={createData.state} onChange={handleCreateField} options={INDIAN_STATES} />
               <SelectRow label="Organization Location" keyName="location" value={createData.location} onChange={handleCreateField} options={["India", "USA", "UK", "UAE", "Singapore"]} required={true} />
               
               <div className="flex flex-col gap-1.5 py-4 border-b border-slate-100 lg:flex-row lg:items-start">
@@ -500,9 +524,6 @@ const CompanyInfoView = ({ firstTime = false, onCompanyCreated }) => {
                     <input type="text" placeholder="City" value={createData.city} onChange={e => handleCreateField('city', e.target.value)} className="h-10 border border-slate-200 rounded-lg px-3 text-[13px] outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 placeholder:text-slate-300" />
                     <input type="text" placeholder="PIN Code" value={createData.pincode} onChange={e => handleCreateField('pincode', e.target.value)} className="h-10 border border-slate-200 rounded-lg px-3 text-[13px] outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 placeholder:text-slate-300" />
                   </div>
-                  <select value={createData.state} onChange={e => handleCreateField('state', e.target.value)} className="w-full h-10 border border-slate-200 bg-white rounded-lg px-3 text-[13px] outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10">
-                    {INDIAN_STATES.map(s => <option key={s} value={s}>{s}</option>)}
-                  </select>
                 </div>
               </div>
 
@@ -626,7 +647,7 @@ const CompanyInfoView = ({ firstTime = false, onCompanyCreated }) => {
 
             <div className="space-y-1">
               <InputRow label="Organization Name" keyName="name" value={formData.name} onChange={handleUpdateField} required={true} />
-              <SelectRow label="Industry" keyName="industry" value={formData.industry} onChange={handleUpdateField} options={["Computer Software", "Accounting", "Manufacturing", "Retail", "Services", "Construction", "Distribution"]} />
+              <SelectRow label="Industry" keyName="industry" value={formData.industry} onChange={handleUpdateField} options={INDUSTRY_OPTIONS} />
               <SelectRow label="Organization Location" keyName="location" value={formData.location} onChange={handleUpdateField} options={["India", "USA", "UK", "UAE", "Singapore"]} required={true} />
               
               <div className="flex flex-col gap-1.5 py-4 border-b border-slate-100 lg:flex-row lg:items-start">
