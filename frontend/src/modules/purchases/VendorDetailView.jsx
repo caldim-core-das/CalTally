@@ -17,6 +17,7 @@ import useNotificationStore from '../../store/notificationStore';
 import ConfirmModal from '../../components/ConfirmModal';
 import ComposeMailModal from '../../components/ComposeMailModal';
 import VendorOverviewSidebar from './VendorOverviewSidebar';
+import { getCurrencyDisplay } from '../../utils/currencies';
 
 const DetailRow = ({ label, value }) => (
   <div className="flex justify-between items-center py-1">
@@ -56,6 +57,14 @@ const VendorDetailView = ({ companyId }) => {
   const [newComment, setNewComment] = useState('');
   const [statementData, setStatementData] = useState(null);
   const [currentCompany, setCurrentCompany] = useState(null);
+  const [statementFromDate, setStatementFromDate] = useState(() => {
+    const d = new Date();
+    d.setDate(1);
+    return d.toISOString().split('T')[0];
+  });
+  const [statementToDate, setStatementToDate] = useState(() => {
+    return new Date().toISOString().split('T')[0];
+  });
 
   // UI state
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -241,6 +250,15 @@ const VendorDetailView = ({ companyId }) => {
         ]);
         
         const allLedgersData = ledgersRes.data || [];
+
+        // Security check: if the URL ID does not belong to the active company,
+        // deny access — never auto-switch company context via URL.
+        if (id && !allLedgersData.some(l => String(l.id) === String(id))) {
+          addNotification('This record does not belong to your active company. Please switch your workspace first.', 'error');
+          navigate('/vendors');
+          return;
+        }
+
         setAllLedgers(allLedgersData);
         setCurrentCompany(companyRes.data);
       } catch (err) {
@@ -250,7 +268,7 @@ const VendorDetailView = ({ companyId }) => {
       }
     };
     fetchData();
-  }, [activeCompanyId]);
+  }, [activeCompanyId, id]);
 
   // 1b. Derive vendors list based on full ledgers and currently selected ID
   const vendors = useMemo(() => {
@@ -281,14 +299,16 @@ const VendorDetailView = ({ companyId }) => {
 
            setTransactions({
              bills: (billsRes.data || []).filter(b => String(b.LedgerId) === String(selectedId)),
-             payments: (vouchersRes.data || []).filter(v => v.type === 'Payment' && v.Transactions?.some(t => String(t.LedgerId) === String(selectedId))),
-             expenses: (expensesRes.data || []).filter(e => String(e.LedgerId) === String(selectedId)),
-             orders: (ordersRes.data || []).filter(o => String(o.LedgerId) === String(selectedId))
+             payments: (vouchersRes.data || []).filter(v => (v.voucherType === 'Payment' || v.type === 'Payment') && v.Transactions?.some(t => String(t.LedgerId) === String(selectedId))),
+             expenses: (expensesRes.data || []).filter(e => String(e.Ledger?.id || '') === String(selectedId)),
+             orders: (ordersRes.data || []).filter(o => String(o.LedgerId) === String(selectedId)),
+             recurringBills: [],
+             recurringExpenses: [],
+             vendorCredits: [],
+             journals: []
            });
          } else if (activeTab === 'Statement') {
-           const fromDate = new Date();
-           fromDate.setDate(1); // Start of month
-           const res = await reportsAPI.ledgerStatement(selectedId, fromDate.toISOString().split('T')[0], new Date().toISOString().split('T')[0]);
+           const res = await reportsAPI.ledgerStatement(selectedId, statementFromDate, statementToDate);
            setStatementData(res.data);
          } else if (activeTab === 'Comments') {
             const stored = localStorage.getItem(`vendor_comments_${selectedId}`);
@@ -299,7 +319,7 @@ const VendorDetailView = ({ companyId }) => {
       }
     };
     fetchTabData();
-  }, [activeTab, selectedId, activeCompanyId]);
+  }, [activeTab, selectedId, activeCompanyId, statementFromDate, statementToDate]);
 
   const vendor = useMemo(() => {
     return allLedgers.find(v => String(v.id) === String(selectedId));
@@ -440,6 +460,119 @@ const VendorDetailView = ({ companyId }) => {
       }
     };
     reader.readAsDataURL(file);
+  };
+
+  const renderVendorTxnCells = (secName, row) => {
+    const currencySym = getCurrencyDisplay(vendor?.currency);
+    const formattedAmount = `${currencySym} ${parseFloat(row.totalAmount || row.amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+    const statusCell = (status) => (
+      <td className="px-6 py-3">
+         <span className={`px-2 py-0.5 rounded-full text-[10px] uppercase font-bold ${status === 'Sent' || status === 'Paid' || status === 'Active' || status === 'Confirmed' ? 'bg-green-50 text-green-600' : 'bg-slate-50 text-slate-400'}`}>
+            {status || 'Draft'}
+         </span>
+      </td>
+    );
+
+    switch (secName) {
+      case 'Bills':
+        return (
+          <>
+            <td className="px-6 py-3">{row.date || 'N/A'}</td>
+            <td className="px-6 py-3 font-bold text-blue-600">{row.billNumber || row.number || '---'}</td>
+            <td className="px-6 py-3">{row.orderNumber || row.reference || '---'}</td>
+            <td className="px-6 py-3">{vendor?.name || '---'}</td>
+            <td className="px-6 py-3 font-bold text-slate-900">{formattedAmount}</td>
+            <td className="px-6 py-3 font-medium text-slate-700">{currencySym} {parseFloat(row.balanceDue || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+            {statusCell(row.status)}
+          </>
+        );
+      case 'Bill Payments':
+        const vendorTx = row.Transactions?.find(t => String(t.LedgerId) === String(selectedId));
+        const paymentAmount = vendorTx ? parseFloat(vendorTx.debit || 0) : 0;
+        const cashBankTx = row.Transactions?.find(t => parseFloat(t.credit || 0) > 0);
+        const paidThrough = cashBankTx?.Ledger?.name || '---';
+        const formattedPaymentAmount = `${currencySym} ${paymentAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        return (
+          <>
+            <td className="px-6 py-3">{row.date ? new Date(row.date).toLocaleDateString('en-GB') : 'N/A'}</td>
+            <td className="px-6 py-3 font-bold text-blue-600">{row.voucherNumber || row.number || '---'}</td>
+            <td className="px-6 py-3">{row.reference || row.referenceNumber || '---'}</td>
+            <td className="px-6 py-3">{paidThrough}</td>
+            <td className="px-6 py-3 font-bold text-slate-900">{formattedPaymentAmount}</td>
+            <td className="px-6 py-3 text-slate-500">{currencySym} 0.00</td>
+            {statusCell(row.status || 'Paid')}
+          </>
+        );
+      case 'Expenses':
+        return (
+          <>
+            <td className="px-6 py-3">{row.date || 'N/A'}</td>
+            <td className="px-6 py-3 font-medium text-slate-700">{row.expenseAccount || row.accountName || '---'}</td>
+            <td className="px-6 py-3 font-bold text-blue-600">{row.invoiceNumber || row.number || '---'}</td>
+            <td className="px-6 py-3">{vendor?.name || '---'}</td>
+            <td className="px-6 py-3">{row.paidThrough || '---'}</td>
+            <td className="px-6 py-3">{row.customerName || '---'}</td>
+            <td className="px-6 py-3 font-bold text-slate-900">{formattedAmount}</td>
+            {statusCell(row.status)}
+          </>
+        );
+      case 'Recurring Bills':
+        return (
+          <>
+            <td className="px-6 py-3 font-bold text-slate-800">{row.profileName || row.name || '---'}</td>
+            <td className="px-6 py-3">{row.frequency || '---'}</td>
+            <td className="px-6 py-3">{row.lastBillDate || '---'}</td>
+            <td className="px-6 py-3">{row.nextBillDate || '---'}</td>
+            {statusCell(row.status)}
+          </>
+        );
+      case 'Recurring Expenses':
+        return (
+          <>
+            <td className="px-6 py-3 font-bold text-slate-800">{row.profileName || row.name || '---'}</td>
+            <td className="px-6 py-3">{row.expenseAccount || row.accountName || '---'}</td>
+            <td className="px-6 py-3">{row.frequency || '---'}</td>
+            <td className="px-6 py-3">{row.lastExpenseDate || '---'}</td>
+            <td className="px-6 py-3">{row.nextExpenseDate || '---'}</td>
+            {statusCell(row.status)}
+          </>
+        );
+      case 'Purchase Orders':
+        return (
+          <>
+            <td className="px-6 py-3 font-bold text-blue-600">{row.purchaseOrderNumber || row.number || '---'}</td>
+            <td className="px-6 py-3">{row.referenceNumber || row.reference || '---'}</td>
+            <td className="px-6 py-3">{row.date || 'N/A'}</td>
+            <td className="px-6 py-3">{row.deliveryDate || row.dueDate || '---'}</td>
+            <td className="px-6 py-3 font-bold text-slate-900">{formattedAmount}</td>
+            {statusCell(row.status)}
+          </>
+        );
+      case 'Vendor Credits':
+        return (
+          <>
+            <td className="px-6 py-3">{row.date || 'N/A'}</td>
+            <td className="px-6 py-3 font-bold text-blue-600">{row.creditNoteNumber || row.number || '---'}</td>
+            <td className="px-6 py-3">{row.orderNumber || '---'}</td>
+            <td className="px-6 py-3 text-slate-500">{currencySym} {parseFloat(row.balance || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+            <td className="px-6 py-3 font-bold text-slate-900">{formattedAmount}</td>
+            {statusCell(row.status)}
+          </>
+        );
+      case 'Journals':
+        return (
+          <>
+            <td className="px-6 py-3">{row.date || 'N/A'}</td>
+            <td className="px-6 py-3 font-bold text-blue-600">{row.journalNumber || row.number || '---'}</td>
+            <td className="px-6 py-3">{row.referenceNumber || row.reference || '---'}</td>
+            <td className="px-6 py-3 font-bold text-slate-900">{currencySym} {parseFloat(row.debit || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+            <td className="px-6 py-3 font-bold text-slate-900">{currencySym} {parseFloat(row.credit || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+          </>
+        );
+      default:
+        return null;
+    }
   };
 
   if (loading && vendors.length === 0) {
@@ -697,9 +830,10 @@ const VendorDetailView = ({ companyId }) => {
                      { name: 'Vendor Credits', data: transactions.vendorCredits, cols: ['DATE', 'CREDIT NOTE NUMBER', 'ORDER NUMBER', 'BALANCE', 'AMOUNT', 'STATUS'] },
                      { name: 'Journals', data: transactions.journals, cols: ['DATE', 'JOURNAL NUMBER', 'REFERENCE NUMBER', 'DEBIT', 'CREDIT'] }
                    ].map(sec => {
-                     const filteredData = statusFilters[sec.name] === 'All' 
-                       ? sec.data 
-                       : sec.data.filter(d => d.status === statusFilters[sec.name]);
+                      const dataArray = sec.data || [];
+                      const filteredData = statusFilters[sec.name] === 'All' 
+                        ? dataArray 
+                        : dataArray.filter(d => d.status === statusFilters[sec.name]);
 
                      return (
                        <div key={sec.name} className="border border-slate-100 rounded-lg overflow-hidden shadow-sm bg-white">
@@ -748,17 +882,7 @@ const VendorDetailView = ({ companyId }) => {
                                      {filteredData.length > 0 ? (
                                        filteredData.map((row, i) => (
                                          <tr key={i} className="hover:bg-slate-50 transition-colors border-b border-slate-50 last:border-0 text-[12px] text-slate-600">
-                                            <td className="px-6 py-3">{row.date || 'N/A'}</td>
-                                            <td className="px-6 py-3 font-bold text-blue-600">{row.number || row.orderNumber || row.billNumber || '---'}</td>
-                                            <td className="px-6 py-3">{row.reference || row.orderNumber || '---'}</td>
-                                            <td className="px-6 py-3">{vendor?.name || '---'}</td>
-                                            <td className="px-6 py-3 font-bold text-slate-900">₹{parseFloat(row.totalAmount || row.amount || 0).toLocaleString()}</td>
-                                            {sec.name === 'Bills' && <td className="px-6 py-3">₹{row.balanceDue || '0.00'}</td>}
-                                            <td className="px-6 py-3">
-                                               <span className={`px-2 py-0.5 rounded-full text-[10px] uppercase font-bold ${row.status === 'Paid' ? 'bg-green-50 text-green-600' : 'bg-slate-50 text-slate-400'}`}>
-                                                  {row.status || 'Draft'}
-                                               </span>
-                                            </td>
+                                            {renderVendorTxnCells(sec.name, row)}
                                          </tr>
                                        ))
                                      ) : (
@@ -860,12 +984,24 @@ const VendorDetailView = ({ companyId }) => {
                 <div className="p-8 bg-slate-50/50 min-h-full animate-fade-in">
                    <div className="max-w-4xl mx-auto space-y-6">
                       <div className="flex items-center justify-between bg-white p-4 rounded-xl shadow-sm border border-slate-100 mb-6">
-                         <div className="flex gap-3">
-                            <div className="flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-200 rounded text-[13px] font-medium text-slate-700">
-                               <Calendar size={14} className="text-slate-400"/> This Month <ChevronDown size={14}/>
+                         <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs font-bold text-slate-400 uppercase">From</span>
+                              <input 
+                                type="date" 
+                                value={statementFromDate} 
+                                onChange={e => setStatementFromDate(e.target.value)}
+                                className="border border-slate-200 rounded px-2 py-1 text-[13px] font-semibold text-slate-700 outline-none focus:border-blue-500 font-sans" 
+                              />
                             </div>
-                            <div className="flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-200 rounded text-[13px] font-medium text-slate-700">
-                               Filter By: All <ChevronDown size={14}/>
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs font-bold text-slate-400 uppercase">To</span>
+                              <input 
+                                type="date" 
+                                value={statementToDate} 
+                                onChange={e => setStatementToDate(e.target.value)}
+                                className="border border-slate-200 rounded px-2 py-1 text-[13px] font-semibold text-slate-700 outline-none focus:border-blue-500 font-sans" 
+                              />
                             </div>
                          </div>
                          <div className="flex items-center gap-2">
@@ -899,17 +1035,31 @@ const VendorDetailView = ({ companyId }) => {
                          {/* Main Title */}
                          <div className="mt-20 text-center space-y-2">
                             <h2 className="text-[28px] font-bold text-slate-900 border-b-4 border-slate-900 inline-block pb-2 px-4 italic uppercase tracking-tighter">Statement of Accounts</h2>
-                            <p className="text-[14px] font-bold text-slate-400 font-sans mt-4">01/04/2026 To 30/04/2026</p>
+                            <p className="text-[14px] font-bold text-slate-400 font-sans mt-4">
+                               {new Date(statementFromDate).toLocaleDateString('en-GB')} To {new Date(statementToDate).toLocaleDateString('en-GB')}
+                            </p>
                          </div>
 
                          {/* Summary Table */}
                          <div className="mt-20 flex justify-end">
                             <div className="w-80 space-y-0 text-[13px] font-sans shadow-xl border border-slate-100 rounded-lg overflow-hidden">
                                <div className="bg-slate-900 p-3 font-bold text-white border-b border-slate-200 uppercase tracking-widest text-[10px]">Account Summary</div>
-                               <div className="flex justify-between p-3 border-b border-slate-50"><span>Opening Balance</span><span className="font-bold">₹0.00</span></div>
-                               <div className="flex justify-between p-3 border-b border-slate-50"><span>Billed Amount</span><span className="font-bold">₹{parseFloat(vendor?.currentBalance || 0).toLocaleString()}</span></div>
-                               <div className="flex justify-between p-3 border-b border-slate-50"><span>Amount Paid</span><span className="font-bold">₹0.00</span></div>
-                               <div className="flex justify-between p-4 border-b border-slate-200 bg-slate-50/50"><span className="font-bold text-slate-900 uppercase">Balance Due</span><span className="font-bold text-[18px] text-blue-600">₹{parseFloat(vendor?.currentBalance || 0).toLocaleString()}</span></div>
+                               <div className="flex justify-between p-3 border-b border-slate-50">
+                                  <span>Opening Balance</span>
+                                  <span className="font-bold">₹{parseFloat(statementData?.ledger?.openingBalance || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                               </div>
+                               <div className="flex justify-between p-3 border-b border-slate-50">
+                                  <span>Billed Amount (Purchase)</span>
+                                  <span className="font-bold">₹{statementData?.entries?.reduce((sum, e) => sum + (e.credit || 0), 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                               </div>
+                               <div className="flex justify-between p-3 border-b border-slate-50">
+                                  <span>Amount Paid</span>
+                                  <span className="font-bold">₹{statementData?.entries?.reduce((sum, e) => sum + (e.debit || 0), 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                               </div>
+                               <div className="flex justify-between p-4 border-b border-slate-200 bg-slate-50/50">
+                                  <span className="font-bold text-slate-900 uppercase">Balance Due</span>
+                                  <span className="font-bold text-[18px] text-blue-600">₹{Math.abs(statementData?.ledger?.closingBalance || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                               </div>
                             </div>
                          </div>
 
@@ -927,18 +1077,31 @@ const VendorDetailView = ({ companyId }) => {
                             </thead>
                             <tbody className="text-slate-600">
                                <tr className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
-                                  <td className="px-4 py-4 italic font-medium">01/04/2026</td>
+                                  <td className="px-4 py-4 italic font-medium">{statementData?.ledger?.openingBalance ? new Date(statementFromDate).toLocaleDateString('en-GB') : '—'}</td>
                                   <td className="px-4 py-4 font-bold text-slate-900 uppercase tracking-tighter italic text-[13px]">*** Opening Balance ***</td>
                                   <td className="px-4 py-4">---</td>
                                   <td className="px-4 py-4 text-right">0.00</td>
                                   <td className="px-4 py-4 text-right">0.00</td>
-                                  <td className="px-4 py-4 text-right font-bold text-slate-900">0.00</td>
-                               </tr>
+                                  <td className="px-4 py-4 text-right font-bold text-slate-900">{parseFloat(statementData?.ledger?.openingBalance || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                                </tr>
+                                {statementData?.entries?.map((e, idx) => (
+                                  <tr key={idx} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
+                                    <td className="px-4 py-5 font-medium">{new Date(e.date).toLocaleDateString('en-GB')}</td>
+                                    <td className="px-4 py-5">
+                                       <p className="font-bold text-slate-800">{e.voucherType}</p>
+                                       <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">#{e.voucherNumber}</p>
+                                    </td>
+                                    <td className="px-4 py-5 max-w-xs truncate text-slate-400 font-medium italic">{e.narration}</td>
+                                    <td className="py-6 px-4 text-right text-slate-600 font-bold tabular-nums">₹{parseFloat(e.debit || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                                    <td className="px-4 py-5 text-right font-bold text-emerald-600">₹{parseFloat(e.credit || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                                    <td className="py-6 px-4 text-right text-slate-900 font-black tabular-nums">₹{parseFloat(e.balance || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                                  </tr>
+                                ))}
                             </tbody>
                             <tfoot>
                                <tr className="font-bold text-slate-900 text-[14px] bg-slate-50/50">
                                   <td colSpan={5} className="px-4 py-6 text-right uppercase tracking-widest text-[11px]">Current Balance Due</td>
-                                  <td className="px-4 py-6 text-right text-blue-600 text-[16px]">₹{parseFloat(vendor?.currentBalance || 0).toLocaleString()}</td>
+                                  <td className="px-4 py-6 text-right text-blue-600 text-[16px]">₹{Math.abs(statementData?.ledger?.closingBalance || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
                                </tr>
                             </tfoot>
                          </table>

@@ -2,12 +2,14 @@ const { CostCenter, CostCategory, AuditLog } = require('../../models');
 
 exports.createCostCenter = async (req, res) => {
   try {
-    const { name, category, description, companyId, costCategoryId } = req.body;
+    const { name, category, description, companyId, CompanyId, costCategoryId } = req.body;
+    const finalCompanyId = req.companyId || companyId || CompanyId;
+    
     const costCenter = await CostCenter.create({
       name,
       category: category || 'General',
       description,
-      CompanyId: companyId,
+      CompanyId: finalCompanyId,
       costCategoryId: costCategoryId || null
     });
 
@@ -16,7 +18,7 @@ exports.createCostCenter = async (req, res) => {
       tableName: 'CostCenters',
       recordId: costCenter.id,
       newData: costCenter,
-      CompanyId: companyId,
+      CompanyId: finalCompanyId,
       UserId: req.user?.id
     });
 

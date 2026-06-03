@@ -68,7 +68,11 @@ class AccountingService {
       // Real-time Balance Update (Tally Standard)
       const ledger = await Ledger.findByPk(entry.ledgerId, options);
       if (ledger) {
-        const delta = parseFloat(entry.debit || 0) - parseFloat(entry.credit || 0);
+        const debit = parseFloat(entry.debit || 0);
+        const credit = parseFloat(entry.credit || 0);
+        const delta = ledger.openingBalanceType === 'Cr'
+          ? credit - debit
+          : debit - credit;
         ledger.currentBalance = parseFloat(ledger.currentBalance || 0) + delta;
         await ledger.save(options);
       }
@@ -126,7 +130,11 @@ class AccountingService {
       for (const oldTx of voucher.Transactions) {
         const ledger = await Ledger.findByPk(oldTx.LedgerId, options);
         if (ledger) {
-          const delta = parseFloat(oldTx.debit || 0) - parseFloat(oldTx.credit || 0)
+          const oldDebit = parseFloat(oldTx.debit || 0);
+          const oldCredit = parseFloat(oldTx.credit || 0);
+          const delta = ledger.openingBalanceType === 'Cr'
+            ? oldCredit - oldDebit
+            : oldDebit - oldCredit;
           ledger.currentBalance = parseFloat(ledger.currentBalance || 0) - delta; // Reverse delta
           await ledger.save(options);
         }
@@ -168,7 +176,11 @@ class AccountingService {
       // Real-time Balance Update
       const ledger = await Ledger.findByPk(entry.ledgerId, options);
       if (ledger) {
-        const delta = parseFloat(entry.debit || 0) - parseFloat(entry.credit || 0);
+        const debit = parseFloat(entry.debit || 0);
+        const credit = parseFloat(entry.credit || 0);
+        const delta = ledger.openingBalanceType === 'Cr'
+          ? credit - debit
+          : debit - credit;
         ledger.currentBalance = parseFloat(ledger.currentBalance || 0) + delta;
         await ledger.save(options);
       }
@@ -212,7 +224,11 @@ class AccountingService {
         totalDebit += parseFloat(oldTx.debit || 0);
         const ledger = await Ledger.findByPk(oldTx.LedgerId, options);
         if (ledger) {
-          const delta = parseFloat(oldTx.debit || 0) - parseFloat(oldTx.credit || 0)
+          const oldDebit = parseFloat(oldTx.debit || 0);
+          const oldCredit = parseFloat(oldTx.credit || 0);
+          const delta = ledger.openingBalanceType === 'Cr'
+            ? oldCredit - oldDebit
+            : oldDebit - oldCredit;
           ledger.currentBalance = parseFloat(ledger.currentBalance || 0) - delta; // Reverse delta
           await ledger.save(options);
         }
@@ -424,7 +440,11 @@ class AccountingService {
         // 1. Reverse balance from old ledger
         const oldLedger = await Ledger.findByPk(oldLedgerId, { transaction: t });
         if (oldLedger) {
-          const delta = parseFloat(tx.debit || 0) - parseFloat(tx.credit || 0);
+          const txDebit = parseFloat(tx.debit || 0);
+          const txCredit = parseFloat(tx.credit || 0);
+          const delta = oldLedger.openingBalanceType === 'Cr'
+            ? txCredit - txDebit
+            : txDebit - txCredit;
           oldLedger.currentBalance = parseFloat(oldLedger.currentBalance || 0) - delta;
           await oldLedger.save({ transaction: t });
           historyDetails.push({ txId, oldAccount: oldLedger.name });
@@ -435,7 +455,11 @@ class AccountingService {
         await tx.save({ transaction: t });
 
         // 3. Apply balance to new ledger
-        const delta = parseFloat(tx.debit || 0) - parseFloat(tx.credit || 0);
+        const txDebit = parseFloat(tx.debit || 0);
+        const txCredit = parseFloat(tx.credit || 0);
+        const delta = targetLedger.openingBalanceType === 'Cr'
+          ? txCredit - txDebit
+          : txDebit - txCredit;
         targetLedger.currentBalance = parseFloat(targetLedger.currentBalance || 0) + delta;
         
         updatedCount++;

@@ -2,11 +2,13 @@ const { CostCategory, AuditLog } = require('../../models');
 
 exports.createCostCategory = async (req, res) => {
   try {
-    const { name, description, companyId } = req.body;
+    const { name, description, companyId, CompanyId } = req.body;
+    const finalCompanyId = req.companyId || companyId || CompanyId;
+    
     const category = await CostCategory.create({
       name,
       description,
-      CompanyId: companyId
+      CompanyId: finalCompanyId
     });
 
     await AuditLog.create({
@@ -14,7 +16,7 @@ exports.createCostCategory = async (req, res) => {
       tableName: 'CostCategories',
       recordId: category.id,
       newData: category,
-      CompanyId: companyId,
+      CompanyId: finalCompanyId,
       UserId: req.user?.id
     });
 

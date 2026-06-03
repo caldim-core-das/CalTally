@@ -57,23 +57,39 @@ const TrialBalanceView = () => {
     setSendingMail(false);
   };
 
-  const fmt = (v) => v === 0 ? '₹0.00' : `₹${Number(v || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
+  const fmt = (v) => {
+    if (v === 0 || v === '0' || !v) return '—';
+    return `₹${Number(v).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
+  };
 
   const grouped = useMemo(() => {
     return data.reduce((acc, row) => {
-      const group = row.group || 'Ungrouped';
-      if (!acc[group]) acc[group] = { ledgers: [], totalDebit: 0, totalCredit: 0 };
+      const group = row.groupName || 'Ungrouped';
+      if (!acc[group]) {
+        acc[group] = { 
+          ledgers: [], 
+          totalTransactionDebits: 0, 
+          totalTransactionCredits: 0, 
+          totalDebitBalance: 0, 
+          totalCreditBalance: 0 
+        };
+      }
       acc[group].ledgers.push(row);
-      acc[group].totalDebit += (parseFloat(row.debitBalance) || 0);
-      acc[group].totalCredit += (parseFloat(row.creditBalance) || 0);
+      acc[group].totalTransactionDebits += (parseFloat(row.transactionDebits) || 0);
+      acc[group].totalTransactionCredits += (parseFloat(row.transactionCredits) || 0);
+      acc[group].totalDebitBalance += (parseFloat(row.debitBalance) || 0);
+      acc[group].totalCreditBalance += (parseFloat(row.creditBalance) || 0);
       return acc;
     }, {});
   }, [data]);
 
   // Flattened data for Ledger Wise view
   const flattenedLedgers = useMemo(() => {
-    return [...data].sort((a, b) => a.ledgerName.localeCompare(b.ledgerName));
+    return [...data].sort((a, b) => (a.name || '').localeCompare(b.name || ''));
   }, [data]);
+
+  const totalTransDebitsSum = useMemo(() => data.reduce((s, r) => s + (parseFloat(r.transactionDebits) || 0), 0), [data]);
+  const totalTransCreditsSum = useMemo(() => data.reduce((s, r) => s + (parseFloat(r.transactionCredits) || 0), 0), [data]);
 
   if (!companyId) {
     return (
@@ -89,6 +105,8 @@ const TrialBalanceView = () => {
       </div>
     );
   }
+
+  const diff = summary ? Math.abs((summary.totalDebit || 0) - (summary.totalCredit || 0)) : 0;
 
   return (
     <div className="flex flex-col h-full bg-[#f8fafc] animate-fade-in font-sans overflow-hidden">
@@ -175,13 +193,13 @@ const TrialBalanceView = () => {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
              <SummaryItem 
                label="Total Debit" 
-               value={fmt(summary?.totalDebit)} 
+               value={summary?.totalDebit > 0 ? `₹${Number(summary.totalDebit).toLocaleString('en-IN', { minimumFractionDigits: 2 })}` : '—'} 
                color="text-slate-900"
                subLabel="Accumulated Debits"
              />
              <SummaryItem 
                label="Total Credit" 
-               value={fmt(summary?.totalCredit)} 
+               value={summary?.totalCredit > 0 ? `₹${Number(summary.totalCredit).toLocaleString('en-IN', { minimumFractionDigits: 2 })}` : '—'} 
                color="text-slate-900"
                subLabel="Accumulated Credits"
              />
@@ -193,15 +211,12 @@ const TrialBalanceView = () => {
                    <div>
                       <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Status</p>
                       <h3 className={`text-[18px] font-bold tracking-tight ${summary?.isBalanced ? 'text-emerald-600' : 'text-rose-600'}`}>
-                        {summary?.isBalanced ? 'Books Balanced' : 'Imbalance Detected'}
+                        {summary?.isBalanced 
+                          ? 'Balanced ✓' 
+                          : `Imbalance Detected — difference: ₹${Number(diff).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`}
                       </h3>
                    </div>
                 </div>
-                {summary?.isBalanced && (
-                  <div className="px-4 py-1.5 bg-emerald-500 text-white rounded-lg text-[10px] font-bold uppercase tracking-widest shadow-lg shadow-emerald-500/20">
-                    Audit Ready
-                  </div>
-                )}
              </div>
           </div>
 
@@ -216,11 +231,13 @@ const TrialBalanceView = () => {
               <table className="w-full text-left border-collapse">
                 <thead className="bg-slate-50/50 text-[10px] font-bold uppercase tracking-widest text-slate-400 border-b border-slate-100">
                   <tr>
-                    <th className="px-8 py-4">Account / Group</th>
+                    <th className="px-8 py-4">Account Name</th>
                     <th className="px-6 py-4">Nature</th>
                     <th className="px-6 py-4 text-right">Opening (₹)</th>
-                    <th className="px-6 py-4 text-right">Debit Balance (₹)</th>
-                    <th className="px-8 py-4 text-right">Credit Balance (₹)</th>
+                    <th className="px-6 py-4 text-right">Total Dr</th>
+                    <th className="px-6 py-4 text-right">Total Cr</th>
+                    <th className="px-6 py-4 text-right">Closing Dr</th>
+                    <th className="px-8 py-4 text-right">Closing Cr</th>
                   </tr>
                 </thead>
                 <tbody className="text-[12px] text-slate-600">
@@ -229,22 +246,24 @@ const TrialBalanceView = () => {
                     Object.entries(grouped).map(([groupName, groupData]) => (
                       <React.Fragment key={groupName}>
                         {/* Group Header */}
-                        <tr className="bg-slate-50/20">
+                        <tr className="bg-slate-50/20 border-b border-slate-100">
                           <td className="px-8 py-2.5 text-[11px] font-bold text-[#1e61f0] uppercase tracking-widest" colSpan={3}>
                             {groupName}
                           </td>
-                          <td className="px-6 py-2.5 text-right text-[11px] font-bold text-slate-400">{groupData.totalDebit > 0 ? fmt(groupData.totalDebit) : '—'}</td>
-                          <td className="px-8 py-2.5 text-right text-[11px] font-bold text-slate-400">{groupData.totalCredit > 0 ? fmt(groupData.totalCredit) : '—'}</td>
+                          <td className="px-6 py-2.5 text-right text-[11px] font-bold text-slate-400">{fmt(groupData.totalTransactionDebits)}</td>
+                          <td className="px-6 py-2.5 text-right text-[11px] font-bold text-slate-400">{fmt(groupData.totalTransactionCredits)}</td>
+                          <td className="px-6 py-2.5 text-right text-[11px] font-bold text-slate-400">{fmt(groupData.totalDebitBalance)}</td>
+                          <td className="px-8 py-2.5 text-right text-[11px] font-bold text-slate-400">{fmt(groupData.totalCreditBalance)}</td>
                         </tr>
                         {groupData.ledgers.map(row => (
-                          <DataRow key={row.ledgerId} row={row} navigate={navigate} fmt={fmt} />
+                          <DataRow key={row.id} row={row} navigate={navigate} fmt={fmt} />
                         ))}
                       </React.Fragment>
                     ))
                   ) : (
                     // LEDGER WISE VIEW (Flat List)
                     flattenedLedgers.map(row => (
-                      <DataRow key={row.ledgerId} row={row} navigate={navigate} fmt={fmt} />
+                      <DataRow key={row.id} row={row} navigate={navigate} fmt={fmt} />
                     ))
                   )}
                 </tbody>
@@ -254,13 +273,27 @@ const TrialBalanceView = () => {
                       <div className="flex items-center gap-4">
                         <span>Grand Totals</span>
                         <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border ${summary?.isBalanced ? 'bg-emerald-50 border-emerald-200 text-emerald-600' : 'bg-rose-50 border-rose-200 text-rose-600'}`}>
-                          {summary?.isBalanced ? 'Integrated' : 'Discrepancy'}
+                          {summary?.isBalanced ? 'Balanced ✓' : 'Imbalance'}
                         </span>
                       </div>
                     </td>
                     <td className="px-6 py-5" />
-                    <td className="px-6 py-5 text-right text-[15px] font-black tracking-tight">{fmt(summary?.totalDebit)}</td>
-                    <td className="px-8 py-5 text-right text-[15px] font-black tracking-tight">{fmt(summary?.totalCredit)}</td>
+                    <td className="px-6 py-5 text-right text-[15px] font-black tracking-tight">{fmt(totalTransDebitsSum)}</td>
+                    <td className="px-6 py-5 text-right text-[15px] font-black tracking-tight">{fmt(totalTransCreditsSum)}</td>
+                    <td className="px-6 py-5 text-right text-[15px] font-black tracking-tight">
+                      <div className="flex items-center justify-end gap-1.5">
+                        {fmt(summary?.totalDebit)}
+                        {summary?.isBalanced && <CheckCircle2 size={14} className="text-emerald-500" />}
+                        {!summary?.isBalanced && <AlertCircle size={14} className="text-rose-500" />}
+                      </div>
+                    </td>
+                    <td className="px-8 py-5 text-right text-[15px] font-black tracking-tight">
+                      <div className="flex items-center justify-end gap-1.5">
+                        {fmt(summary?.totalCredit)}
+                        {summary?.isBalanced && <CheckCircle2 size={14} className="text-emerald-500" />}
+                        {!summary?.isBalanced && <AlertCircle size={14} className="text-rose-500" />}
+                      </div>
+                    </td>
                   </tr>
                 </tfoot>
               </table>
@@ -315,13 +348,13 @@ const TrialBalanceView = () => {
 // Extracted Row Component for reusability
 const DataRow = ({ row, navigate, fmt }) => (
   <tr 
-    onClick={() => navigate(`/ledger-statement/${row.ledgerId}`)}
+    onClick={() => navigate(`/ledger-statement/${row.id}`)}
     className="hover:bg-slate-50 transition-all cursor-pointer group border-b border-slate-50 last:border-0"
   >
     <td className="px-8 py-4 pl-12 font-bold text-slate-900 flex items-center gap-2">
       <div className="flex flex-col">
-        <span>{row.ledgerName}</span>
-        {row.group && <span className="text-[9px] text-slate-400 font-medium uppercase tracking-tighter">{row.group}</span>}
+        <span>{row.name}</span>
+        {row.groupName && <span className="text-[9px] text-slate-400 font-medium uppercase tracking-tighter">{row.groupName}</span>}
       </div>
       <ChevronRight size={14} className="opacity-0 group-hover:opacity-100 group-hover:translate-x-1 text-[#1e61f0] transition-all" />
     </td>
@@ -331,16 +364,26 @@ const DataRow = ({ row, navigate, fmt }) => (
       </span>
     </td>
     <td className="px-6 py-4 text-right text-slate-500 font-medium">
-      {fmt(row.openingBalance)}
-      <span className="text-[9px] ml-1 text-slate-300 uppercase">
-        {row.openingBalanceType || 'Dr'}
-      </span>
+      {row.openingBalance > 0 ? (
+        <>
+          {fmt(row.openingBalance)}
+          <span className="text-[9px] ml-1 text-slate-300 uppercase">
+            {row.openingBalanceType || 'Dr'}
+          </span>
+        </>
+      ) : '—'}
+    </td>
+    <td className="px-6 py-4 text-right text-slate-500 font-medium">
+      {fmt(row.transactionDebits)}
+    </td>
+    <td className="px-6 py-4 text-right text-slate-500 font-medium">
+      {fmt(row.transactionCredits)}
     </td>
     <td className="px-6 py-4 text-right font-bold text-slate-900">
-      {row.debitBalance > 0 ? fmt(row.debitBalance) : '—'}
+      {fmt(row.debitBalance)}
     </td>
     <td className="px-8 py-4 text-right font-bold text-slate-900">
-      {row.creditBalance > 0 ? fmt(row.creditBalance) : '—'}
+      {fmt(row.creditBalance)}
     </td>
   </tr>
 );

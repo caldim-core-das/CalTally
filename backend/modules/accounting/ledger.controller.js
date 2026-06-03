@@ -1,36 +1,90 @@
 const { Ledger, Group, Transaction, Voucher, sequelize } = require('../../models');
+const { Op } = require('sequelize');
 const AuditService = require('../../services/AuditService');
+
+// ─── Helper: find-or-create a standard group ────────────────────────────────
+const AUTO_GROUPS = {
+  'Sundry Debtors':   { nature: 'Assets',      parent: 'Current Assets',      category: 'Sub-Group' },
+  'Sundry Creditors': { nature: 'Liabilities',  parent: 'Current Liabilities', category: 'Sub-Group' },
+  'Bank Accounts':    { nature: 'Assets',        parent: 'Current Assets',      category: 'Sub-Group' },
+  'Bank OD A/c':      { nature: 'Liabilities',   parent: 'Loans (Liability)',   category: 'Sub-Group' },
+  'Cash-in-Hand':     { nature: 'Assets',        parent: 'Current Assets',      category: 'Sub-Group' },
+};
+
+async function findOrCreateGroup(groupName, companyId) {
+  let group = await Group.findOne({ where: { name: groupName, CompanyId: companyId } });
+  if (group) return group;
+
+  const meta = AUTO_GROUPS[groupName];
+  if (!meta) return null; // Unknown group — cannot auto-create
+
+  console.log(`[LEDGER_CONTROLLER] Auto-creating missing group: "${groupName}" for company ${companyId}`);
+
+  // Find or create parent group first
+  let parentId = null;
+  if (meta.parent) {
+    let parentGroup = await Group.findOne({ where: { name: meta.parent, CompanyId: companyId } });
+    if (!parentGroup) {
+      parentGroup = await Group.create({
+        name: meta.parent,
+        nature: meta.nature, // Same nature as child (safe default)
+        category: 'Primary',
+        CompanyId: companyId
+      });
+    }
+    parentId = parentGroup.id;
+  }
+
+  group = await Group.create({
+    name: groupName,
+    nature: meta.nature,
+    category: meta.category,
+    parent_id: parentId,
+    CompanyId: companyId
+  });
+
+  return group;
+}
 
 // Create a Ledger under a Group
 exports.createLedger = async (req, res) => {
   console.log('[CREATE_LEDGER] Request Body:', JSON.stringify(req.body, null, 2));
   try {
-    const { companyId, CompanyId, groupId, GroupId, name, openingBalance, openingBalanceType, description, address, gstNumber, groupName } = req.body;
+    const {
+      companyId, CompanyId, groupId, GroupId, name,
+      openingBalance, openingBalanceType, description, address,
+      gstNumber, groupName
+    } = req.body;
+
+    const finalCompanyId = companyId || CompanyId;
     let finalGroupId = groupId || GroupId;
-    
-    // Auto-resolve groupName to GroupId
+
+    // Auto-resolve groupName → GroupId
     if (!finalGroupId && groupName) {
-      let foundGroup = await Group.findOne({ 
-        where: { name: groupName, CompanyId: companyId || CompanyId } 
+      const resolvedGroup = await findOrCreateGroup(groupName, finalCompanyId);
+      if (resolvedGroup) finalGroupId = resolvedGroup.id;
+    }
+
+    // ── Duplicate-name check ─────────────────────────────────────────────────
+    // Prevent two ledgers with the same name in the same group+company.
+    // (Case-insensitive match)
+    if (name && finalGroupId && finalCompanyId) {
+      const existing = await Ledger.findOne({
+        where: {
+          name: { [Op.like]: name.trim() },
+          GroupId: finalGroupId,
+          CompanyId: finalCompanyId
+        }
       });
-
-      // If banking group is missing, auto-create it (essential for Banking module)
-      if (!foundGroup && ['Bank Accounts', 'Bank OD A/c', 'Cash-in-Hand'].includes(groupName)) {
-        console.log(`[LEDGER_CONTROLLER] Auto-creating missing system group: ${groupName}`);
-        foundGroup = await Group.create({
-          name: groupName,
-          nature: groupName === 'Bank Accounts' || groupName === 'Cash-in-Hand' ? 'Assets' : 'Liabilities',
-          category: 'Primary',
-          CompanyId: companyId || CompanyId
-        });
+      if (existing) {
+        console.log(`[CREATE_LEDGER] Duplicate detected: "${name}" already exists in group ${finalGroupId}. Returning existing.`);
+        return res.status(200).json({ ...existing.toJSON(), _duplicate: true });
       }
-
-      if (foundGroup) finalGroupId = foundGroup.id;
     }
 
     const ledger = await Ledger.create({
       ...req.body,
-      name,
+      name: name?.trim(),
       openingBalance: openingBalance || 0,
       openingBalanceType: openingBalanceType || 'Dr',
       currentBalance: openingBalance || 0,
@@ -42,7 +96,7 @@ exports.createLedger = async (req, res) => {
       ifsc: req.body.ifsc,
       accountCode: req.body.accountCode,
       GroupId: finalGroupId,
-      CompanyId: companyId || CompanyId
+      CompanyId: finalCompanyId
     });
 
     await AuditService.log({
@@ -66,13 +120,25 @@ exports.createLedger = async (req, res) => {
   }
 };
 
-// Get all Ledgers for a company, grouped by their parent Group
+
 exports.getLedgers = async (req, res) => {
   try {
     console.log(`[LEDGER_FETCH] Requesting ledgers for companyId: ${req.params.companyId}`);
     const ledgers = await Ledger.findAll({
       where: { CompanyId: req.params.companyId },
-      include: [{ model: Group, attributes: ['id', 'name', 'nature'] }],
+      include: [
+        { model: Group, attributes: ['id', 'name', 'nature'] },
+        { model: Transaction, attributes: [] }
+      ],
+      attributes: {
+        include: [
+          [sequelize.fn('COALESCE', sequelize.fn('SUM', sequelize.col('Transactions.debit')), 0), 'totalDebit'],
+          [sequelize.fn('COALESCE', sequelize.fn('SUM', sequelize.col('Transactions.credit')), 0), 'totalCredit']
+        ]
+      },
+      group: ['Ledger.id', 'Group.id'],
+      raw: true,
+      nest: true,
       order: [['name', 'ASC']]
     });
     res.json(ledgers);
