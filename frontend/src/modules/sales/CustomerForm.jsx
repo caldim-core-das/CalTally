@@ -42,7 +42,7 @@ const CustomerForm = ({ onSaveSuccess, onCancel, customerToEdit = null, standalo
   const [showDisplayNameDropdown, setShowDisplayNameDropdown] = useState(false);
   
   // Addresses
-  const initialAddress = { attention: '', country: 'India', street1: '', street2: '', city: '', state: '', pinCode: '', phone: '' };
+  const initialAddress = { attention: '', country: '', street1: '', street2: '', city: '', state: '', pinCode: '', phone: '' };
   const [billingAddress, setBillingAddress] = useState({ ...initialAddress });
   const [shippingAddress, setShippingAddress] = useState({ ...initialAddress });
 
