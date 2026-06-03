@@ -48,6 +48,14 @@ const CustomerDetailView = ({ companyId }) => {
   const [newComment, setNewComment] = useState('');
   const [statementData, setStatementData] = useState(null);
   const [currentCompany, setCurrentCompany] = useState(null);
+  const [statementFromDate, setStatementFromDate] = useState(() => {
+    const d = new Date();
+    d.setDate(1);
+    return d.toISOString().split('T')[0];
+  });
+  const [statementToDate, setStatementToDate] = useState(() => {
+    return new Date().toISOString().split('T')[0];
+  });
 
   // UI state
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -112,6 +120,15 @@ const CustomerDetailView = ({ companyId }) => {
           l.Group?.name?.toLowerCase().includes('debtor') || 
           l.groupName?.toLowerCase().includes('debtor')
         );
+
+        // Security check: if the URL ID does not belong to the active company,
+        // deny access — never auto-switch company context via URL.
+        if (id && !customerLedgers.some(c => String(c.id) === String(id))) {
+          addNotification('This record does not belong to your active company. Please switch your workspace first.', 'error');
+          navigate('/customers');
+          return;
+        }
+
         setCustomers(customerLedgers);
         setCurrentCompany(companyRes.data);
       } catch (err) {
@@ -121,7 +138,7 @@ const CustomerDetailView = ({ companyId }) => {
       }
     };
     fetchData();
-  }, [activeCompanyId]);
+  }, [activeCompanyId, id]);
 
   useEffect(() => {
     if (id) setSelectedId(id);
@@ -143,24 +160,23 @@ const CustomerDetailView = ({ companyId }) => {
     const fetchTabData = async () => {
       try {
          if (activeTab === 'Transactions') {
-           const [ordersRes, quotesRes, retainerRes, vouchersRes] = await Promise.all([
+           const [ordersRes, quotesRes, retainerRes, vouchersRes, invoicesRes] = await Promise.all([
              salesAPI.getOrders(activeCompanyId),
              quoteAPI.getByCompany(activeCompanyId),
              retainerInvoiceAPI.getByCompany(activeCompanyId),
-             voucherAPI.getByCompany(activeCompanyId)
+             voucherAPI.getByCompany(activeCompanyId),
+             salesAPI.getInvoicesByCompany(activeCompanyId)
            ]);
 
            setTransactions({
-             invoices: (vouchersRes.data || []).filter(v => v.type === 'Sales' && v.Transactions?.some(t => String(t.LedgerId) === String(selectedId))),
-             payments: (vouchersRes.data || []).filter(v => v.type === 'Receipt' && v.Transactions?.some(t => String(t.LedgerId) === String(selectedId))),
-             quotes: (quotesRes.data || []).filter(q => String(q.LedgerId) === String(selectedId)),
-             retainerInvoices: (retainerRes.data || []).filter(r => String(r.LedgerId) === String(selectedId)),
+             invoices: (invoicesRes.data || []).filter(inv => String(inv.customerLedgerId) === String(selectedId)),
+             payments: (vouchersRes.data || []).filter(v => (v.voucherType === 'Receipt' || v.type === 'Receipt') && v.Transactions?.some(t => String(t.LedgerId) === String(selectedId))),
+             quotes: (quotesRes.data || []).filter(q => String(q.customerLedgerId || '') === String(selectedId)),
+             retainerInvoices: (retainerRes.data || []).filter(r => String(r.customerLedgerId || '') === String(selectedId)),
              salesOrders: (ordersRes.data || []).filter(o => String(o.LedgerId) === String(selectedId))
            });
          } else if (activeTab === 'Statement') {
-           const fromDate = new Date();
-           fromDate.setDate(1); // Start of month
-           const res = await reportsAPI.ledgerStatement(selectedId, fromDate.toISOString().split('T')[0], new Date().toISOString().split('T')[0]);
+           const res = await reportsAPI.ledgerStatement(selectedId, statementFromDate, statementToDate);
            setStatementData(res.data);
          } else if (activeTab === 'Comments') {
             // Simulated comments fetch
@@ -172,7 +188,7 @@ const CustomerDetailView = ({ companyId }) => {
       }
     };
     fetchTabData();
-  }, [activeTab, selectedId, activeCompanyId]);
+  }, [activeTab, selectedId, activeCompanyId, statementFromDate, statementToDate]);
 
   // 2.5 Fetch Live Exchange Rate for Receivables
   useEffect(() => {

@@ -4,7 +4,7 @@ import {
   Plus, MoreHorizontal, ChevronDown, User, Check, 
   FileUp, Sparkles, Link as LinkIcon, Globe, ArrowDownToLine,
   ArrowDownUp, Download, Upload as UploadIcon, Settings, RefreshCw, RotateCcw,
-  ChevronRight, ArrowUp, ArrowDown, Edit, Trash2
+  ChevronRight, ArrowUp, ArrowDown, Edit, Trash2, Search, Users
 } from 'lucide-react';
 import { ledgerAPI, groupAPI } from '../../services/api';
 import ConfirmModal from '../../components/ConfirmModal';
@@ -14,6 +14,7 @@ const CustomersListView = ({ companyId }) => {
   const navigate = useNavigate();
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
   const [isOptionsOpen, setIsOptionsOpen] = useState(false);
   const [activeSubMenu, setActiveSubMenu] = useState(null);
   const [sortConfig, setSortConfig] = useState({ key: 'name', direction: 'asc' });
@@ -30,7 +31,14 @@ const CustomersListView = ({ companyId }) => {
     setIsOptionsOpen(false);
   };
 
-  const sortedCustomers = [...customers].sort((a, b) => {
+  const filteredCustomers = customers.filter(c => 
+    (c.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (c.companyName || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (c.email || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (c.workPhone || '').toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const sortedCustomers = [...filteredCustomers].sort((a, b) => {
     let aValue = a[sortConfig.key] || '';
     let bValue = b[sortConfig.key] || '';
     if (sortConfig.key === 'currentBalance') {
@@ -70,34 +78,34 @@ const CustomersListView = ({ companyId }) => {
     return () => document.removeEventListener('click', handleClickOutside);
   }, [isOptionsOpen]);
 
-  useEffect(() => {
+  const fetchCustomers = async () => {
     if (!companyId) return;
-    
-    const fetchCustomers = async () => {
-      try {
-        console.log("Fetching customers for company:", companyId);
-        const res = await ledgerAPI.getByCompany(companyId);
-        
-        // Filter for Sundry Debtors (Customers) only
-        const allLedgers = Array.isArray(res.data) ? res.data : [];
-        console.log("Total ledgers fetched:", allLedgers.length);
-        
-        const customerLedgers = allLedgers.filter(l => {
-          const groupName = l.Group?.name?.toLowerCase() || l.groupName?.toLowerCase() || "";
-          return groupName.includes('debtor') || groupName.includes('customer');
-        });
-        
-        console.log("Filtered customers:", customerLedgers.length);
-        setCustomers(customerLedgers);
-        setError(null);
-      } catch (err) {
-        console.error("Failed to fetch customers:", err);
-        setError("Unable to load customers. There might be a database synchronization issue. Please check the backend server.");
-      } finally {
-        setLoading(false);
-      }
-    };
+    setLoading(true);
+    try {
+      console.log("Fetching customers for company:", companyId);
+      const res = await ledgerAPI.getByCompany(companyId);
+      
+      // Filter for Sundry Debtors (Customers) only
+      const allLedgers = Array.isArray(res.data) ? res.data : [];
+      console.log("Total ledgers fetched:", allLedgers.length);
+      
+      const customerLedgers = allLedgers.filter(l => {
+        const groupName = l.Group?.name?.toLowerCase() || l.groupName?.toLowerCase() || "";
+        return groupName.includes('debtor') || groupName.includes('customer');
+      });
+      
+      console.log("Filtered customers:", customerLedgers.length);
+      setCustomers(customerLedgers);
+      setError(null);
+    } catch (err) {
+      console.error("Failed to fetch customers:", err);
+      setError("Unable to load customers. There might be a database synchronization issue. Please check the backend server.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchCustomers();
   }, [companyId]);
 
@@ -145,7 +153,7 @@ const CustomersListView = ({ companyId }) => {
 
   // Placeholder for the actual list if customers exist
   return (
-    <div className="bg-white min-h-screen">
+    <div className="bg-white min-h-[calc(100vh-80px)]">
        <div className="flex items-center justify-between px-8 py-4 border-b border-slate-100">
           <div className="flex items-center gap-2 group cursor-pointer">
              <h1 className="text-[20px] font-bold text-slate-900">All Customers</h1>
@@ -271,6 +279,34 @@ const CustomersListView = ({ companyId }) => {
         />
      </div>
 
+       {/* SEARCH/FILTER BAR */}
+       <div className="px-8 py-4 bg-slate-50/50 flex items-center justify-between border-b border-slate-100">
+         <div className="flex items-center gap-4">
+             <div className="relative group w-64">
+                 <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#1e61f0] transition-colors" />
+                 <input 
+                     value={searchQuery}
+                     onChange={e => setSearchQuery(e.target.value)}
+                     placeholder="Search records..."
+                     className="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded text-[13px] font-bold text-slate-700 outline-none focus:border-[#1e61f0] shadow-sm transition-all"
+                 />
+             </div>
+             <button 
+                 onClick={fetchCustomers}
+                 className="p-2 text-slate-400 hover:text-[#1e61f0] transition-colors"
+                 title="Refresh"
+             >
+                 <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
+             </button>
+         </div>
+
+         <div className="flex items-center gap-3">
+             <button onClick={fetchCustomers} className="h-9 px-4 flex items-center gap-2 bg-white border border-slate-200 text-slate-600 rounded-[4px] text-[11px] font-bold uppercase tracking-widest hover:bg-slate-50 transition-all shadow-sm">
+                 <RefreshCw size={14} /> Sync
+             </button>
+         </div>
+       </div>
+
        <div className="p-8">
           {/* Detailed list implementation would go here */}
           <table className="w-full text-left">
@@ -320,24 +356,34 @@ const CustomersListView = ({ companyId }) => {
                         </td>
                      </tr>
                    ))
-                 ) : (
-                   <tr>
-                     <td colSpan="6" className="px-6 py-20 text-center">
-                        <div className="flex flex-col items-center justify-center gap-3">
-                           <div className="w-12 h-12 bg-slate-50 rounded-full flex items-center justify-center text-slate-300">
-                              <User size={24} />
-                           </div>
-                           <p className={`${error ? 'text-red-500 font-medium' : 'text-slate-500'} text-[14px]`}>{error || "No customers found."}</p>
-                           <button 
-                             onClick={() => navigate('/customers/new')}
-                             className="text-blue-600 text-[13px] font-medium hover:underline"
-                           >
-                              Add your first customer
-                           </button>
-                        </div>
-                     </td>
-                   </tr>
-                 )}
+                  ) : (
+                    <tr>
+                      <td colSpan="6" className="px-6 py-40 text-center bg-white">
+                         <div className="flex flex-col items-center justify-center max-w-[600px] mx-auto animate-fade-in">
+                            <div className="relative mb-10 group">
+                              <div className="w-28 h-28 bg-blue-50/50 rounded-[2.5rem] flex items-center justify-center text-[#1e61f0] border border-blue-100 shadow-sm transition-transform duration-500 group-hover:scale-105 group-hover:rotate-3">
+                                <Users size={56} strokeWidth={1.2} />
+                              </div>
+                              <div className="absolute -bottom-1 -right-1 w-11 h-11 bg-[#1e61f0] rounded-2xl flex items-center justify-center border-4 border-white shadow-lg transition-all duration-300 group-hover:translate-x-1 group-hover:translate-y-1">
+                                <Plus size={22} className="text-white" strokeWidth={3} />
+                              </div>
+                            </div>
+                            <h2 className="text-[26px] font-bold text-slate-900 mb-3 tracking-tight">Your Client Relationships Start Here</h2>
+                            <p className="text-slate-500 text-[16px] mb-10 leading-relaxed max-w-[440px]">
+                               Centralize your customer profiles, track outstanding receivables, and streamline your sales workflow—all from a single, intuitive workspace.
+                            </p>
+                            <div className="flex items-center gap-5">
+                               <button 
+                                 onClick={() => navigate('/customers/new')}
+                                 className="bg-[#1e61f0] hover:bg-[#1a54d1] text-white px-8 py-3 rounded-xl font-bold text-[15px] flex items-center gap-2.5 transition-all shadow-xl shadow-blue-600/20 hover:shadow-blue-600/30 active:scale-[0.98]"
+                               >
+                                  <Plus size={20} strokeWidth={3}/> Onboard New Customer
+                               </button>
+                            </div>
+                         </div>
+                      </td>
+                    </tr>
+                  )}
               </tbody>
           </table>
        </div>

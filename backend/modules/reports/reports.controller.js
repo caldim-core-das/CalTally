@@ -31,28 +31,71 @@ exports.getTrialBalance = async (req, res) => {
     });
 
     const trialBalance = ledgers.map(l => {
-      const rawOpening = parseFloat(l.openingBalance || 0);
-      const opening = l.openingBalanceType === 'Cr' ? -rawOpening : rawOpening;
-      const debit = parseFloat(l.totalDebit || 0);
-      const credit = parseFloat(l.totalCredit || 0);
-      const closingRaw = opening + debit - credit;
+      // Step 1 — Determine ledger nature:
+      const rawNature = l.Group?.nature || 'Assets';
+      const nature = rawNature.trim().toUpperCase();
+      const isDrNature = ['ASSETS', 'EXPENSES'].includes(nature);
 
+      // Step 2 — Compute raw closing balance:
+      const openingBalance = parseFloat(l.openingBalance || 0);
+      const normalizedOpeningType = (l.openingBalanceType || 'Dr').trim().toUpperCase();
+      
+      let openingDr = 0;
+      let openingCr = 0;
+      if (normalizedOpeningType === 'DR') {
+        openingDr = openingBalance;
+      } else {
+        openingCr = openingBalance;
+      }
+
+      const transactionDebits = parseFloat(l.totalDebit || 0);
+      const transactionCredits = parseFloat(l.totalCredit || 0);
+
+      const totalDr = openingDr + transactionDebits;
+      const totalCr = openingCr + transactionCredits;
+      const closing = totalDr - totalCr;
+
+      // Step 3 — Assign to columns:
+      let debitBalance = 0;
+      let creditBalance = 0;
+
+      if (isDrNature) {
+        if (closing >= 0) {
+          debitBalance = closing;
+          creditBalance = 0;
+        } else {
+          debitBalance = 0;
+          creditBalance = Math.abs(closing);
+        }
+      } else {
+        // Credit-nature (Liabilities, Income, Capital, Equity)
+        if (closing <= 0) {
+          debitBalance = 0;
+          creditBalance = Math.abs(closing);
+        } else {
+          debitBalance = closing;
+          creditBalance = 0;
+        }
+      }
+
+      // Step 5 — Return per ledger:
       return {
-        ledgerId: l.id,
-        ledgerName: l.name,
-        group: l.Group?.name || 'Ungrouped',
-        nature: l.Group?.nature || 'Unknown',
-        openingBalance: rawOpening,
+        id: l.id,
+        name: l.name,
+        groupName: l.Group?.name || 'Ungrouped',
+        nature: rawNature,
+        openingBalance,
         openingBalanceType: l.openingBalanceType || 'Dr',
-        totalDebit: debit,
-        totalCredit: credit,
-        closingBalance: closingRaw,
-        debitBalance: closingRaw > 0 ? closingRaw : 0,
-        creditBalance: closingRaw < 0 ? Math.abs(closingRaw) : 0
+        transactionDebits,
+        transactionCredits,
+        debitBalance,
+        creditBalance,
+        totalDebit: transactionDebits,
+        totalCredit: transactionCredits
       };
     });
 
-    // Summary
+    // Step 4 — Summary totals:
     const totalDebitBal = trialBalance.reduce((s, r) => s + r.debitBalance, 0);
     const totalCreditBal = trialBalance.reduce((s, r) => s + r.creditBalance, 0);
 
@@ -156,35 +199,50 @@ exports.getBalanceSheet = async (req, res) => {
 
     // 1. Map Ledgers to Assets/Liabilities
     ledgers.forEach(l => {
-      // Determine if opening balance is Debit or Credit
-      let opening = parseFloat(l.openingBalance || 0);
-      if (l.openingBalanceType === 'Cr') {
-        opening = -opening;
-      } else if (!l.openingBalanceType && l.Group?.nature === 'Liabilities') {
-        opening = -opening;
+      const rawOpening = parseFloat(l.openingBalance || 0);
+      const openingType = (l.openingBalanceType || 'Dr').trim().toUpperCase();
+      const nature = l.Group?.nature || 'Assets';
+      const isDrNature = ['Assets', 'Expenses'].includes(nature);
+      const debit = parseFloat(l.totalDebit || 0);
+      const credit = parseFloat(l.totalCredit || 0);
+
+      // Nature-aware closing balance
+      let closing;
+      if (isDrNature) {
+        const openingDr = openingType === 'DR' ? rawOpening : -rawOpening;
+        closing = openingDr + debit - credit;
+      } else {
+        const openingCr = openingType === 'CR' ? rawOpening : -rawOpening;
+        closing = openingCr + credit - debit;
       }
 
-      // closing > 0 means Debit balance, closing < 0 means Credit balance
-      const closing = opening + parseFloat(l.totalDebit || 0) - parseFloat(l.totalCredit || 0);
       const absBalance = Math.abs(closing);
-      
       const entry = { ledgerId: l.id, ledgerName: l.name, group: l.Group?.name, balance: absBalance };
 
-      if (closing > 0.01) {
-        assets.push(entry);
-        totalAssets += absBalance;
-      } else if (closing < -0.01) {
-        liabilities.push(entry);
-        totalLiabilities += absBalance;
-      } else {
-        // For Exactly 0 balances, put them in their natural group for display
-        if (l.Group?.nature === 'Assets') {
+      // closing > 0 means the ledger has its natural balance
+      // For Assets: positive = Asset (show on assets side)
+      // For Liabilities: positive = Liability (show on liabilities side)
+      if (isDrNature) {
+        if (closing >= 0) {
           assets.push(entry);
+          totalAssets += absBalance;
         } else {
+          // Reversed: asset has credit balance → show on liabilities side
           liabilities.push(entry);
+          totalLiabilities += absBalance;
+        }
+      } else {
+        if (closing >= 0) {
+          liabilities.push(entry);
+          totalLiabilities += absBalance;
+        } else {
+          // Reversed: liability has debit balance → show on assets side
+          assets.push(entry);
+          totalAssets += absBalance;
         }
       }
     });
+
 
     // 2. Fetch Net Profit to make the BS Balance (Crucial Step)
     const incomeLedgers = await Ledger.findAll({
@@ -350,7 +408,8 @@ exports.getDashboardStats = async (req, res) => {
     ledgers.forEach(l => {
       const nature = l.Group?.nature || '';
       const rawOpening = parseFloat(l.openingBalance || 0);
-      const opening = l.openingBalanceType === 'Cr' ? -rawOpening : rawOpening;
+      const openingType = (l.openingBalanceType || 'Dr').trim().toUpperCase();
+      const opening = openingType === 'CR' ? -rawOpening : rawOpening;
       const debit  = parseFloat(l.totalDebit  || 0);
       const credit = parseFloat(l.totalCredit || 0);
       const closing = opening + debit - credit;
@@ -547,7 +606,8 @@ exports.getDashboardStats = async (req, res) => {
     ledgers.forEach(l => {
       const name = (l.name || '').toLowerCase();
       const rawOpening = parseFloat(l.openingBalance || 0);
-      const opening = l.openingBalanceType === 'Cr' ? -rawOpening : rawOpening;
+      const openingType = (l.openingBalanceType || 'Dr').trim().toUpperCase();
+      const opening = openingType === 'CR' ? -rawOpening : rawOpening;
       const debit  = parseFloat(l.totalDebit  || 0);
       const credit = parseFloat(l.totalCredit || 0);
       const closing = opening + debit - credit;
@@ -750,7 +810,9 @@ exports.getLedgerStatement = async (req, res) => {
     if (!ledger) return res.status(404).json({ error: 'Ledger not found' });
 
     // 1. Calculate Balance Before "From" Date
-    let startBalance = parseFloat(ledger.openingBalance || 0);
+    const rawOpening = parseFloat(ledger.openingBalance || 0);
+    const openingType = (ledger.openingBalanceType || 'Dr').trim().toUpperCase();
+    let startBalance = openingType === 'CR' ? -rawOpening : rawOpening;
     
     if (from) {
       const priorTransactions = await Transaction.findAll({

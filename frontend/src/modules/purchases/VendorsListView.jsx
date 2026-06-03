@@ -1,19 +1,27 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
-  Plus, MoreHorizontal, ChevronDown, User, RefreshCw, 
-  ArrowDownUp, Download, Upload as UploadIcon, Settings, RotateCcw,
-  ChevronRight, ArrowUp, ArrowDown, Edit, Trash2, ShoppingBag
+  Plus, MoreHorizontal, ChevronDown, User, RefreshCw, RotateCcw,
+  ArrowDownUp, Download, Upload as UploadIcon, Settings, 
+  ChevronRight, ArrowUp, ArrowDown, Edit, Trash2, ShoppingBag, Search
 } from 'lucide-react';
-import { purchaseAPI, ledgerAPI } from '../../services/api';
+import { ledgerAPI } from '../../services/api';
+import ConfirmModal from '../../components/ConfirmModal';
+import { getCurrencyDisplay } from '../../utils/currencies';
 
 const VendorsListView = ({ companyId }) => {
   const navigate = useNavigate();
   const [vendors, setVendors] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
   const [isOptionsOpen, setIsOptionsOpen] = useState(false);
   const [activeSubMenu, setActiveSubMenu] = useState(null);
   const [sortConfig, setSortConfig] = useState({ key: 'name', direction: 'asc' });
+  const [deleteId, setDeleteId] = useState(null);
+  const [deleteName, setDeleteName] = useState('');
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [error, setError] = useState(null);
+  const [modalConfig, setModalConfig] = useState({ isOpen: false, title: '', message: '', type: 'info', showCancel: false });
 
   const handleSort = (key) => {
     let direction = 'asc';
@@ -22,7 +30,14 @@ const VendorsListView = ({ companyId }) => {
     setIsOptionsOpen(false);
   };
 
-  const sortedVendors = [...vendors].sort((a, b) => {
+  const filteredVendors = vendors.filter(v => 
+    (v.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (v.companyName || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (v.email || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (v.workPhone || '').toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const sortedVendors = [...filteredVendors].sort((a, b) => {
     let aValue = a[sortConfig.key] || '';
     let bValue = b[sortConfig.key] || '';
     if (sortConfig.key === 'currentBalance' || sortConfig.key === 'unusedCredits') {
@@ -61,32 +76,62 @@ const VendorsListView = ({ companyId }) => {
     return () => document.removeEventListener('click', handleClickOutside);
   }, [isOptionsOpen]);
 
-  useEffect(() => {
+  const fetchVendors = async () => {
     if (!companyId) return;
-    
-    const fetchVendors = async () => {
-      try {
-        setLoading(true);
-        const res = await purchaseAPI.getVendors(companyId);
-        setVendors(res.data || []);
-      } catch (err) {
-        console.error("Failed to fetch vendors:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
+    setLoading(true);
+    try {
+      console.log("Fetching vendors for company:", companyId);
+      const res = await ledgerAPI.getByCompany(companyId);
+      
+      // Filter for Sundry Creditors (Vendors) only
+      const allLedgers = Array.isArray(res.data) ? res.data : [];
+      console.log("Total ledgers fetched:", allLedgers.length);
+      
+      const vendorLedgers = allLedgers.filter(l => {
+        const groupName = l.Group?.name?.toLowerCase() || l.groupName?.toLowerCase() || "";
+        return groupName.includes('creditor') || groupName.includes('vendor');
+      });
+      
+      console.log("Filtered vendors:", vendorLedgers.length);
+      setVendors(vendorLedgers);
+      setError(null);
+    } catch (err) {
+      console.error("Failed to fetch vendors:", err);
+      setError("Unable to load vendors. There might be a database synchronization issue. Please check the backend server.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchVendors();
   }, [companyId]);
 
-  const handleDelete = async (id, name, e) => {
+  const handleDelete = (id, name, e) => {
     e.stopPropagation();
-    if (!window.confirm(`Are you sure you want to delete vendor ${name}?`)) return;
+    setDeleteId(id);
+    setDeleteName(name);
+    setIsDeleteModalOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteId) return;
     try {
-      await ledgerAPI.delete(id);
-      setVendors(vendors.filter(v => v.id !== id));
+      await ledgerAPI.delete(deleteId);
+      setVendors(vendors.filter(v => v.id !== deleteId));
     } catch (err) {
-      alert(err.response?.data?.error || "Failed to delete vendor");
+      setModalConfig({
+        isOpen: true,
+        title: 'Delete Failed',
+        message: err.response?.data?.error || "Failed to delete vendor. Please ensure there are no active transactions linked to this vendor.",
+        type: 'danger',
+        showCancel: false,
+        confirmText: 'Continue'
+      });
+    } finally {
+      setIsDeleteModalOpen(false);
+      setDeleteId(null);
+      setDeleteName('');
     }
   };
 
@@ -98,7 +143,7 @@ const VendorsListView = ({ companyId }) => {
   );
 
   return (
-    <div className="bg-white min-h-screen">
+    <div className="bg-white min-h-[calc(100vh-80px)]">
        <div className="flex items-center justify-between px-8 py-4 border-b border-slate-100">
           <div className="flex items-center gap-2 group cursor-pointer">
              <h1 className="text-[20px] font-bold text-slate-900">All Vendors</h1>
@@ -146,7 +191,10 @@ const VendorsListView = ({ companyId }) => {
                         )}
                      </div>
 
-                     <div className="px-4 py-2.5 hover:bg-[#1e61f0] hover:text-white group cursor-pointer flex items-center gap-3 transition-colors border-t border-slate-100 mt-1 pt-3">
+                     <div 
+                        onClick={() => fetchVendors()}
+                        className="px-4 py-2.5 hover:bg-[#1e61f0] hover:text-white group cursor-pointer flex items-center gap-3 transition-colors border-t border-slate-100 mt-1 pt-3"
+                     >
                         <RefreshCw size={16} className="text-[#1e61f0] group-hover:text-white"/>
                         <span>Refresh List</span>
                      </div>
@@ -154,6 +202,34 @@ const VendorsListView = ({ companyId }) => {
                 )}
              </div>
           </div>
+       </div>
+
+       {/* SEARCH/FILTER BAR */}
+       <div className="px-8 py-4 bg-slate-50/50 flex items-center justify-between border-b border-slate-100">
+         <div className="flex items-center gap-4">
+             <div className="relative group w-64">
+                 <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#1e61f0] transition-colors" />
+                 <input 
+                     value={searchQuery}
+                     onChange={e => setSearchQuery(e.target.value)}
+                     placeholder="Search records..."
+                     className="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded text-[13px] font-bold text-slate-700 outline-none focus:border-[#1e61f0] shadow-sm transition-all"
+                 />
+             </div>
+             <button 
+                 onClick={fetchVendors}
+                 className="p-2 text-slate-400 hover:text-[#1e61f0] transition-colors"
+                 title="Refresh"
+             >
+                 <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
+             </button>
+         </div>
+
+         <div className="flex items-center gap-3">
+             <button onClick={fetchVendors} className="h-9 px-4 flex items-center gap-2 bg-white border border-slate-200 text-slate-600 rounded-[4px] text-[11px] font-bold uppercase tracking-widest hover:bg-slate-50 transition-all shadow-sm">
+                 <RefreshCw size={14} /> Sync
+             </button>
+         </div>
        </div>
 
        <div className="p-8">
@@ -183,12 +259,12 @@ const VendorsListView = ({ companyId }) => {
                         <td className="px-6 py-4 text-[14px] text-slate-600">{v.workPhone || '-'}</td>
                         <td className="px-6 py-4 text-right">
                            <span className="text-[14px] text-slate-900 font-medium whitespace-nowrap">
-                              ₹ {v.currentBalance?.toLocaleString() || '0.00'}
+                              {getCurrencyDisplay(v.currency)} {v.currentBalance?.toLocaleString() || '0.00'}
                            </span>
                         </td>
                         <td className="px-6 py-4 text-right">
                            <span className="text-[14px] text-slate-900 font-medium whitespace-nowrap">
-                              ₹ {(parseFloat(v.unusedCredits || 0)).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                              {getCurrencyDisplay(v.currency)} {(parseFloat(v.unusedCredits || 0)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                            </span>
                         </td>
                         <td className="px-6 py-4">
@@ -240,6 +316,24 @@ const VendorsListView = ({ companyId }) => {
               </tbody>
           </table>
        </div>
+
+       <ConfirmModal 
+          isOpen={isDeleteModalOpen}
+          onClose={() => setIsDeleteModalOpen(false)}
+          onConfirm={confirmDelete}
+          title="Delete Vendor"
+          message={`Are you sure you want to delete ${deleteName}? All transaction history and balance data for this vendor will be permanently removed.`}
+       />
+
+       <ConfirmModal 
+           isOpen={modalConfig.isOpen}
+           onClose={() => setModalConfig({ ...modalConfig, isOpen: false })}
+           title={modalConfig.title}
+           message={modalConfig.message}
+           type={modalConfig.type}
+           showCancel={modalConfig.showCancel}
+           confirmText={modalConfig.confirmText}
+       />
     </div>
   );
 };

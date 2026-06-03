@@ -8,8 +8,9 @@ const { standardGroups } = require('../../helpers/tallyGroups');
  */
 exports.resolveCompanyGroups = async (req, res) => {
   try {
-    const company = await Company.findOne({ order: [['createdAt', 'ASC']] });
-    if (!company) return res.status(404).json({ error: 'No company found. Please create a company first.' });
+    const companyId = req.companyId;
+    const company = await Company.findByPk(companyId);
+    if (!company) return res.status(404).json({ error: 'Company not found.' });
 
     let groups = await Group.findAll({
       where: { CompanyId: company.id },
@@ -57,20 +58,83 @@ exports.createGroup = async (req, res) => {
 // Get all groups for a company (hierarchical)
 exports.getGroups = async (req, res) => {
   try {
-    const { Ledger } = require('../../models');
-    const groups = await Group.findAll({
-      where: { CompanyId: req.params.companyId },
-      include: [
-        { model: Group, as: 'SubGroups' },
-        { model: Ledger, as: 'Ledgers' }
-      ],
-      order: [['name', 'ASC']]
-    });
+    const { Ledger, Transaction, sequelize } = require('../../models');
+    const { Op } = require('sequelize');
+
+    const fetchGroupsWithBalances = async (companyId) => {
+      // Fetch ledger transaction sums for this company in one query
+      const ledgerTotals = await Ledger.findAll({
+        where: { CompanyId: companyId },
+        include: [{ model: Transaction, attributes: [] }],
+        attributes: {
+          include: [
+            [sequelize.fn('COALESCE', sequelize.fn('SUM', sequelize.col('Transactions.debit')), 0), 'totalDebit'],
+            [sequelize.fn('COALESCE', sequelize.fn('SUM', sequelize.col('Transactions.credit')), 0), 'totalCredit']
+          ]
+        },
+        group: ['Ledger.id'],
+        raw: true
+      });
+      const totalsMap = {};
+      ledgerTotals.forEach(l => { totalsMap[l.id] = { totalDebit: l.totalDebit, totalCredit: l.totalCredit }; });
+
+      // Fetch groups with Ledgers
+      const groups = await Group.findAll({
+        where: { CompanyId: companyId },
+        include: [
+          { model: Group, as: 'SubGroups' },
+          { model: Ledger, as: 'Ledgers' }
+        ],
+        order: [['name', 'ASC']]
+      });
+
+      // Attach transaction totals to each ledger
+      return groups.map(g => {
+        const gj = g.toJSON();
+        if (gj.Ledgers) {
+          gj.Ledgers = gj.Ledgers.map(l => ({
+            ...l,
+            totalDebit: parseFloat(totalsMap[l.id]?.totalDebit || 0),
+            totalCredit: parseFloat(totalsMap[l.id]?.totalCredit || 0)
+          }));
+        }
+        return gj;
+      });
+    };
+
+    let groups = await fetchGroupsWithBalances(req.params.companyId);
+
+    // Self-healing: Auto-seed standard groups if they are empty
+    if (groups.length === 0) {
+      const primaryGroups = standardGroups.filter(g => !g.parent);
+      const groupMap = {};
+      for (const g of primaryGroups) {
+        const c = await Group.create({
+          name: g.name,
+          nature: g.nature,
+          category: 'Primary',
+          CompanyId: req.params.companyId
+        });
+        groupMap[g.name] = c.id;
+      }
+      for (const g of standardGroups.filter(g => g.parent)) {
+        await Group.create({
+          name: g.name,
+          nature: g.nature,
+          category: 'Sub-Group',
+          parent_id: groupMap[g.parent] || null,
+          CompanyId: req.params.companyId
+        });
+      }
+      groups = await fetchGroupsWithBalances(req.params.companyId);
+    }
+
     res.json(groups);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 };
+
 
 // Seed the 24 standard Tally groups for a company
 exports.seedGroups = async (req, res) => {

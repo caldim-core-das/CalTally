@@ -151,6 +151,7 @@ const NAV = [
     icon: Settings,
     items: [
       { label: 'Chart of Accounts', path: '/ledgers/chart-of-accounts', icon: BookOpen },
+      { label: 'Ledgers',           path: '/ledgers', icon: Folder },
       { label: 'Cost Centers',      path: '/cost-centers', icon: Folder },
       { label: 'Budgets',           path: '/accountant/budgets', icon: Target },
       { label: 'Fixed Assets',      path: '/fixed-assets', icon: Building2 },
@@ -231,26 +232,30 @@ const NavGroup = ({ group, icon: Icon, items, collapsed, pathname, location, nav
             className="absolute left-[84px] top-0 w-[240px] bg-white rounded-r-2xl shadow-[10px_0_30px_rgba(0,0,0,0.12)] border-y border-r border-slate-100 py-6 px-4 z-[100] animate-fade-in-right"
             style={{ minHeight: '100%' }}
           >
-            <div className="text-[11px] font-bold text-blue-600 uppercase tracking-[0.2em] mb-4 pl-2">
+            <div className="text-[11px] font-bold text-indigo-600 uppercase tracking-[0.2em] mb-4 pl-2">
               {group}
             </div>
             <div className="space-y-1">
               {items.map(item => {
                 const active = isPathActive(item.path, pathname, location);
+                const SubIcon = item.icon;
                 return (
                   <div 
                     key={item.path} 
                     className={`group/sub flex items-center justify-between px-3 py-2.5 rounded-xl transition-all duration-200 cursor-pointer
-                      ${active ? 'bg-blue-50 text-blue-600' : 'hover:bg-slate-50 text-slate-600 hover:text-slate-900'}`}
+                      ${active ? 'bg-indigo-50/70 text-indigo-600' : 'hover:bg-slate-50 text-slate-600 hover:text-slate-900'}`}
                     onClick={() => { navigate(item.path); setIsHovered(false); }}
                   >
-                    <span className={`text-[13px] font-bold tracking-tight ${active ? 'text-blue-600' : ''}`}>
-                      {item.label}
-                    </span>
+                    <div className="flex items-center gap-2.5 flex-1 min-w-0">
+                      {SubIcon && <SubIcon size={14} className={`shrink-0 ${active ? 'text-indigo-600' : 'text-slate-400 group-hover/sub:text-slate-700'}`} />}
+                      <span className={`text-[13px] font-bold tracking-tight truncate ${active ? 'text-indigo-600' : ''}`}>
+                        {item.label}
+                      </span>
+                    </div>
                     {item.showPlus && (
                        <button 
                          onClick={(e) => { e.stopPropagation(); navigate(item.plusPath); setIsHovered(false); }}
-                         className="flex items-center justify-center w-6 h-6 rounded-full bg-slate-200 text-slate-600 shrink-0 shadow-sm transition-all hover:bg-blue-600 hover:text-white"
+                         className="flex items-center justify-center w-6 h-6 rounded-full bg-slate-200 text-slate-600 shrink-0 shadow-sm transition-all hover:bg-indigo-600 hover:text-white"
                        >
                          <Plus size={14} strokeWidth={3} />
                        </button>
@@ -301,25 +306,28 @@ const NavGroup = ({ group, icon: Icon, items, collapsed, pathname, location, nav
         <div className="ml-8 space-y-0.5 mt-0.5">
           {items.map(item => {
             const active = isPathActive(item.path, pathname, location);
+            const SubIcon = item.icon;
             return (
               <div 
                 key={item.path} 
                 className={`group/item flex items-center justify-between px-4 py-1.5 rounded-l-full transition-all duration-200 
-                  ${active ? 'bg-blue-50 text-blue-600 border-r-4 border-blue-600' : 'hover:bg-slate-50 text-slate-800 hover:text-slate-900'}`}
+                  ${active ? 'bg-indigo-50/70 text-indigo-600 border-r-4 border-indigo-600 font-bold' : 'hover:bg-slate-50/60 text-slate-800 hover:text-slate-900'}`}
               >
-                <button
-                  onClick={() => navigate(item.path)}
-                  title={item.label}
-                  className={`flex-1 text-left text-[12px] font-medium tracking-tight
-                    ${active ? 'text-blue-600 font-bold' : 'text-slate-800 group-hover/item:text-slate-900'}`}
-                >
-                  {item.label}
-                </button>
+                <div className="flex items-center gap-2.5 flex-1 min-w-0" onClick={() => navigate(item.path)}>
+                  {SubIcon && <SubIcon size={14} className={`shrink-0 ${active ? 'text-indigo-600' : 'text-slate-400 group-hover/item:text-slate-700'}`} />}
+                  <button
+                    title={item.label}
+                    className={`text-left text-[12px] font-medium tracking-tight truncate
+                      ${active ? 'text-indigo-600 font-bold' : 'text-slate-800 group-hover/item:text-slate-900'}`}
+                  >
+                    {item.label}
+                  </button>
+                </div>
                 {(item.showPlus) && (
                    <button 
                      onClick={(e) => { e.stopPropagation(); navigate(item.plusPath); }}
                      title={`Add New ${item.label}`}
-                     className={`items-center justify-center w-6 h-6 rounded-full bg-blue-600 text-white shrink-0 shadow-sm transition-all hover:bg-blue-700 ${active ? 'flex' : 'hidden group-hover/item:flex'}`}
+                     className={`items-center justify-center w-6 h-6 rounded-full bg-indigo-600 text-white shrink-0 shadow-sm transition-all hover:bg-indigo-700 ${active ? 'flex' : 'hidden group-hover/item:flex'}`}
                    >
                      <Plus size={14} strokeWidth={3} />
                    </button>
@@ -344,11 +352,11 @@ const NavItem = ({ icon: Icon, label, active, onClick, onPlusClick, collapsed, s
     className={`flex transition-all duration-200 group relative
       ${collapsed 
         ? `flex-col items-center justify-center h-[72px] w-full gap-1.5 border-b border-slate-50/50
-           ${active ? 'bg-blue-600 text-white shadow-inner' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'}`
+           ${active ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/10' : 'text-slate-500 hover:bg-slate-50/60 hover:text-slate-900'}`
         : `items-center gap-3 w-full px-6 py-2.5
-           ${active ? 'bg-blue-50/50 text-blue-600 border-l-4 border-blue-600' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'}`}`}
+           ${active ? 'bg-indigo-50/70 text-indigo-600 border-l-4 border-indigo-600 font-bold shadow-sm shadow-indigo-500/5' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50/60'}`}`}
   >
-    {Icon && <Icon size={collapsed ? 22 : 18} strokeWidth={active ? 2.5 : 2} className={`transition-transform duration-300 ${active ? (collapsed ? 'text-white' : 'text-blue-600') : 'text-slate-400 group-hover:text-slate-900'}`} />}
+    {Icon && <Icon size={collapsed ? 22 : 18} strokeWidth={active ? 2.5 : 2} className={`transition-transform duration-300 ${active ? (collapsed ? 'text-white' : 'text-indigo-600') : 'text-slate-400 group-hover:text-slate-900'}`} />}
     
     {collapsed ? (
       <>
@@ -360,14 +368,14 @@ const NavItem = ({ icon: Icon, label, active, onClick, onPlusClick, collapsed, s
         )}
       </>
     ) : (
-      <span className={`text-[13px] font-bold tracking-tight ${active ? 'text-blue-600' : 'text-slate-900 group-hover:text-slate-900'}`}>{label}</span>
+      <span className={`text-[13px] font-bold tracking-tight ${active ? 'text-indigo-600' : 'text-slate-900 group-hover:text-slate-900'}`}>{label}</span>
     )}
 
     {showPlus && !collapsed && (
       <button 
         onClick={(e) => { e.stopPropagation(); onPlusClick && onPlusClick(); }}
         title={`Add New ${label}`}
-        className="ml-auto opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center w-6 h-6 rounded-full bg-blue-600 text-white shadow-sm hover:bg-blue-700"
+        className="ml-auto opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center w-6 h-6 rounded-full bg-indigo-600 text-white shadow-sm hover:bg-indigo-700"
       >
         <Plus size={14} strokeWidth={3} />
       </button>
@@ -418,11 +426,9 @@ const AppShell = ({ children, onLogout, companies = [], currentCompanyId, onComp
     >
 
       {/* ─── SIDEBAR ─────────────────────────────────────────── */}
-      <aside className="no-print" style={{
+      <aside className="no-print bg-white/85 backdrop-blur-md border-r border-slate-100" style={{
         width: sidebarW,
         minWidth: sidebarW,
-        background: '#fff',
-        borderRight: '1px solid #e5e7eb',
         display: 'flex',
         flexDirection: 'column',
         transition: 'width .2s ease-in-out',
@@ -544,7 +550,7 @@ const AppShell = ({ children, onLogout, companies = [], currentCompanyId, onComp
         </header>
 
         {/* Page content */}
-        <main style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden' }}>
+        <main className="bg-[#f8fafc]" style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden' }}>
           <div className="animate-fade-up" style={{ animationDuration: '.35s' }}>
             {children}
           </div>

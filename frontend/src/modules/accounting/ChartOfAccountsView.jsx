@@ -1,9 +1,48 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Folder, FileText, ChevronDown, ChevronRight, BarChart2, BookOpen } from 'lucide-react';
+import { Folder, FolderOpen, FileText, ChevronDown, ChevronRight, BarChart2, BookOpen, RefreshCw } from 'lucide-react';
 import { groupAPI, ledgerAPI } from '../../services/api';
 
 const fmt = (v) => `₹${Number(v || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
+
+const getNodeBalanceSigned = (node, parentNature = 'Assets') => {
+  if (!node) return 0;
+  if (node.type === 'ledger') {
+    const rawOpening = Number(node.openingBalance || 0);
+    const openingType = (node.openingBalanceType || 'Dr').trim().toUpperCase();
+    const nature = node.nature || node.Group?.nature || parentNature;
+    const isDrNature = ['Assets', 'Expenses'].includes(nature);
+    const debit = Number(node.totalDebit || 0);
+    const credit = Number(node.totalCredit || 0);
+
+    if (isDrNature) {
+      const openingDr = openingType === 'DR' ? rawOpening : -rawOpening;
+      return openingDr + debit - credit;
+    } else {
+      const openingCr = openingType === 'CR' ? rawOpening : -rawOpening;
+      return openingCr + credit - debit;
+    }
+  }
+
+  // Group: sum of all child group/ledger balances relative to parent/group nature
+  const groupNature = node.nature || parentNature;
+  let total = 0;
+  if (node.children) {
+    node.children.forEach(child => {
+      const childNature = child.nature || groupNature;
+      let childBal = getNodeBalanceSigned(child, groupNature);
+      if (['Assets', 'Expenses'].includes(childNature) !== ['Assets', 'Expenses'].includes(groupNature)) {
+        childBal = -childBal;
+      }
+      total += childBal;
+    });
+  }
+  return total;
+};
+
+const getNodeBalance = (node) => {
+  return Math.abs(getNodeBalanceSigned(node));
+};
 
 export default function ChartOfAccountsView() {
   const navigate = useNavigate();
@@ -14,7 +53,8 @@ export default function ChartOfAccountsView() {
   const [expanded, setExpanded] = useState({});
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  const fetchContext = () => {
+    setLoading(true);
     Promise.all([
       groupAPI.getByCompany(companyId),
       ledgerAPI.getByCompany(companyId)
@@ -26,6 +66,10 @@ export default function ChartOfAccountsView() {
       console.error(err);
       setLoading(false);
     });
+  };
+
+  useEffect(() => {
+    fetchContext();
   }, [companyId]);
 
   const toggleExpand = (id) => {
@@ -76,44 +120,72 @@ export default function ChartOfAccountsView() {
     const isGroup = node.type === 'group';
     const hasChildren = isGroup && node.children.length > 0;
     const isExpanded = !!expanded[node.id];
+    const balance = getNodeBalance(node);
+    
+    // Nature-specific styling
+    const nature = (node.nature || 'Assets').toLowerCase();
+    let borderLeftClass = 'border-l-slate-300';
+    let bgClass = 'bg-white hover:bg-slate-50/50';
+    let iconColor = 'text-slate-500';
+    
+    if (nature === 'assets') {
+        borderLeftClass = 'border-l-emerald-500';
+        iconColor = 'text-emerald-500';
+        bgClass = isGroup ? 'bg-emerald-50/10 hover:bg-emerald-50/20' : 'bg-white hover:bg-emerald-50/10';
+    } else if (nature === 'liabilities') {
+        borderLeftClass = 'border-l-rose-500';
+        iconColor = 'text-rose-500';
+        bgClass = isGroup ? 'bg-rose-50/10 hover:bg-rose-50/20' : 'bg-white hover:bg-rose-50/10';
+    } else if (nature === 'income') {
+        borderLeftClass = 'border-l-indigo-500';
+        iconColor = 'text-indigo-500';
+        bgClass = isGroup ? 'bg-indigo-50/10 hover:bg-indigo-50/20' : 'bg-white hover:bg-indigo-50/10';
+    } else if (nature === 'expenses') {
+        borderLeftClass = 'border-l-amber-500';
+        iconColor = 'text-amber-500';
+        bgClass = isGroup ? 'bg-amber-50/10 hover:bg-amber-50/20' : 'bg-white hover:bg-amber-50/10';
+    }
 
     return (
-      <div key={node.id} style={{ marginLeft: depth * 24 }} className="space-y-1">
+      <div key={node.id} className="space-y-1.5 w-full">
         <div 
           onClick={() => isGroup ? toggleExpand(node.id) : navigate(`/ledger-statement/${node.id}`)}
-          className={`flex items-center justify-between p-3 rounded-xl transition-all cursor-pointer border ${isGroup ? 'bg-slate-50/50 border-slate-100 hover:bg-slate-50' : 'bg-white border-transparent hover:border-blue-100 hover:bg-blue-50/20'}`}
+          style={{ paddingLeft: `${depth * 28 + 16}px` }}
+          className={`flex items-center justify-between py-3.5 px-6 rounded-r-2xl transition-all duration-200 cursor-pointer border-y border-r border-slate-100/50 border-l-[6px] ${borderLeftClass} ${bgClass}`}
         >
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3.5 min-w-0">
             {isGroup ? (
               <>
-                <button className="p-1 rounded-lg text-slate-400 hover:bg-slate-100">
+                <button className="p-1 rounded-lg text-slate-400 hover:bg-slate-200/60 transition-all flex items-center justify-center shrink-0">
                   {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
                 </button>
-                <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
-                  <Folder size={15} />
+                <div className={`w-8 h-8 rounded-xl bg-slate-50 flex items-center justify-center shrink-0`}>
+                  {isExpanded ? (
+                    <FolderOpen size={16} className={`${iconColor}`} />
+                  ) : (
+                    <Folder size={16} className={`${iconColor}`} />
+                  )}
                 </div>
-                <div>
-                  <span className="text-[13px] font-bold text-slate-800">{node.name}</span>
-                  <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest ml-3">{node.nature || 'Group'}</span>
+                <div className="min-w-0">
+                  <span className="text-[13px] font-bold text-slate-800 truncate block">{node.name}</span>
                 </div>
               </>
             ) : (
               <>
-                <div className="w-4" /> {/* Spacer instead of toggle */}
-                <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
-                  <FileText size={15} />
+                <div className="w-6" /> {/* Spacer */}
+                <div className="w-8 h-8 rounded-xl bg-slate-50 flex items-center justify-center shrink-0">
+                  <FileText size={16} className="text-slate-400" />
                 </div>
-                <div>
-                  <span className="text-[13px] font-semibold text-slate-700">{node.name}</span>
-                  <span className="text-[10px] text-slate-400 font-semibold ml-3">{node.currency}</span>
+                <div className="min-w-0">
+                  <span className="text-[12.5px] font-semibold text-slate-600 italic truncate block">{node.name}</span>
                 </div>
               </>
             )}
           </div>
 
-          <div className="flex items-center gap-6">
-            <span className={`text-[13px] font-bold ${isGroup ? 'text-slate-800' : (parseFloat(node.currentBalance || 0) >= 0 ? 'text-emerald-600' : 'text-rose-600')}`}>
-              {fmt(Math.abs(node.currentBalance || 0))}
+          <div className="flex items-center gap-6 shrink-0">
+            <span className={`text-[13.5px] font-black ${isGroup ? 'text-slate-800' : (balance >= 0 ? 'text-emerald-600' : 'text-rose-600')}`}>
+              {balance < 0 ? `-${fmt(Math.abs(balance))}` : fmt(balance)}
             </span>
           </div>
         </div>
@@ -128,16 +200,24 @@ export default function ChartOfAccountsView() {
   return (
     <div className="p-8 max-w-[1400px] mx-auto space-y-8 animate-fade-in">
       {/* Header */}
-      <div className="flex justify-between items-end border-b border-slate-100 pb-8">
+      <div className="flex justify-between items-end border-b border-slate-100 pb-6 mb-8">
         <div>
           <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 bg-slate-900 rounded-xl flex items-center justify-center text-white shadow-lg shadow-slate-900/10">
+            <div className="w-10 h-10 bg-gradient-to-tr from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-blue-500/10">
               <BookOpen size={18} />
             </div>
             <span className="text-[10px] font-bold uppercase text-slate-400 tracking-[0.2em]">Masters</span>
           </div>
           <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">Chart of Accounts</h1>
           <p className="text-slate-400 text-xs mt-1 font-medium">Tree structure representing all asset, liability, income, and expense ledger groups</p>
+        </div>
+        <div>
+          <button 
+              onClick={fetchContext} 
+              className="px-4 py-2.5 border border-slate-200 rounded-xl bg-white hover:bg-slate-50 text-slate-600 text-xs font-bold uppercase tracking-wider shadow-sm transition-all flex items-center gap-2 group/sync"
+          >
+              <RefreshCw size={13} className="group-hover/sync:rotate-180 transition-transform duration-500" /> Sync
+          </button>
         </div>
       </div>
 
@@ -146,12 +226,18 @@ export default function ChartOfAccountsView() {
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
         </div>
       ) : (
-        <div className="bg-white rounded-[2rem] border border-slate-100 p-8 shadow-xl space-y-3">
-          <div className="flex justify-between items-center text-[10px] font-bold uppercase tracking-[0.15em] text-slate-400 border-b border-slate-100 pb-4 mb-4 px-3">
+        <div className="bg-white rounded-[2rem] border border-slate-100 p-8 shadow-xl space-y-4">
+          <div className="flex justify-between items-center text-[10px] font-bold uppercase tracking-[0.15em] text-slate-400 border-b border-slate-100 pb-4 mb-4 px-6 select-none">
             <span>Group / Ledger Name</span>
             <span>Closing Balance</span>
           </div>
-          {treeData.map(node => renderNode(node))}
+          <div className="space-y-2">
+            {treeData.length === 0 ? (
+              <div className="text-center py-10 text-slate-400 text-xs font-bold uppercase tracking-wider">No Accounts Configured</div>
+            ) : (
+              treeData.map(node => renderNode(node))
+            )}
+          </div>
         </div>
       )}
     </div>

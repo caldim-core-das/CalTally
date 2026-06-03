@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Building2, Save, Upload, CheckCircle2, AlertCircle, Loader2, HelpCircle, 
-  Plus, Trash2, X, Maximize2, Landmark, Check, ShieldAlert, Calendar, DollarSign
+  Plus, Trash2, X, Maximize2, Landmark, Check, ShieldAlert, Calendar, DollarSign,
+  Pencil
 } from 'lucide-react';
 import { companyAPI } from '../../services/api';
 import { INDIAN_STATES } from '../../utils/indianStates';
@@ -56,7 +57,7 @@ const SelectRow = ({ label, keyName, value, onChange, options, required = false,
 );
 
 const CompanyInfoView = ({ firstTime = false, onCompanyCreated }) => {
-  const [activeTab, setActiveTab] = useState(firstTime ? 'create' : 'switch'); // 'switch' | 'edit' | 'gst_fy' | 'create'
+  const [activeTab, setActiveTab] = useState(firstTime ? 'create' : 'switch'); // 'switch' | 'edit' | 'create'
   const [loading, setLoading]     = useState(false);
   const [fetching, setFetching] = useState(true);
   const [status, setStatus]     = useState(null); // 'success' | 'error' | null
@@ -65,6 +66,7 @@ const CompanyInfoView = ({ firstTime = false, onCompanyCreated }) => {
   
   const [companies, setCompanies] = useState([]);
   const [activeCompanyId, setActiveCompanyId] = useState(localStorage.getItem('companyId'));
+  const [editingCompanyId, setEditingCompanyId] = useState(null);
   
   const [formData, setFormData] = useState({
     name: '',
@@ -144,6 +146,30 @@ const CompanyInfoView = ({ firstTime = false, onCompanyCreated }) => {
   useEffect(() => {
     fetchCompanies();
   }, []);
+
+  const startEditingCompany = async (company) => {
+    setLoading(true);
+    setStatus(null);
+    try {
+      const res = await companyAPI.getById(company.id);
+      if (res.data) {
+        const d = res.data;
+        setFormData({
+          ...d,
+          financialYearStart: d.financialYearStart ? d.financialYearStart.split('T')[0] : new Date().getFullYear() + '-04-01',
+          booksBeginningFrom: d.booksBeginningFrom ? d.booksBeginningFrom.split('T')[0] : new Date().getFullYear() + '-04-01',
+          additionalFields: Array.isArray(d.additionalFields) ? d.additionalFields : [],
+        });
+        setEditingCompanyId(company.id);
+        setActiveTab('edit');
+      }
+    } catch (err) {
+      console.error(err);
+      setErrorMsg('Failed to load company details.');
+      setStatus('error');
+    }
+    setLoading(false);
+  };
 
   const handleUpdateField = (key, val) => {
     let cleanVal = val;
@@ -228,10 +254,18 @@ const CompanyInfoView = ({ firstTime = false, onCompanyCreated }) => {
     setLoading(true);
     setStatus(null);
     try {
-      await companyAPI.update(activeCompanyId, formData);
+      const targetId = editingCompanyId || activeCompanyId;
+      await companyAPI.update(targetId, formData);
       setStatus('success');
-      fetchCompanies();
-      setTimeout(() => setStatus(null), 3000);
+      if (targetId === activeCompanyId) {
+        localStorage.setItem('companyName', formData.name);
+      }
+      await fetchCompanies();
+      setTimeout(() => {
+        setStatus(null);
+        setActiveTab('switch');
+        setEditingCompanyId(null);
+      }, 1500);
     } catch (err) {
       console.error(err);
       setStatus('error');
@@ -383,10 +417,11 @@ const CompanyInfoView = ({ firstTime = false, onCompanyCreated }) => {
       {!firstTime && (
         <div className="bg-white border-b border-slate-200 sticky top-16 z-40 shadow-sm">
           <div className="max-w-6xl mx-auto px-8 flex gap-2">
-            <TabButton active={activeTab === 'switch'} label="Switch Company" onClick={() => setActiveTab('switch')} />
-            <TabButton active={activeTab === 'create'} label="Create Company" onClick={() => setActiveTab('create')} />
-            <TabButton active={activeTab === 'edit'} label="Edit Active Company" onClick={() => setActiveTab('edit')} />
-            <TabButton active={activeTab === 'gst_fy'} label="GST & Financial Year" onClick={() => setActiveTab('gst_fy')} />
+            <TabButton active={activeTab === 'switch'} label="Switch Company" onClick={() => { setActiveTab('switch'); setEditingCompanyId(null); }} />
+            <TabButton active={activeTab === 'create'} label="Create Company" onClick={() => { setActiveTab('create'); setEditingCompanyId(null); }} />
+            {activeTab === 'edit' && (
+              <TabButton active={true} label="Edit Company Settings" onClick={() => {}} />
+            )}
           </div>
         </div>
       )}
@@ -434,8 +469,17 @@ const CompanyInfoView = ({ firstTime = false, onCompanyCreated }) => {
                           ${isActive ? 'bg-blue-50 border-blue-200 text-blue-600' : 'bg-slate-50 border-slate-200 text-slate-400 group-hover:text-blue-500 group-hover:bg-blue-50/50 group-hover:border-blue-100 transition-all'}`}>
                           <Building2 size={24} />
                         </div>
-                        <div className="min-w-0">
-                          <h3 className="text-sm font-bold text-slate-800 truncate group-hover:text-blue-600 transition-colors">{c.name}</h3>
+                        <div className="min-w-0 flex-1 pr-14">
+                          <div className="flex items-center justify-between gap-2">
+                            <h3 className="text-sm font-bold text-slate-800 truncate group-hover:text-blue-600 transition-colors">{c.name}</h3>
+                            <button 
+                              onClick={(e) => { e.stopPropagation(); startEditingCompany(c); }}
+                              className="p-1.5 rounded-lg border border-slate-100 hover:border-blue-200 hover:bg-blue-50 text-slate-400 hover:text-blue-600 transition-all shrink-0 cursor-pointer"
+                              title="Edit Company Settings"
+                            >
+                              <Pencil size={12} />
+                            </button>
+                          </div>
                           <span className="text-[11px] text-slate-400 font-semibold uppercase tracking-wider">{c.industry || 'General Business'}</span>
                         </div>
                       </div>
@@ -560,78 +604,95 @@ const CompanyInfoView = ({ firstTime = false, onCompanyCreated }) => {
           </div>
         )}
 
-        {/* TAB 3: EDIT ACTIVE COMPANY */}
+        {/* TAB 3: EDIT COMPANY (Consolidated Settings) */}
         {activeTab === 'edit' && (
-          <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-8 max-w-4xl mx-auto">
-            <div className="border-b border-slate-100 pb-5 mb-6 flex justify-between items-start">
+          <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-8 max-w-4xl mx-auto space-y-8 animate-fade-in">
+            <div className="border-b border-slate-100 pb-5 flex justify-between items-center">
               <div>
-                <h2 className="text-lg font-bold text-slate-800">Edit Company Profile</h2>
-                <p className="text-xs text-slate-500 mt-1">Configure general contact, address, and localizations for the active company.</p>
+                <h2 className="text-lg font-bold text-slate-800">Edit Company Settings</h2>
+                <p className="text-xs text-slate-500 mt-1">Configure profile details, address, localizations, tax registrations, and financial settings.</p>
               </div>
+              <button 
+                onClick={() => { setActiveTab('switch'); setEditingCompanyId(null); }}
+                className="px-4 py-2 text-xs font-bold border border-slate-200 hover:bg-slate-50 text-slate-600 rounded-lg uppercase tracking-wider cursor-pointer"
+              >
+                Back to Companies
+              </button>
             </div>
 
-            {/* LOGO SECTION */}
-            <div className="flex items-start gap-8 border-b border-slate-100 pb-8 mb-6">
-              <div className="relative group shrink-0">
-                <input 
-                  type="file" 
-                  id="logo-upload" 
-                  className="hidden" 
-                  accept="image/*"
-                  onChange={handleLogoUpload}
-                />
-                <div 
-                  className={`w-36 h-36 border-2 border-dashed border-slate-200 rounded-2xl flex flex-col items-center justify-center transition-all bg-slate-50 p-1 relative overflow-hidden group/box
-                    ${!formData.logoUrl ? 'hover:bg-slate-100 hover:border-blue-300 cursor-pointer' : ''}`}
-                >
-                  {formData.logoUrl ? (
-                    <div className="relative w-full h-full">
-                      <img 
-                        src={formData.logoUrl} 
-                        alt="Logo Preview" 
-                        className="w-full h-full object-contain rounded-xl cursor-zoom-in" 
-                        onClick={() => setIsImageZoomed(true)}
-                      />
-                      <div className="absolute inset-0 bg-black/0 group-hover/box:bg-black/5 transition-colors pointer-events-none flex items-center justify-center">
-                        <Maximize2 className="text-white opacity-0 group-hover/box:opacity-100 transition-opacity" size={20} />
+            {/* SECTION 1: PROFILE & LOGO */}
+            <div className="space-y-6">
+              <h3 className="text-xs font-bold text-blue-600 uppercase tracking-widest border-b border-slate-50 pb-2">
+                1. General Profile & Logo
+              </h3>
+              
+              {/* LOGO UPLOAD */}
+              <div className="flex items-start gap-8 border-b border-slate-100 pb-6">
+                <div className="relative group shrink-0">
+                  <input 
+                    type="file" 
+                    id="logo-upload" 
+                    className="hidden" 
+                    accept="image/*"
+                    onChange={handleLogoUpload}
+                  />
+                  <div 
+                    className={`w-28 h-28 border-2 border-dashed border-slate-200 rounded-2xl flex flex-col items-center justify-center transition-all bg-slate-50 p-1 relative overflow-hidden group/box
+                      ${!formData.logoUrl ? 'hover:bg-slate-100 hover:border-blue-300 cursor-pointer' : ''}`}
+                  >
+                    {formData.logoUrl ? (
+                      <div className="relative w-full h-full">
+                        <img 
+                          src={formData.logoUrl} 
+                          alt="Logo Preview" 
+                          className="w-full h-full object-contain rounded-xl cursor-zoom-in" 
+                          onClick={() => setIsImageZoomed(true)}
+                        />
+                        <div className="absolute inset-0 bg-black/0 group-hover/box:bg-black/5 transition-colors pointer-events-none flex items-center justify-center">
+                          <Maximize2 className="text-white opacity-0 group-hover/box:opacity-100 transition-opacity" size={16} />
+                        </div>
                       </div>
-                    </div>
-                  ) : (
-                    <label htmlFor="logo-upload" className="w-full h-full flex flex-col items-center justify-center cursor-pointer">
-                      <Upload size={20} className="text-slate-300 group-hover:text-blue-400 mb-2" />
-                      <span className="text-[10px] font-bold text-slate-400 text-center px-4 leading-relaxed uppercase tracking-wider">
-                        Upload Logo
-                      </span>
-                    </label>
-                  )}
-                </div>
-                {formData.logoUrl && (
-                  <>
+                    ) : (
+                      <label htmlFor="logo-upload" className="w-full h-full flex flex-col items-center justify-center cursor-pointer">
+                        <Upload size={16} className="text-slate-300 group-hover:text-blue-400 mb-1" />
+                        <span className="text-[9px] font-bold text-slate-400 text-center px-2 leading-relaxed uppercase tracking-wider">
+                          Upload Logo
+                        </span>
+                      </label>
+                    )}
+                  </div>
+                  {formData.logoUrl && (
                     <button 
                       onClick={() => setFormData(p => ({ ...p, logoUrl: '' }))}
-                      className="absolute -top-2 -right-2 bg-white border border-slate-200 rounded-full p-1.5 text-slate-400 hover:text-rose-500 shadow-md z-10"
+                      className="absolute -top-1.5 -right-1.5 bg-white border border-slate-200 rounded-full p-1 text-slate-400 hover:text-rose-500 shadow-md z-10"
                     >
-                      <Trash2 size={12} />
+                      <Trash2 size={10} />
                     </button>
-                  </>
-                )}
-              </div>
-              <div className="flex-1 text-xs text-slate-500 pt-2 leading-relaxed">
-                <p className="font-bold text-slate-700">Organization Logo</p>
-                <p className="mt-1">Displays on reports, sales invoices, and customer receipts.</p>
-                <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 mt-3 space-y-0.5 text-[11px] font-medium text-slate-400">
-                  <p>• Max File Size: 1MB</p>
-                  <p>• Dimensions: Square ratios (e.g. 240x240 px)</p>
+                  )}
                 </div>
+                <div className="flex-1 text-[11px] text-slate-500 pt-1 leading-relaxed">
+                  <p className="font-bold text-slate-700">Organization Logo</p>
+                  <p className="mt-0.5">Displays on invoices, receipts, and financial reports.</p>
+                  <p className="text-[10px] text-slate-400 mt-1.5">Max size: 1MB. Recommended: Square ratio.</p>
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <InputRow label="Organization Name" keyName="name" value={formData.name} onChange={handleUpdateField} required={true} />
+                <SelectRow label="Industry" keyName="industry" value={formData.industry} onChange={handleUpdateField} options={["Computer Software", "Accounting", "Manufacturing", "Retail", "Services", "Construction", "Distribution"]} />
+                <SelectRow label="Organization Location" keyName="location" value={formData.location} onChange={handleUpdateField} options={["India", "USA", "UK", "UAE", "Singapore"]} required={true} />
+                <InputRow label="Website URL" keyName="website" value={formData.website} onChange={handleUpdateField} placeholder="www.yourcompany.com" />
+                <SelectRow label="Language" keyName="language" value={formData.language} onChange={handleUpdateField} options={["English", "Hindi", "Tamil", "Spanish", "French", "German"]} />
+                <SelectRow label="Date Format" keyName="dateFormat" value={formData.dateFormat} onChange={handleUpdateField} options={["dd/MM/yyyy", "MM/dd/yyyy", "yyyy-MM-dd", "dd-MMM-yyyy"]} />
               </div>
             </div>
 
-            <div className="space-y-1">
-              <InputRow label="Organization Name" keyName="name" value={formData.name} onChange={handleUpdateField} required={true} />
-              <SelectRow label="Industry" keyName="industry" value={formData.industry} onChange={handleUpdateField} options={["Computer Software", "Accounting", "Manufacturing", "Retail", "Services", "Construction", "Distribution"]} />
-              <SelectRow label="Organization Location" keyName="location" value={formData.location} onChange={handleUpdateField} options={["India", "USA", "UK", "UAE", "Singapore"]} required={true} />
-              
-              <div className="flex flex-col gap-1.5 py-4 border-b border-slate-100 lg:flex-row lg:items-start">
+            {/* SECTION 2: ADDRESS & CONTACT */}
+            <div className="space-y-6 pt-4">
+              <h3 className="text-xs font-bold text-blue-600 uppercase tracking-widest border-b border-slate-50 pb-2">
+                2. Address & Contacts
+              </h3>
+              <div className="flex flex-col gap-1.5 py-3 lg:flex-row lg:items-start">
                 <label className="text-[13px] text-slate-600 font-bold lg:w-56 shrink-0 pt-2">Address Details</label>
                 <div className="flex-1 max-w-md space-y-3">
                   <input type="text" placeholder="Street Address 1" value={formData.street1 || ''} onChange={e => handleUpdateField('street1', e.target.value)} className="w-full h-10 border border-slate-200 rounded-lg px-3 text-[13px] outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 placeholder:text-slate-300" />
@@ -648,47 +709,25 @@ const CompanyInfoView = ({ firstTime = false, onCompanyCreated }) => {
                   </div>
                 </div>
               </div>
-
-              <InputRow label="Website URL" keyName="website" value={formData.website} onChange={handleUpdateField} placeholder="www.yourcompany.com" />
-              <SelectRow label="Language" keyName="language" value={formData.language} onChange={handleUpdateField} options={["English", "Hindi", "Tamil", "Spanish", "French", "German"]} />
-              <SelectRow label="Date Format" keyName="dateFormat" value={formData.dateFormat} onChange={handleUpdateField} options={["dd/MM/yyyy", "MM/dd/yyyy", "yyyy-MM-dd", "dd-MMM-yyyy"]} />
             </div>
 
-            <div className="flex justify-end gap-3 mt-8 pt-5 border-t border-slate-100">
-              <button 
-                onClick={handleSaveActive}
-                disabled={loading}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider flex items-center gap-2 shadow-lg shadow-blue-500/20"
-              >
-                {loading ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />} Save Changes
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* TAB 4: GST & FY DETAILS */}
-        {activeTab === 'gst_fy' && (
-          <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-8 max-w-4xl mx-auto">
-            <div className="border-b border-slate-100 pb-5 mb-6">
-              <h2 className="text-lg font-bold text-slate-800">GST & Financial Year Configurations</h2>
-              <p className="text-xs text-slate-500 mt-1">Review state localizations, tax registrations, and accounting calendar settings.</p>
-            </div>
-
-            <div className="space-y-4">
-              <div className="border-b border-slate-100 pb-4 mb-4">
-                <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5 mb-4">
-                  <Landmark size={16} className="text-blue-500" /> Tax Identification details
-                </h3>
+            {/* SECTION 3: TAX & FINANCIALS */}
+            <div className="space-y-6 pt-4">
+              <h3 className="text-xs font-bold text-blue-600 uppercase tracking-widest border-b border-slate-50 pb-2">
+                3. Tax & Financial Settings
+              </h3>
+              
+              <div className="space-y-1">
                 <SelectRow label="Registration State" keyName="state" value={formData.state} onChange={handleUpdateField} options={INDIAN_STATES} />
                 <InputRow label="GSTIN (GST Number)" keyName="gstNumber" value={formData.gstNumber} onChange={handleUpdateField} placeholder="e.g. 33AAAAA1111A1Z1" maxLength={15} />
                 <InputRow label="PAN Number" keyName="panNumber" value={formData.panNumber} onChange={handleUpdateField} placeholder="e.g. ABCDE1234F" maxLength={10} />
               </div>
 
-              <div>
-                <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5 mb-4">
-                  <Calendar size={16} className="text-blue-500" /> Financial Year configuration
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
+              <div className="bg-slate-50 rounded-xl p-6 border border-slate-100 space-y-4 mt-4">
+                <h4 className="text-[11px] font-bold text-slate-600 uppercase tracking-wider flex items-center gap-1.5">
+                  <Calendar size={14} className="text-blue-500" /> Accounting Period & Currency
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Financial Year Starts From</label>
                     <input 
@@ -708,19 +747,27 @@ const CompanyInfoView = ({ firstTime = false, onCompanyCreated }) => {
                     />
                   </div>
                 </div>
-                <SelectRow label="Fiscal Year Range" keyName="fiscalYear" value={formData.fiscalYear} onChange={handleUpdateField} options={["April - March", "January - December", "July - June", "October - September"]} />
-                <SelectRow label="Base Currency" keyName="baseCurrency" value={formData.baseCurrency} onChange={handleUpdateField} options={CURRENCIES.map(c => c.code)} />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
+                  <SelectRow label="Fiscal Year Range" keyName="fiscalYear" value={formData.fiscalYear} onChange={handleUpdateField} options={["April - March", "January - December", "July - June", "October - September"]} />
+                  <SelectRow label="Base Currency" keyName="baseCurrency" value={formData.baseCurrency} onChange={handleUpdateField} options={CURRENCIES.map(c => c.code)} />
+                </div>
                 <SelectRow label="Reporting Basis" keyName="reportBasis" value={formData.reportBasis} onChange={handleUpdateField} options={["Accrual", "Cash"]} />
               </div>
             </div>
 
             <div className="flex justify-end gap-3 mt-8 pt-5 border-t border-slate-100">
               <button 
+                onClick={() => { setActiveTab('switch'); setEditingCompanyId(null); }}
+                className="px-6 py-2.5 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-600 text-xs font-bold uppercase tracking-wider cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button 
                 onClick={handleSaveActive}
                 disabled={loading}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider flex items-center gap-2 shadow-lg shadow-blue-500/20"
+                className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider flex items-center gap-2 shadow-lg shadow-blue-500/20 cursor-pointer"
               >
-                {loading ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />} Save Configurations
+                {loading ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />} Save Settings
               </button>
             </div>
           </div>

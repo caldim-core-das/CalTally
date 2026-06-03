@@ -1753,9 +1753,9 @@ const NewQuoteForm = ({ companyId, navigate, editId }) => {
                 </div>
             </footer>
             {isQuickAddOpen && (
-                <div className="fixed inset-0 z-[500] flex justify-end">
+                <div className="fixed inset-0 z-[500] flex items-center justify-center p-4">
                     <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm animate-fade-in" onClick={() => setIsQuickAddOpen(false)} />
-                    <div className="relative w-[500px] bg-white h-full shadow-2xl flex flex-col">
+                    <div className="relative w-full max-w-[500px] max-h-[90vh] bg-white border border-slate-200 rounded-[2rem] shadow-2xl flex flex-col overflow-hidden animate-zoom-in font-sans">
                         <header className="p-8 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
                             <div>
                                 <h3 className="text-xl font-bold text-slate-800 tracking-tight italic uppercase">Register New Customer</h3>
@@ -1763,7 +1763,7 @@ const NewQuoteForm = ({ companyId, navigate, editId }) => {
                             </div>
                             <button onClick={() => setIsQuickAddOpen(false)} className="p-2 hover:bg-white rounded-full transition-colors text-slate-400 shadow-sm border border-slate-100"><X size={24}/></button>
                         </header>
-                        <div className="flex-1 overflow-y-auto p-10 space-y-8 bg-white no-scrollbar">
+                        <div className="flex-1 overflow-y-auto p-10 space-y-8 bg-white no-scrollbar font-sans">
                            <div className="space-y-6">
                               <div className="grid grid-cols-4 gap-4">
                                  <div className="col-span-1 space-y-2">
