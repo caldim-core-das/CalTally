@@ -34,7 +34,7 @@ const VendorForm = ({ editId, standalone = true, onSaveSuccess, onCancel }) => {
   const [paymentTerms, setPaymentTerms] = useState('Due on Receipt');
   
   // Addresses (optional — not required to save)
-  const initialAddress = { attention: '', country: 'India', street1: '', street2: '', city: '', state: '', pinCode: '', phone: '' };
+  const initialAddress = { attention: '', country: '', street1: '', street2: '', city: '', state: '', pinCode: '', phone: '' };
   const [billingAddress, setBillingAddress] = useState({ ...initialAddress });
   const [shippingAddress, setShippingAddress] = useState({ ...initialAddress });
 
