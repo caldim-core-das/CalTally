@@ -488,8 +488,8 @@ exports.getDashboardStats = async (req, res) => {
 
         // Check payments made referencing this bill
         const payments = await Transaction.findAll({
-          where: { description: { [Op.like]: `%BILL_REF:${bill.id}%` } },
-          include: [{ model: Voucher, where: { status: 'Paid' }, attributes: [] }]
+          where: { CompanyId: companyId, description: { [Op.like]: `%BILL_REF:${bill.id}%` } },
+          include: [{ model: Voucher, where: { status: 'Paid', CompanyId: companyId }, attributes: [] }]
         });
         const paid = payments.reduce((s, p) => s + parseFloat(p.debit || 0), 0);
         const balance = Math.max(0, billAmount - paid);
@@ -689,6 +689,7 @@ exports.getDashboardStats = async (req, res) => {
           for (const item of b.items) {
             const txs = await Transaction.findAll({
               where: {
+                CompanyId: companyId,
                 LedgerId: item.LedgerId,
                 createdAt: { [Op.between]: [startDate, endDate] }
               }
@@ -817,6 +818,7 @@ exports.getLedgerStatement = async (req, res) => {
     if (from) {
       const priorTransactions = await Transaction.findAll({
         where: {
+          CompanyId: ledger.CompanyId,
           LedgerId: ledgerId,
           createdAt: { [Op.lt]: new Date(from) }
         }
@@ -827,7 +829,7 @@ exports.getLedgerStatement = async (req, res) => {
     }
 
     // 2. Fetch Transactions within range
-    const where = { LedgerId: ledgerId };
+    const where = { LedgerId: ledgerId, CompanyId: ledger.CompanyId };
     if (from && to) {
       where.createdAt = { [Op.between]: [new Date(from), new Date(to)] };
     } else if (from) {
@@ -1086,8 +1088,8 @@ exports.getPayablesReport = async (req, res) => {
 
       // Check payments
       const payments = await Transaction.findAll({
-        where: { description: { [Op.like]: `%BILL_REF:${bill.id}%` } },
-        include: [{ model: Voucher, where: { status: 'Paid' }, attributes: [], required: false }]
+        where: { CompanyId: companyId, description: { [Op.like]: `%BILL_REF:${bill.id}%` } },
+        include: [{ model: Voucher, where: { status: 'Paid', CompanyId: companyId }, attributes: [], required: false }]
       });
       const paid    = payments.reduce((s, p) => s + parseFloat(p.debit || 0), 0);
       const balance = Math.max(0, billAmount - paid);
