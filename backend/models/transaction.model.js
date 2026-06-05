@@ -6,6 +6,14 @@ module.exports = (sequelize, DataTypes) => {
       primaryKey: true,
       allowNull: false
     },
+    CreatedBy: {
+      type: DataTypes.UUID,
+      allowNull: true
+    },
+    ModifiedBy: {
+      type: DataTypes.UUID,
+      allowNull: true
+    },
     debit: {
       type: DataTypes.DOUBLE, // SQLite preferred for decimals
       defaultValue: 0.00
@@ -37,11 +45,6 @@ module.exports = (sequelize, DataTypes) => {
     unit: {
       type: DataTypes.STRING,
       defaultValue: 'Nos'
-    },
-    createdBy: {
-      type: DataTypes.UUID,
-      allowNull: true,
-      field: 'CreatedBy'
     },
     description: {
       type: DataTypes.TEXT,

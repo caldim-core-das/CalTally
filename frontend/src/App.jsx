@@ -110,8 +110,6 @@ const NAV = [
     icon: Package,
     items: [
       { label: 'Items',             path: '/inventory', icon: Package, showPlus: true, plusPath: '/inventory/new' },
-      { label: 'Inventory Masters', path: '/inventory/masters', icon: Folder },
-      { label: 'Price Lists',       path: '/price-lists', icon: ClipboardList, showPlus: true, plusPath: '/price-lists/new' },
     ]
   },
   {
@@ -419,7 +417,7 @@ const AppShell = ({ children, onLogout, companies = [], currentCompanyId, onComp
   const location   = useLocation();
   const { pathname } = location;
   const [collapsed, setCollapsed] = useState(false);
-  const user = useMemo(() => { try { return JSON.parse(localStorage.getItem('user') || '{}'); } catch { return {}; } }, []);
+  const user = useMemo(() => { try { return JSON.parse(sessionStorage.getItem('user') || '{}'); } catch { return {}; } }, []);
 
   const sidebarW = collapsed ? 84 : 230;
 
@@ -481,8 +479,9 @@ const AppShell = ({ children, onLogout, companies = [], currentCompanyId, onComp
             const role = user.role || 'VIEWER';
             if (role === 'VIEWER') return ['Home', 'Reports'].includes(section.group);
             if (role === 'AUDITOR') return ['Home', 'Reports', 'Setup'].includes(section.group);
-            if (role === 'DATA_ENTRY') return ['Home', 'Items', 'Banking', 'Sales', 'Purchases', 'Accountant', 'Payroll'].includes(section.group);
-            return true; // ADMIN, MANAGER, ACCOUNTANT see all
+            if (role === 'DATA_ENTRY') return ['Home', 'Items', 'Banking', 'Sales', 'Purchases', 'Accounting', 'Payroll'].includes(section.group);
+            if (role === 'EMPLOYEE') return ['Home', 'Items', 'Sales', 'Purchases', 'Banking', 'Accounting', 'Reports'].includes(section.group);
+            return true; // ADMIN, SUPER_ADMIN, ACCOUNTANT, MANAGER see all
           }).map(section => (
             <NavGroup
               key={section.group}
@@ -594,16 +593,16 @@ function AuthenticatedApp() {
   const [stats,    setStats]    = useState(null);
   const [vouchers, setVouchers] = useState([]);
   const [companies, setCompanies] = useState([]);
-  const [companyId, setCompanyId] = useState(localStorage.getItem('companyId'));
+  const [companyId, setCompanyId] = useState(sessionStorage.getItem('companyId'));
 
   const handleLogout = useCallback(() => {
-    ['token', 'companyId', 'companyName', 'user'].forEach(k => localStorage.removeItem(k));
+    ['token', 'companyId', 'companyName', 'user'].forEach(k => sessionStorage.removeItem(k));
     window.location.reload();
   }, []);
 
   const handleCompanyChange = (id, name) => {
-     localStorage.setItem('companyId', id);
-     localStorage.setItem('companyName', name);
+     sessionStorage.setItem('companyId', id);
+     sessionStorage.setItem('companyName', name);
      setCompanyId(id);
      window.location.reload();
   };
@@ -630,8 +629,8 @@ function AuthenticatedApp() {
 
         if (!currentId && allCos.length > 0) {
           currentId = allCos[0].id;
-          localStorage.setItem('companyId', currentId);
-          localStorage.setItem('companyName', allCos[0].name);
+          sessionStorage.setItem('companyId', currentId);
+          sessionStorage.setItem('companyName', allCos[0].name);
           setCompanyId(currentId);
           window.location.reload();
           return;
@@ -644,7 +643,7 @@ function AuthenticatedApp() {
 
         if (currentId) {
           const activeCo = allCos.find(c => c.id === currentId);
-          if (activeCo) localStorage.setItem('companyName', activeCo.name);
+          if (activeCo) sessionStorage.setItem('companyName', activeCo.name);
           
           Promise.allSettled([
             reportsAPI.dashboard(currentId),
@@ -674,8 +673,8 @@ function AuthenticatedApp() {
 
       <Route path="/setup-company" element={
         <CompanyInfoView firstTime={true} onCompanyCreated={(id, name) => {
-          localStorage.setItem('companyId', id);
-          localStorage.setItem('companyName', name);
+          sessionStorage.setItem('companyId', id);
+          sessionStorage.setItem('companyName', name);
           setCompanyId(id);
           navigate('/dashboard');
           window.location.reload();
@@ -849,7 +848,7 @@ function AuthenticatedApp() {
 // ROOT
 // ═══════════════════════════════════════════════════════════════════
 export default function App() {
-  const [authed, setAuthed] = useState(!!localStorage.getItem('token'));
+  const [authed, setAuthed] = useState(!!sessionStorage.getItem('token'));
 
   if (!authed) {
     return (
