@@ -40,7 +40,8 @@ module.exports = (sequelize, DataTypes) => {
     },
     createdBy: {
       type: DataTypes.UUID,
-      allowNull: true
+      allowNull: true,
+      field: 'CreatedBy'
     },
     description: {
       type: DataTypes.TEXT,
