@@ -4,7 +4,8 @@ import {
   ShieldCheck, ArrowRight, Play, Globe, Zap,
   UserPlus, User, Check
 } from 'lucide-react';
-import { login, register } from '../../services/api';
+import { login, register, googleLogin } from '../../services/api';
+import { GoogleOAuthProvider, GoogleLogin } from '@react-oauth/google';
 
 const AuthPage = ({ onLogin }) => {
   const [isLogin, setIsLogin] = useState(false); // Start with signup as per screenshot
@@ -43,8 +44,31 @@ const AuthPage = ({ onLogin }) => {
     }
   };
 
+  const handleGoogleSuccess = async (credentialResponse) => {
+    setLoading(true);
+    setError('');
+    try {
+      const res = await googleLogin(credentialResponse.credential);
+      sessionStorage.setItem('token', res.data.token);
+      sessionStorage.setItem('user', JSON.stringify(res.data.user));
+      if (res.data.companies && res.data.companies.length > 0) {
+        sessionStorage.setItem('companyId', res.data.companies[0].id);
+      } else {
+        sessionStorage.removeItem('companyId');
+        sessionStorage.removeItem('companyName');
+      }
+      onLogin();
+    } catch (err) {
+      setError(err.response?.data?.error || 'Google Authentication failed.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+
   return (
-    <div className="min-h-screen bg-[#EAF5FF] flex items-center justify-center font-['Inter',sans-serif] p-6">
+    <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID || '18346618646-9hvt5qujf46md3inhb0l72pgt74fu9gh.apps.googleusercontent.com'}>
+      <div className="min-h-screen bg-[#EAF5FF] flex items-center justify-center font-['Inter',sans-serif] p-6">
       
       <div className="max-w-[1100px] w-full flex flex-col lg:flex-row items-center gap-10 lg:gap-20">
         
@@ -54,16 +78,16 @@ const AuthPage = ({ onLogin }) => {
             <div className="p-2 bg-blue-600 rounded-lg text-white">
               <Building2 size={24} strokeWidth={2.5}/>
             </div>
-            <span className="text-2xl font-bold text-slate-800 tracking-tight">Tally Replica</span>
+            <span className="text-2xl font-bold text-slate-800 tracking-tight">CalTally</span>
           </div>
 
           <h1 className="text-5xl lg:text-6xl font-bold text-[#1F314F] leading-[1.1] tracking-tight">
             {isLogin ? 'Welcome back to' : 'Wave hello to'} <br/>
-            <span className="text-blue-600">Tally Replica!</span>
+            <span className="text-blue-600">CalTally!</span>
           </h1>
 
           <p className="text-lg text-slate-600 max-w-md leading-relaxed">
-            Tally Replica is your trusted financial partner. Our platform is 
+            CalTally is your trusted financial partner. Our platform is 
             equipped with powerful features that will take care of your 
             business finances. Welcome to the future of accounting!
           </p>
@@ -159,6 +183,24 @@ const AuthPage = ({ onLogin }) => {
             </button>
           </form>
 
+          <div className="mt-6 flex items-center justify-between">
+            <span className="w-1/5 border-b border-slate-200 lg:w-1/4"></span>
+            <span className="text-xs text-center text-slate-500 font-medium uppercase tracking-widest">or</span>
+            <span className="w-1/5 border-b border-slate-200 lg:w-1/4"></span>
+          </div>
+
+          <div className="mt-6 flex justify-center">
+            <GoogleLogin
+              onSuccess={handleGoogleSuccess}
+              onError={() => setError('Google Login Failed')}
+              useOneTap
+              theme="outline"
+              size="large"
+              shape="rectangular"
+              width="100%"
+            />
+          </div>
+
           <div className="mt-8 text-center space-y-4">
              <p className="text-[11px] font-medium text-slate-400 italic font-mono">*No credit card required</p>
              <p className="text-xs font-semibold text-slate-700">
@@ -173,13 +215,14 @@ const AuthPage = ({ onLogin }) => {
           </div>
 
           <p className="mt-10 text-[9px] text-center text-slate-300 font-bold uppercase tracking-[0.1em]">
-            *This offer is applicable only for Tally Replica users
+            *This offer is applicable only for CalTally users
           </p>
         </div>
 
       </div>
 
     </div>
+    </GoogleOAuthProvider>
   );
 };
 

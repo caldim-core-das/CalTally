@@ -42,7 +42,7 @@ const getNodeBalanceSigned = (node, parentNature = 'Assets') => {
 };
 
 const getNodeBalance = (node) => {
-  return Math.abs(getNodeBalanceSigned(node));
+  return getNodeBalanceSigned(node);
 };
 
 export default function ChartOfAccountsView() {
