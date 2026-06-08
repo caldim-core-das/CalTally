@@ -7,6 +7,7 @@ import {
     Folder, FolderOpen, FileText, CornerDownRight, BookOpen, Edit, X, Info
 } from 'lucide-react';
 import { groupAPI, ledgerAPI } from '../../services/api';
+import ConfirmModal from '../../components/ConfirmModal';
 
 const LedgersView = ({ showNew }) => {
     const navigate = useNavigate();
@@ -20,6 +21,11 @@ const LedgersView = ({ showNew }) => {
     const [seeding, setSeeding] = useState(false);
     const [seedStatus, setSeedStatus] = useState(null); // 'success' | 'error' | null
     
+    // Delete Modal State
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+    const [deleteId, setDeleteId] = useState(null);
+    const [deleteType, setDeleteType] = useState(null);
+
     // Flattened list for the Parent select dropdown
     const [flatGroupList, setFlatGroupList] = useState([]);
     
@@ -132,22 +138,36 @@ const LedgersView = ({ showNew }) => {
         setShowDrawer(true);
     };
 
-    const handleDeleteLedger = async (e, id) => {
+    const handleDeleteLedger = (e, id) => {
         e.stopPropagation();
-        if (!window.confirm("Are you sure you want to delete this ledger?")) return;
-        try {
-            await ledgerAPI.delete(id);
-            fetchData();
-        } catch (err) { alert("Delete failed: " + (err.response?.data?.error || err.message)); }
+        setDeleteId(id);
+        setDeleteType('ledger');
+        setIsDeleteModalOpen(true);
     };
 
-    const handleDeleteGroup = async (e, id) => {
+    const handleDeleteGroup = (e, id) => {
         e.stopPropagation();
-        if (!window.confirm("Are you sure you want to delete this group and its contents?")) return;
+        setDeleteId(id);
+        setDeleteType('group');
+        setIsDeleteModalOpen(true);
+    };
+
+    const confirmDelete = async () => {
+        if (!deleteId || !deleteType) return;
         try {
-            await groupAPI.delete(id);
+            if (deleteType === 'group') {
+                await groupAPI.delete(deleteId);
+            } else {
+                await ledgerAPI.delete(deleteId);
+            }
             fetchData();
-        } catch (err) { alert("Delete failed: " + (err.response?.data?.error || err.message)); }
+        } catch (err) {
+            alert("Delete failed: " + (err.response?.data?.error || err.message));
+        } finally {
+            setIsDeleteModalOpen(false);
+            setDeleteId(null);
+            setDeleteType(null);
+        }
     };
 
     const matchesSearch = (item) => {
@@ -833,6 +853,23 @@ const LedgersView = ({ showNew }) => {
                     </div>
                 </div>
             )}
+
+            <ConfirmModal 
+                isOpen={isDeleteModalOpen}
+                onClose={() => {
+                    setIsDeleteModalOpen(false);
+                    setDeleteId(null);
+                    setDeleteType(null);
+                }}
+                onConfirm={confirmDelete}
+                title={deleteType === 'group' ? "Delete Group" : "Delete Ledger"}
+                message={deleteType === 'group' 
+                    ? "Are you sure you want to delete this group and its contents? This action cannot be undone."
+                    : "Are you sure you want to delete this ledger? This action cannot be undone."}
+                confirmText="Delete"
+                cancelText="Cancel"
+                type="danger"
+            />
             
         </div>
     );

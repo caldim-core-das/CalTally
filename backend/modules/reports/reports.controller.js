@@ -532,7 +532,8 @@ exports.getDashboardStats = async (req, res) => {
       if (nature === 'Expenses') totalExpenses += debit - credit + opening;
 
       const name = (l.name || '').toLowerCase();
-      if (name.includes('cash') || name.includes('bank')) {
+      const groupName = (l.Group?.name || '').toLowerCase();
+      if (name.includes('cash') || name.includes('bank') || groupName.includes('cash') || groupName.includes('bank')) {
         cashBalance += closing;
         bankAccounts.push({ name: l.name, balance: parseFloat(closing.toFixed(2)), id: l.id });
       }
