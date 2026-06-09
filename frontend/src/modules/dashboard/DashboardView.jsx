@@ -530,8 +530,8 @@ const DashboardView = ({ companyId: propCompanyId }) => {
                           <YAxis tickFormatter={fmtK} tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
                           <Tooltip content={<CustomTooltip />} />
                           <Legend wrapperStyle={{ fontSize: 12, paddingTop: 12 }} />
-                          <Line type="monotone" dataKey="inflow" stroke="#1A73E8" strokeWidth={2.5} dot={{ fill: '#1A73E8', r: 4 }} name="Inflow" />
-                          <Line type="monotone" dataKey="outflow" stroke="#ef4444" strokeWidth={2.5} dot={{ fill: '#ef4444', r: 4 }} name="Outflow" strokeDasharray="5 3" />
+                          <Line type="linear" dataKey="inflow" stroke="#1A73E8" strokeWidth={2.5} dot={{ fill: '#1A73E8', r: 4 }} name="Inflow" />
+                          <Line type="linear" dataKey="outflow" stroke="#ef4444" strokeWidth={2.5} dot={{ fill: '#ef4444', r: 4 }} name="Outflow" strokeDasharray="5 3" />
                         </LineChart>
                       </ResponsiveContainer>
                     )}

@@ -9,13 +9,25 @@ const AI_API_URL = import.meta.env.VITE_AI_API_URL || null;
 
 const matchMockKey = (msg) => {
   const lower = msg.toLowerCase().trim();
+  let bestKey = 'default';
+  let bestScore = 0;
+
   for (const key of Object.keys(mockAIResponses)) {
     if (key === 'default') continue;
-    const keyWords = key.split(' ').filter(w => w.length > 3);
-    const matchCount = keyWords.filter(w => lower.includes(w)).length;
-    if (matchCount >= Math.ceil(keyWords.length * 0.6)) return key;
+    if (lower === key) return key;
+
+    const inputWords = lower.split(/\s+/).filter(w => w.length > 2);
+    let score = 0;
+    inputWords.forEach(w => {
+      if (key.includes(w)) score++;
+    });
+
+    if (score > bestScore) {
+      bestScore = score;
+      bestKey = key;
+    }
   }
-  return 'default';
+  return bestKey;
 };
 
 const ChatBubble = ({ msg, onActionClick }) => {
