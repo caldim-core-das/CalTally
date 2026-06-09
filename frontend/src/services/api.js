@@ -35,8 +35,9 @@ api.interceptors.response.use(
 // ─── Auth ──────────────────────────────────────────
 export const register = (name, email, password, role) => api.post('/auth/register', { name, email, password, role });
 export const login = (email, password) => api.post('/auth/login', { email, password });
+export const googleLogin = (credential) => api.post('/auth/google-login', { credential });
 
-export const authAPI = { register, login };
+export const authAPI = { register, login, googleLogin };
 
 // ─── Users ─────────────────────────────────────────
 export const usersAPI = {

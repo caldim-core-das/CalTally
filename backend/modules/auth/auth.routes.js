@@ -8,6 +8,7 @@ const { verifyToken } = require('../../middleware/auth.middleware');
 // ── Standard Authentication ──
 router.post('/register', authController.register);
 router.post('/login', authController.login);
+router.post('/google-login', authController.googleLogin);
 router.post('/switch-company', verifyToken, authController.switchCompany);
 
 // ── Google OAuth Strategy ──

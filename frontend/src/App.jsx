@@ -466,8 +466,7 @@ const AppShell = ({ children, onLogout, companies = [], currentCompanyId, onComp
           </div>
           {!collapsed && (
             <div className="flex flex-col items-start leading-[1.1] animate-fade-in">
-              <div className="text-[15px] font-black text-slate-900 tracking-tight uppercase">Tally Replica</div>
-              <div className="text-[10px] font-bold text-blue-600/70 uppercase tracking-[0.15em] mt-1 whitespace-nowrap">Cloud Accounting Suite</div>
+              <div className="text-[15px] font-black text-slate-900 tracking-tight uppercase">CalTally</div>
             </div>
           )}
         </div>

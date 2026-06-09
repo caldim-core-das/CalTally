@@ -1,6 +1,9 @@
 const { User } = require('../../models');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const { OAuth2Client } = require('google-auth-library');
+const client = new OAuth2Client(process.env.Client_ID);
+
 
 exports.register = async (req, res) => {
   try {
@@ -127,5 +130,65 @@ exports.switchCompany = async (req, res) => {
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
+  }
+};
+
+exports.googleLogin = async (req, res) => {
+  try {
+    const { credential } = req.body;
+    
+    const ticket = await client.verifyIdToken({
+      idToken: credential,
+      audience: process.env.Client_ID,
+    });
+    
+    const payload = ticket.getPayload();
+    const { email, name } = payload;
+    
+    const { Company } = require('../../models');
+    let user = await User.findOne({ 
+      where: { email },
+      include: [{ model: Company, through: { attributes: [] } }]
+    });
+
+    if (!user) {
+      const randomPassword = Math.random().toString(36).slice(-8) + Math.random().toString(36).slice(-8);
+      const hashedPassword = await bcrypt.hash(randomPassword, 10);
+      user = await User.create({ 
+        email, 
+        password: hashedPassword, 
+        name: name || email.split('@')[0],
+        role: 'ADMIN'
+      });
+      user = await User.findOne({ 
+        where: { id: user.id },
+        include: [{ model: Company, through: { attributes: [] } }]
+      });
+    }
+
+    let userCompanies = user.Companies || [];
+    let activeCoId = user.activeCompanyId;
+    
+    if (!activeCoId && userCompanies.length === 1) {
+       activeCoId = userCompanies[0].id;
+       user.activeCompanyId = activeCoId;
+       await user.save();
+    }
+
+    const token = jwt.sign(
+      { id: user.id, role: user.role, companyId: activeCoId }, 
+      process.env.JWT_SECRET, 
+      { expiresIn: '1d' }
+    );
+    
+    res.json({ 
+      token, 
+      user: { id: user.id, email: user.email, name: user.name, role: user.role, activeCompanyId: activeCoId },
+      companies: userCompanies 
+    });
+
+  } catch (err) {
+    console.error("Google Auth Error:", err);
+    res.status(500).json({ error: 'Google Authentication Failed' });
   }
 };
