@@ -89,8 +89,8 @@ app.get('/api/ping', (req, res) => res.json({ status: 'active', platform: 'Tally
 
 // 6. DB Sync & Boot Strategy
 const dialect = process.env.DB_DIALECT || 'sqlite';
-// Temporarily enabling alter:true to sync new columns like CreatedBy
-const syncOptions = {};
+// Use alter:true only for local SQLite; disabled for cloud Postgres to prevent sync locks
+const syncOptions = process.env.DATABASE_URL ? {} : { alter: true };
 
 const cron = require('node-cron');
 const recurringController = require('./modules/sales/recurringInvoice.controller');
@@ -118,8 +118,7 @@ const startServer = async () => {
     try {
       await sequelize.authenticate();
       console.log('✅ Database connection authenticated.');
-      // Skip sync on boot to prevent hanging on slow remote DBs:
-      // await sequelize.sync(syncOptions);
+      await sequelize.sync(syncOptions);
       const connectedTo = process.env.DATABASE_URL ? 'Cloud Postgres' : (process.env.DB_DIALECT || 'sqlite');
       console.log(`✅ Ledger Database Synced [${connectedTo}]`);
       break; // Success, exit retry loop
