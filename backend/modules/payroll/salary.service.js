@@ -92,7 +92,8 @@ class SalaryService {
     // Step 2: Calculate Earnings that depend on other earnings (e.g. HRA of BASIC)
     earnings.forEach(e => {
       if (e.calculationType === 'Percentage' && e.calculationBase && e.calculationBase !== 'CTC' && e.calculationBase !== 'RemainingGross') {
-        const baseVal = breakdown[e.calculationBase] || 0;
+        const baseKey = e.calculationBase.toUpperCase();
+        const baseVal = breakdown[baseKey] || breakdown[e.calculationBase] || 0;
         e.monthlyAmount = Number(((baseVal * e.calculationValue) / 100).toFixed(2));
         breakdown[e.code] = e.monthlyAmount;
         currentGrossEarnings += e.monthlyAmount;
@@ -104,7 +105,7 @@ class SalaryService {
     // If there is an employer PF component, it should subtract it, but by default:
     const targetGross = monthlyCtc;
     earnings.forEach(e => {
-      if (e.code === 'SPECIAL_ALLOWANCE' || e.calculationBase === 'RemainingGross') {
+      if (e.code === 'SPECIAL_ALLOWANCE' || e.code === 'FIXED' || e.calculationBase === 'RemainingGross') {
         const remaining = targetGross - currentGrossEarnings;
         e.monthlyAmount = remaining > 0 ? Number(remaining.toFixed(2)) : 0;
         breakdown[e.code] = e.monthlyAmount;
