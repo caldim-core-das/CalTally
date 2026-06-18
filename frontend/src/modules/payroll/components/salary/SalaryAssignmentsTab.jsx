@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { salaryAPI, payrollAPI } from '../../../../services/api';
-import { Plus, Trash2, Check, AlertCircle, Info, UserCheck, Calendar, Calculator, Eye } from 'lucide-react';
+import { Plus, Trash2, Check, AlertCircle, Info, UserCheck, Calendar, Calculator, Eye, ArrowLeft } from 'lucide-react';
 
 export default function SalaryAssignmentsTab() {
   const [assignments, setAssignments] = useState([]);
@@ -423,11 +423,12 @@ export default function SalaryAssignmentsTab() {
           {/* Top Header Bar */}
           <div className="bg-white border-b border-slate-200 px-6 py-4 flex justify-between items-center shadow-sm z-10">
             <div className="flex items-center gap-4">
-              <button 
-                onClick={() => setShowModal(false)}
-                className="w-8 h-8 flex items-center justify-center rounded border border-slate-200 text-slate-500 hover:bg-slate-50 transition-colors"
+              <button
+                type="button"
+                onClick={(e) => { e.preventDefault(); setShowModal(false); }}
+                className="w-8 h-8 flex items-center justify-center rounded border border-slate-200 text-slate-500 hover:bg-slate-50 transition-colors cursor-pointer"
               >
-                &lt;
+                <ArrowLeft size={18} />
               </button>
               <div>
                 <h2 className="text-xl font-semibold text-slate-800 flex items-center gap-2">
