@@ -34,11 +34,15 @@ export default function SalaryAssignmentsTab() {
 
   // Fetch preview when input variables change
   useEffect(() => {
-    if (formData.ctcAmount && formData.ctcAmount > 0) {
-      calculateLivePreview();
+    let timeoutId;
+    if (formData.ctcAmount && formData.ctcAmount > 0 && formData.salaryStructureId) {
+      timeoutId = setTimeout(() => {
+        calculateLivePreview();
+      }, 400); // 400ms debounce
     } else {
       setPreviewData(null);
     }
+    return () => clearTimeout(timeoutId);
   }, [formData.ctcAmount, formData.salaryStructureId]);
 
   const fetchInitialData = async () => {
@@ -69,43 +73,29 @@ export default function SalaryAssignmentsTab() {
     }
   };
 
-  const calculateLivePreview = () => {
+  const calculateLivePreview = async () => {
     try {
       const annualCtc = parseFloat(formData.ctcAmount);
-      if (isNaN(annualCtc) || annualCtc <= 0) {
+      if (isNaN(annualCtc) || annualCtc <= 0 || !formData.salaryStructureId) {
         setPreviewData(null);
         return;
       }
 
-      // Dynamic Preview Math Engine
-      const monthlyCtc = annualCtc / 12;
-      const basic = monthlyCtc * 0.50; // Basic = 50% of Monthly Gross
-      const hra = basic * 0.50;        // HRA = 50% of Basic
-      const fixedAllowance = monthlyCtc - basic - hra; // Spillover remainder
-      
-      // Statutory Deductions Simulation
-      const pf = Math.min(basic * 0.12, 1800);
-      const pt = 200;
-      const totalDeductions = pf + pt;
-      const netPay = monthlyCtc - totalDeductions;
-
-      const data = {
-        monthlyCtc,
-        grossEarnings: monthlyCtc,
-        totalDeductions,
-        netPay,
-        components: [
-          { code: 'BASIC', name: 'Basic Salary', type: 'Earning', monthlyAmount: basic },
-          { code: 'HRA', name: 'House Rent Allowance', type: 'Earning', monthlyAmount: hra },
-          { code: 'FIXED', name: 'Fixed Allowance', type: 'Earning', monthlyAmount: fixedAllowance },
-          { code: 'PF', name: 'Provident Fund (EPF)', type: 'Deduction', monthlyAmount: pf },
-          { code: 'PT', name: 'Professional Tax', type: 'Deduction', monthlyAmount: pt }
-        ]
+      setPreviewError(null);
+      const payload = {
+        ctcAmount: annualCtc,
+        salaryStructureId: formData.salaryStructureId
       };
       
-      setPreviewData(data);
+      const res = await salaryAPI.calculatePreview(payload);
+      if (res.data && res.data.success) {
+        setPreviewData(res.data.data);
+      } else {
+        setPreviewData(null);
+        setPreviewError('Failed to calculate preview');
+      }
     } catch (err) {
-      setPreviewError('Failed to compute live breakdown preview');
+      setPreviewError(err.response?.data?.error || 'Failed to compute live breakdown preview');
       setPreviewData(null);
     }
   };
@@ -180,41 +170,7 @@ export default function SalaryAssignmentsTab() {
     try {
       const res = await salaryAPI.getEmployeeAssignment(employeeId);
       if (res.data && res.data.success) {
-        const raw = res.data.data;
-        const annualCtc = parseFloat(raw.annualCtc) || 0;
-        
-        // 1. Set the calculation engine base to: Monthly Gross = Annual CTC / 12
-        const monthlyGross = annualCtc / 12;
-        
-        // 2. Update the breakdown loop rendering values
-        const basic = monthlyGross * 0.50; // 50% of Gross
-        const hra = basic * 0.50;          // 50% of Basic
-        const fixed = monthlyGross - basic - hra; // Remaining spillover
-        
-        // Statutory Deductions
-        const pf = Math.min(basic * 0.12, 1800);
-        const pt = 200;
-        const totalDeductions = pf + pt;
-        const netPay = monthlyGross - totalDeductions;
-        
-        // Ensure components list has the calculated values
-        const updatedComponents = raw.components?.map(c => {
-          let amount = 0;
-          if (c.code === 'BASIC') amount = basic;
-          else if (c.code === 'HRA') amount = hra;
-          else if (c.code === 'FIXED') amount = fixed;
-          else if (c.code === 'PF_EMP' || c.code === 'PF') amount = pf;
-          else if (c.code === 'PT') amount = pt;
-          return { ...c, monthlyAmount: amount };
-        }) || [];
-
-        setViewDetails({
-          ...raw,
-          grossEarnings: monthlyGross,
-          totalDeductions,
-          netPay,
-          components: updatedComponents
-        });
+        setViewDetails(res.data.data);
       }
     } catch (err) {
       alert(err.response?.data?.error || 'Could not load salary breakdown details');
