@@ -54,7 +54,9 @@ export default function SalaryAssignmentsTab() {
       if (assignRes.data && assignRes.data.success) {
         setAssignments(assignRes.data.data);
       }
-      if (empRes.data && empRes.data.success) {
+      if (empRes.data && empRes.data.employees) {
+        setEmployees(empRes.data.employees || []);
+      } else if (empRes.data && empRes.data.success) {
         setEmployees(empRes.data.data || []);
       }
       if (structRes.data && structRes.data.success) {
