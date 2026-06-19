@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Edit2, ChevronRight, ChevronDown, Plus, MoreVertical, Search, Package, RefreshCcw, Check, Trash2, AlertTriangle } from 'lucide-react';
-import { inventoryAPI } from '../../services/api';
+import { inventoryAPI, purchaseAPI } from '../../services/api';
 import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import ConfirmModal from '../../components/ConfirmModal';
 import useNotificationStore from '../../store/notificationStore';
@@ -20,6 +20,7 @@ const InventoryView = () => {
   const [deleteId, setDeleteId] = useState(null);
   const [deleteName, setDeleteName] = useState('');
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState('all');
   const { addNotification } = useNotificationStore();
   
   const companyId = sessionStorage.getItem('companyId');
@@ -66,9 +67,18 @@ const InventoryView = () => {
     setLoading(false);
   };
 
-  const filteredItems = items.filter(item => 
-    item.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredItems = items.filter(item => {
+    const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase());
+    if (!matchesSearch) return false;
+    
+    if (activeTab === 'restock') {
+      const current = parseFloat(item.currentStock) || 0;
+      const reorder = parseFloat(item.reorderLevel) || 0;
+      // Show if current stock is at/below reorder level, OR if it's completely out of stock
+      return current <= reorder;
+    }
+    return true;
+  });
 
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('en-IN', {
@@ -147,6 +157,22 @@ const InventoryView = () => {
               </div>
           </div>
 
+          <div className="px-8 flex items-center gap-6 border-b border-slate-100 bg-white">
+            <button 
+              onClick={() => setActiveTab('all')}
+              className={`py-3 text-[13px] font-bold tracking-wide border-b-2 transition-all ${activeTab === 'all' ? 'border-[#1e61f0] text-[#1e61f0]' : 'border-transparent text-slate-500 hover:text-slate-800'}`}
+            >
+               All Items
+            </button>
+            <button 
+              onClick={() => setActiveTab('restock')}
+              className={`py-3 text-[13px] font-bold tracking-wide border-b-2 transition-all flex items-center gap-2 ${activeTab === 'restock' ? 'border-orange-500 text-orange-600' : 'border-transparent text-slate-500 hover:text-slate-800'}`}
+            >
+               Restock Need
+               {activeTab !== 'restock' && <span className="bg-orange-100 text-orange-600 px-1.5 py-0.5 rounded text-[10px]">Auto</span>}
+            </button>
+          </div>
+
           {/* SEARCH/FILTER BAR */}
           <div className="px-8 py-4 bg-slate-50/50 flex items-center justify-between border-b border-slate-100">
             <div className="flex items-center gap-4">
@@ -187,16 +213,16 @@ const InventoryView = () => {
                     <th className="px-6 py-4">Name</th>
                     <th className="px-6 py-4">Purchase Rate</th>
                     <th className="px-6 py-4">Sales Rate</th>
-                    <th className="px-6 py-4">Usage Unit</th>
+                    <th className="px-6 py-4">Available Stock</th>
                     <th className="px-6 py-4 text-center">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {loading ? (
-                    <tr><td colSpan="5" className="py-24 text-center font-bold text-slate-400 animate-pulse uppercase tracking-widest">Syncing...</td></tr>
+                    <tr><td colSpan="6" className="py-24 text-center font-bold text-slate-400 animate-pulse uppercase tracking-widest">Syncing...</td></tr>
                 ) : filteredItems.length === 0 ? (
                   <tr>
-                      <td colSpan="5" className="py-20 text-center">
+                      <td colSpan="6" className="py-20 text-center">
                          <div className="flex flex-col items-center justify-center gap-3">
                             <div className="w-12 h-12 bg-slate-50 rounded-full flex items-center justify-center text-slate-300">
                                <Package size={24} />
@@ -220,7 +246,7 @@ const InventoryView = () => {
                         {item.sellingPrice ? formatCurrency(item.sellingPrice) : '—'}
                       </td>
                       <td className="px-6 py-4 text-[13px] text-slate-500 font-medium">
-                        {(!item.unit || item.unit === 'Select or type to add') ? '—' : item.unit}
+                        {item.currentStock ? `${item.currentStock} ${item.unit || 'Nos'}` : `0 ${item.unit || 'Nos'}`}
                       </td>
                       <td className="px-6 py-4" onClick={e => e.stopPropagation()}>
                         <div className="flex items-center justify-center gap-2">
