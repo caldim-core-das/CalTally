@@ -62,8 +62,6 @@ import RecurringExpenseEntryView from './modules/purchases/RecurringExpenseEntry
 import PurchaseOrderEntryView from './modules/purchases/PurchaseOrderEntryView';
 import PurchaseOrderEmailView from './modules/purchases/PurchaseOrderEmailView';
 import BillEntryView from './modules/purchases/BillEntryView';
-import RecurringBillEntryView from './modules/purchases/RecurringBillEntryView';
-import RecurringBillsView from './modules/purchases/RecurringBillsView';
 import PaymentsMadeListView from './modules/purchases/PaymentsMadeListView';
 import PaymentsMadeEntryView from './modules/purchases/PaymentsMadeEntryView';
 import BudgetsView from './modules/accountant/BudgetsView';
@@ -140,7 +138,6 @@ const NAV = [
       { label: 'Vendors',            path: '/vendors', icon: Users, showPlus: true, plusPath: '/vendors/new' },
       { label: 'Purchase Orders',    path: '/purchase-orders', icon: ShoppingBag, showPlus: true, plusPath: '/purchase-orders/new' },
       { label: 'Bills',              path: '/bills', icon: FileStack, showPlus: true, plusPath: '/bills/new' },
-      { label: 'Recurring Bills',    path: '/recurring-bills', icon: Repeat, showPlus: true, plusPath: '/recurring-bills/new' },
       { label: 'Vendor Payments',    path: '/payments-made', icon: Wallet, showPlus: true, plusPath: '/payments-made/new' },
     ]
   },
@@ -766,8 +763,6 @@ function AuthenticatedApp() {
       <Route path="/bills"               element={shell(BillsView)} />
       <Route path="/bills/new"           element={shell(BillEntryView)} />
       <Route path="/bills/edit/:id"      element={shell(BillEntryView)} />
-      <Route path="/recurring-bills"     element={shell(RecurringBillsView)} />
-      <Route path="/recurring-bills/new" element={shell(RecurringBillEntryView)} />
       <Route path="/purchase-orders"     element={shell(PurchaseOrdersView)} />
       <Route path="/purchase-orders/view/:id" element={shell(PurchaseOrdersView)} />
       <Route path="/purchase-orders/:id/email" element={shell(PurchaseOrderEmailView)} />
