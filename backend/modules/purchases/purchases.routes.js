@@ -18,6 +18,7 @@ router.delete('/vendors/:id', authorizeRoles('ADMIN', 'SUPER_ADMIN'), purchasesC
 
 // ─── 2. PURCHASE ORDERS ──────────────────────────────────────────────────
 router.get('/orders/next-number', purchasesController.getNextOrderNumber);
+router.post('/orders/batch-restock', purchasesController.batchRestock);
 router.get('/orders', purchasesController.getOrders);
 router.get('/orders/:id/pdf-preview', purchasesController.getPurchaseOrderPdfPreview);
 router.post('/orders', purchasesController.createOrder);
