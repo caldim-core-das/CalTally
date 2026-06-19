@@ -542,8 +542,9 @@ const PurchaseOrderEntryView = ({ companyId }) => {
                           <input 
                             type="text"
                             placeholder="Select a Vendor"
-                            value={formData.vendorName || vendorSearch}
+                            value={formData.vendorName}
                             onChange={(e) => {
+                               setFormData({ ...formData, vendorName: e.target.value, vendorId: '' });
                                setVendorSearch(e.target.value);
                                setIsVendorDropdownOpen(true);
                             }}
