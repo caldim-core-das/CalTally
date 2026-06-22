@@ -631,7 +631,7 @@ exports.createBill = async (req, res, next) => {
             const { StockMovement, FixedAsset, Ledger } = require('../../models');
             for (const itemData of items) {
                 const qty = itemData.quantity || itemData.qty;
-                if (itemData.itemId && parseFloat(qty) > 0 && !itemData.isFixedAsset) {
+                if (itemData.itemId && parseFloat(qty) > 0) {
                     await StockMovement.create({
                         movementType: 'PURCHASE',
                         quantity: parseFloat(qty),
@@ -824,7 +824,7 @@ exports.updateBill = async (req, res, next) => {
             const { StockMovement, FixedAsset, Ledger } = require('../../models');
             for (const itemData of items) {
                 const qty = itemData.quantity || itemData.qty;
-                if (itemData.itemId && parseFloat(qty) > 0 && !itemData.isFixedAsset) {
+                if (itemData.itemId && parseFloat(qty) > 0) {
                     await StockMovement.create({
                         movementType: 'PURCHASE',
                         quantity: parseFloat(qty),

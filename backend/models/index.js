@@ -63,6 +63,7 @@ const PaymentTransaction = require('./paymentTransaction.model')(sequelize, Data
 const InvoicePayment = require('./invoicePayment.model')(sequelize, DataTypes);
 const PaymentWebhookLog = require('./paymentWebhookLog.model')(sequelize, DataTypes);
 const StockMovement = require('./stockMovement.model')(sequelize, DataTypes);
+const AppNotification = require('./appNotification.model')(sequelize, DataTypes);
 
 // ─── Associations ────────────────────────────────────────────────────────────
 
@@ -448,6 +449,10 @@ RefreshToken.belongsTo(User, { foreignKey: 'UserId' });
 User.hasOne(MfaSecret, { foreignKey: 'userId', onDelete: 'CASCADE' });
 MfaSecret.belongsTo(User, { foreignKey: 'userId' });
 
+// App Notifications
+Company.hasMany(AppNotification, { foreignKey: 'CompanyId' });
+AppNotification.belongsTo(Company, { foreignKey: 'CompanyId' });
+
 
 module.exports = {
   sequelize,
@@ -512,6 +517,7 @@ module.exports = {
   PaymentTransaction,
   InvoicePayment,
   PaymentWebhookLog,
-  StockMovement
+  StockMovement,
+  AppNotification
 };
 
