@@ -116,12 +116,13 @@ const RecurringBillEntryView = ({ companyId }) => {
   const tdsDropdownRef = useRef(null);
 
   const tdsOptions = [
-    { name: 'Commission or Brokerage', rate: 2 },
-    { name: 'Dividend', rate: 10 },
-    { name: 'Other Interest than securities', rate: 10 },
-    { name: 'Payment of contractors for Others', rate: 2 },
-    { name: 'Payment of contractors HUF/Indiv', rate: 1 },
-    { name: 'Technical Fees (2%)', rate: 2 },
+    { section: '194H', name: 'Commission or Brokerage', rate: 2 },
+    { section: '194',  name: 'Dividend', rate: 10 },
+    { section: '194A', name: 'Other Interest than securities', rate: 10 },
+    { section: '194C', name: 'Payment of contractors for Others', rate: 2 },
+    { section: '194C', name: 'Payment of contractors HUF/Indiv', rate: 1 },
+    { section: '194J', name: 'Technical Fees (2%)', rate: 2 },
+    { section: '194J', name: 'Professional Fees', rate: 10 },
   ];
 
   const filteredTdsOptions = tdsOptions.filter(opt => 
@@ -482,7 +483,27 @@ const RecurringBillEntryView = ({ companyId }) => {
                                   <div 
                                      key={vendor.id}
                                      onClick={() => {
-                                        setFormData({ ...formData, vendorId: vendor.id, vendorName: vendor.name });
+                                        let newTdsName = formData.tdsName;
+                                        let newTdsRate = formData.tdsRate;
+                                        
+                                        if (vendor.tdsApplicable && vendor.tds_section) {
+                                           const matched = tdsOptions.find(o => o.section === vendor.tds_section && o.rate === Number(vendor.tds_rate));
+                                           if (matched) {
+                                              newTdsName = matched.name;
+                                              newTdsRate = matched.rate;
+                                           }
+                                        } else if (vendor.tdsApplicable === false) {
+                                           newTdsName = '';
+                                           newTdsRate = 0;
+                                        }
+
+                                        setFormData({ 
+                                          ...formData, 
+                                          vendorId: vendor.id, 
+                                          vendorName: vendor.name,
+                                          tdsName: newTdsName,
+                                          tdsRate: newTdsRate
+                                        });
                                         setSelectedVendor(vendor);
                                         setVendorSearch('');
                                         setIsVendorDropdownOpen(false);
@@ -1208,7 +1229,7 @@ const RecurringBillEntryView = ({ companyId }) => {
        </div>
 
        {/* â”€â”€â”€ Bottom Actions â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
-       <div className="fixed bottom-0 left-0 right-0 h-16 bg-white border-t border-slate-200 shadow-[0_-4px_10px_rgba(0,0,0,0.02)] flex items-center justify-between px-8 z-50">
+       <div className="fixed bottom-0 right-0 h-16 bg-white border-t border-slate-200 shadow-[0_-4px_10px_rgba(0,0,0,0.02)] flex items-center justify-between px-8 z-50" style={{ left: 'var(--sidebar-width)' }}>
           <div className="flex items-center gap-3">
              <button 
                onClick={() => handleSaveOrder(false)}
