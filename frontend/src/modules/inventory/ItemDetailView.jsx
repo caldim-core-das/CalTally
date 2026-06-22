@@ -272,7 +272,7 @@ const ItemDetailView = ({ item, onClose, onEdit }) => {
   const formatCurrency = (amount) =>
     new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 2 }).format(amount || 0);
 
-  const tabs = ['Overview', 'Transactions', 'History'];
+  const tabs = ['Overview', 'History'];
 
   const SimpleDetailRow = ({ label, value, isLink = false, onClick = null }) => (
      <div className="grid grid-cols-[180px_1fr] py-2 text-[13px]">
@@ -410,31 +410,14 @@ const ItemDetailView = ({ item, onClose, onEdit }) => {
               </div>
             )}
 
-            {/* REPORTING TAGS */}
-            <div className={`space-y-4 pt-4 ${(item.salesInformation || item.purchaseInformation) ? 'border-t border-slate-100' : ''}`}>
-               <h3 className="text-[16px] font-bold text-slate-800">Reporting Tags</h3>
-               <p className="text-[13px] text-slate-500">No reporting tag has been associated with this item.</p>
-            </div>
 
-            {/* ASSOCIATED PRICE LISTS */}
-            <div className="pt-2">
-               <button className="text-[13px] font-bold text-[#1e61f0] hover:underline flex items-center gap-1">
-                  Associated Price Lists
-                  <ChevronRight size={14} className="mt-0.5" />
-               </button>
-            </div>
+
+
 
           </div>
         )}
 
-        {/* Transactions Tab Content */}
-        {activeTab === 'Transactions' && (
-          <div className="p-0 h-full max-w-6xl mx-auto">
-            <ErrorBoundary>
-              <TransactionsTab />
-            </ErrorBoundary>
-          </div>
-        )}
+
 
         {/* History Tab Content */}
         {activeTab === 'History' && (

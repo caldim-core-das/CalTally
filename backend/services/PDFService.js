@@ -378,7 +378,7 @@ class PDFService {
             }
 
             // Right side: TITLE
-            doc.fontSize(22).font('Helvetica-Bold').fillColor('#000000')
+            doc.fontSize(22).font('Helvetica-Bold').fillColor('#1e3a8a')
                .text('PURCHASE ORDER', 250, 40, { width: 305, align: 'right' });
 
             doc.fontSize(10).font('Helvetica-Bold').fillColor('#333333')
@@ -388,8 +388,8 @@ class PDFService {
             const addressY = 130;
             
             // 1. Vendor Address
-            doc.fillColor('#555555').fontSize(9).font('Helvetica-Bold')
-               .text('Vendor Address', 40, addressY);
+            doc.fillColor('#2563eb').fontSize(9).font('Helvetica-Bold')
+               .text('VENDOR ADDRESS', 40, addressY);
             
             doc.fillColor('#000000').fontSize(10).font('Helvetica-Bold')
                .text(vendor?.name || order.vendorName || 'Vendor', 40, addressY + 13);
@@ -446,8 +446,8 @@ class PDFService {
             let currentVendorY = doc.y;
 
             // 2. Deliver To Address
-            doc.fillColor('#555555').fontSize(9).font('Helvetica-Bold')
-               .text('Deliver To', 220, addressY);
+            doc.fillColor('#2563eb').fontSize(9).font('Helvetica-Bold')
+               .text('DELIVER TO', 220, addressY);
 
             // Build delivery address lines
             const deliveryLines = [];
@@ -499,30 +499,21 @@ class PDFService {
             const orderDate = formatDate(order.date);
             const deliveryDate = formatDate(order.deliveryDate);
             
-            let dateY = addressY + 50;
-            doc.fillColor('#555555').fontSize(9).font('Helvetica');
+            let dateY = Math.max(currentVendorY, currentDeliveryY) + 30;
             
-            doc.text('Date :', 410, dateY);
-            doc.fillColor('#000000').font('Helvetica').text(orderDate, 470, dateY, { width: 85, align: 'right' });
-            dateY += 15;
-
-            doc.fillColor('#555555').text('Delivery Date :', 410, dateY);
-            doc.fillColor('#000000').text(deliveryDate, 470, dateY, { width: 85, align: 'right' });
-            dateY += 15;
-
-            if (order.paymentTerms) {
-                doc.fillColor('#555555').text('Payment Terms :', 410, dateY);
-                doc.fillColor('#000000').text(order.paymentTerms, 470, dateY, { width: 85, align: 'right' });
-                dateY += 15;
-            }
-            if (order.reference) {
-                doc.fillColor('#555555').text('Reference :', 410, dateY);
-                doc.fillColor('#000000').text(order.reference, 470, dateY, { width: 85, align: 'right' });
-                dateY += 15;
-            }
+            doc.fillColor('#9ca3af').fontSize(9).font('Helvetica-Bold');
+            doc.text('DATE', 40, dateY);
+            doc.text('DELIVERY DATE', 160, dateY);
+            doc.text('PAYMENT TERMS', 280, dateY);
+            
+            doc.fillColor('#1f2937').fontSize(10).font('Helvetica');
+            doc.text(orderDate, 40, dateY + 12);
+            doc.text(deliveryDate, 160, dateY + 12);
+            doc.text(order.paymentTerms || '—', 280, dateY + 12);
+            
+            const maxAddressEnd = dateY + 30;
 
             // ─── HORIZONTAL DIVIDER ───────────────────────────────────────
-            const maxAddressEnd = Math.max(currentVendorY, currentDeliveryY, dateY) + 15;
             const dividerY = Math.max(maxAddressEnd, 235);
             doc.moveTo(40, dividerY).lineTo(555, dividerY).strokeColor('#dddddd').lineWidth(0.5).stroke();
 
@@ -592,8 +583,18 @@ class PDFService {
                 totY += 15;
             }
             if (taxAmt > 0) {
-                doc.fillColor('#555555').text(`Tax`, 380, totY).fillColor('#000000').text(`${taxAmt.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, 480, totY, { width: 75, align: 'right' });
+                const taxLabel = order.taxRate ? `Tax (${order.taxRate}%)` : `Tax`;
+                doc.fillColor('#555555').text(taxLabel, 380, totY).fillColor('#000000').text(`+ ${taxAmt.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, 480, totY, { width: 75, align: 'right' });
                 totY += 15;
+            }
+            if (order.tdsAmount > 0) {
+                const tdsLabel = order.tdsName ? `TDS (${order.tdsName} - ${order.tdsRate}%)` : `TDS`;
+                
+                // Allow label to wrap if it's long
+                doc.fillColor('#555555').text(tdsLabel, 380, totY, { width: 100 });
+                
+                doc.fillColor('#ef4444').text(`- ${parseFloat(order.tdsAmount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, 480, totY, { width: 75, align: 'right' });
+                totY += Math.max(15, doc.heightOfString(tdsLabel, { width: 100 }) + 5);
             }
             if (adjustment !== 0) {
                 doc.fillColor('#555555').text('Adjustment', 380, totY).fillColor('#000000').text(`${adjustment.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, 480, totY, { width: 75, align: 'right' });
@@ -601,12 +602,13 @@ class PDFService {
             }
 
             doc.moveTo(380, totY).lineTo(555, totY).strokeColor('#dddddd').lineWidth(0.5).stroke();
-            totY += 5;
+            totY += 10;
             
             // Grand Total
             doc.fillColor('#000000').fontSize(11).font('Helvetica-Bold')
                .text('Total', 380, totY)
-               .text(`Rs. ${total.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, 480, totY, { width: 75, align: 'right' });
+               .fillColor('#2563eb')
+               .text(`₹ ${total.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, 480, totY, { width: 75, align: 'right' });
 
             // ─── AUTHORIZED SIGNATURE ─────────────────────────────────────
             const sigY = 700;
