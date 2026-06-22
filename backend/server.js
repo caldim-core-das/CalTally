@@ -200,11 +200,18 @@ const syncOptions = process.env.DATABASE_URL ? {} : { alter: true };
 
 const cron = require('node-cron');
 const recurringController = require('./modules/sales/recurringInvoice.controller');
+const ReminderService = require('./services/ReminderService');
 
 // Run everyday at midnight — recurring invoice automation
 cron.schedule('0 0 * * *', async () => {
   console.log('--- RUNNING RECURRING INVOICE AUTOMATION ---');
   await recurringController.processDueInvoices({}, { json: (r) => console.log('Cron Result:', r), status: () => ({ json: (r) => console.error('Cron Error:', r) }) });
+});
+
+// Run everyday at 8:00 AM - Smart Payment Reminders
+cron.schedule('0 8 * * *', async () => {
+  console.log('--- TRIGGERING SMART PAYMENT REMINDERS CRON ---');
+  await ReminderService.processPaymentReminders();
 });
 
 // Extra 1: Run every day at 1am — purge expired refresh tokens to prevent DB bloat
