@@ -1894,6 +1894,7 @@ const VendorDetailView = ({ companyId }) => {
             )}
 
             <div className="p-5 space-y-4 overflow-y-auto">
+              {addressType === 'billing' && (
               <div className="space-y-1">
                 <label className="text-[12px] font-medium text-slate-600">Attention</label>
                 <input 
@@ -1903,6 +1904,7 @@ const VendorDetailView = ({ companyId }) => {
                   className="w-full h-[34px] px-3 border border-slate-200 rounded text-[13px] outline-none focus:border-blue-500"
                 />
               </div>
+              )}
 
               <div className="space-y-1">
                 <label className="text-[12px] font-medium text-slate-600">Country/Region</label>
