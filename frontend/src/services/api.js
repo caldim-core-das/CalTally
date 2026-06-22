@@ -280,7 +280,7 @@ export const reportsAPI = {
   daybook: (companyId, from, to) => api.get(`/reports/daybook/${companyId}`, { params: { from, to } }),
   dashboard: (companyId) => api.get(`/reports/dashboard/${companyId}`),
   ledgerStatement: (ledgerId, from, to) => api.get(`/reports/ledger-statement/${ledgerId}`, { params: { from, to } }),
-  auditTrail: (companyId) => api.get(`/reports/audit/${companyId}`),
+  auditTrail: (companyId, from, to) => api.get(`/reports/audit/${companyId}`, { params: { from, to } }),
   cashFlow: (companyId, from, to) => api.get(`/reports/cash-flow/${companyId}`, { params: { from, to } }),
   receivablesReport: (companyId, status) => api.get(`/reports/receivables-report/${companyId}`, { params: { status } }),
   payablesReport: (companyId) => api.get(`/reports/payables-report/${companyId}`),
@@ -355,7 +355,8 @@ export const salesAPI = {
   getOpenInvoices: (customerId) => api.get(`/sales/invoices/open/${customerId}`),
   recordPayment: (data) => api.post('/sales/payments/record', data),
   applyCredit: (data) => api.post('/sales/credits/apply', data),
-  getNextNumber: (companyId, type) => api.get(`/sales/next-number/${companyId}/${type}`)
+  getNextNumber: (companyId, type) => api.get(`/sales/next-number/${companyId}/${type}`),
+  triggerReminders: (companyId) => api.post(`/sales/trigger-reminders/${companyId}`)
 };
 
 export const paymentAPI = {
