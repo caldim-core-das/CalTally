@@ -181,6 +181,7 @@ const NAV = [
       { label: 'Trial Balance',      path: '/reports/trial-balance', icon: BarChart2 },
       { label: 'Cash Flow',          path: '/reports/cash-flow', icon: TrendingUp },
       { label: 'Inventory Report',   path: '/reports/inventory-report', icon: Package },
+      { label: 'Audit Trails',       path: '/reports/audit', icon: Shield },
     ]
   },
   {

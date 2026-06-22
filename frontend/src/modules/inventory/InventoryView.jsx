@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Edit2, ChevronRight, ChevronDown, Plus, MoreVertical, Search, Package, RefreshCcw, Check, Trash2, AlertTriangle } from 'lucide-react';
+import { Edit2, ChevronRight, ChevronDown, Plus, MoreVertical, Search, Package, RefreshCcw, Check, Trash2, AlertTriangle, Filter } from 'lucide-react';
 import { inventoryAPI, purchaseAPI } from '../../services/api';
 import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import ConfirmModal from '../../components/ConfirmModal';
@@ -21,6 +21,8 @@ const InventoryView = () => {
   const [deleteName, setDeleteName] = useState('');
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('all');
+  const [filterType, setFilterType] = useState('All');
+  const [showFilterMenu, setShowFilterMenu] = useState(false);
   const { addNotification } = useNotificationStore();
   
   const companyId = sessionStorage.getItem('companyId');
@@ -71,6 +73,8 @@ const InventoryView = () => {
     const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase());
     if (!matchesSearch) return false;
     
+    if (filterType !== 'All' && item.type !== filterType) return false;
+
     if (activeTab === 'restock') {
       const current = parseFloat(item.currentStock) || 0;
       const reorder = parseFloat(item.reorderLevel) || 0;
@@ -194,12 +198,24 @@ const InventoryView = () => {
                 </button>
             </div>
 
-            <div className="flex items-center gap-3">
-                <button className="flex items-center gap-1.5 text-slate-500 text-[13px] font-medium hover:text-slate-900 transition-colors">
-                    <AlertTriangle size={14} /> Filter
+            <div className="flex items-center gap-3 relative">
+                <button 
+                  onClick={() => setShowFilterMenu(!showFilterMenu)}
+                  className={`flex items-center gap-1.5 text-[13px] font-medium transition-colors ${filterType !== 'All' ? 'text-blue-600' : 'text-slate-500 hover:text-slate-900'}`}
+                >
+                    <Filter size={14} /> Filter {filterType !== 'All' && `(${filterType})`}
                 </button>
+                
+                {showFilterMenu && (
+                  <div className="absolute top-8 right-16 w-40 bg-white border border-slate-200 shadow-lg rounded-lg py-1 z-50 animate-fade-in">
+                    <div className="px-3 py-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Item Type</div>
+                    <button onClick={() => { setFilterType('All'); setShowFilterMenu(false); }} className={`w-full text-left px-4 py-2 text-[12px] hover:bg-slate-50 ${filterType === 'All' ? 'text-blue-600 font-bold bg-blue-50/50' : 'text-slate-700'}`}>All Types</button>
+                    <button onClick={() => { setFilterType('Goods'); setShowFilterMenu(false); }} className={`w-full text-left px-4 py-2 text-[12px] hover:bg-slate-50 ${filterType === 'Goods' ? 'text-blue-600 font-bold bg-blue-50/50' : 'text-slate-700'}`}>Goods</button>
+                    <button onClick={() => { setFilterType('Service'); setShowFilterMenu(false); }} className={`w-full text-left px-4 py-2 text-[12px] hover:bg-slate-50 ${filterType === 'Service' ? 'text-blue-600 font-bold bg-blue-50/50' : 'text-slate-700'}`}>Services</button>
+                  </div>
+                )}
                 <div className="w-px h-4 bg-slate-200 mx-2" />
-                <button className="h-9 px-4 flex items-center gap-2 bg-white border border-slate-200 text-slate-600 rounded-[4px] text-[11px] font-bold uppercase tracking-widest hover:bg-slate-50 transition-all shadow-sm">
+                <button onClick={fetchData} className="h-9 px-4 flex items-center gap-2 bg-white border border-slate-200 text-slate-600 rounded-[4px] text-[11px] font-bold uppercase tracking-widest hover:bg-slate-50 transition-all shadow-sm">
                     <RefreshCcw size={14} /> Sync
                 </button>
             </div>

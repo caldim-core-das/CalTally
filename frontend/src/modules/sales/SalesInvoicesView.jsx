@@ -509,6 +509,19 @@ const InvoiceDetail = ({ id, company, navigate, onRefresh }) => {
                         );
                     })()}
 
+                    {/* Smart Payment Reminder Badge */}
+                    {invoice.lastReminderType && (
+                        <div className="absolute top-2 left-2 bg-indigo-50 border border-indigo-100 px-3 py-1.5 rounded-md flex items-center gap-2 no-print shadow-sm z-10">
+                            <Clock size={14} className="text-indigo-600" />
+                            <div className="text-[10px] font-bold text-indigo-700 uppercase tracking-widest">
+                                {invoice.lastReminderType} REMINDER SENT
+                            </div>
+                            <div className="text-[10px] font-medium text-indigo-400 border-l border-indigo-200 pl-2">
+                                Count: {invoice.reminderCount || 1}
+                            </div>
+                        </div>
+                    )}
+
                     {/* ─── TALLY-STYLE HEADER ─── */}
                     <table style={{width:'100%', borderCollapse:'collapse', borderBottom:'2px solid #000'}} >
                         <tbody>
@@ -807,11 +820,26 @@ const InvoiceDetail = ({ id, company, navigate, onRefresh }) => {
 // FULL TABLE VIEW (INITIAL STATE)
 // ─────────────────────────────────────────────────────────────────────────────
 
-const InvoicesTableView = ({ invoices, loading, onSelect, navigate, fetchInvoices, filterType }) => {
+const InvoicesTableView = ({ invoices, loading, onSelect, navigate, fetchInvoices, filterType, companyId }) => {
     const [searchQuery, setSearchQuery] = useState('');
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [idToDelete, setIdToDelete] = useState(null);
+    const [isTriggering, setIsTriggering] = useState(false);
     const { addNotification } = useNotificationStore();
+
+    const handleTriggerReminders = async () => {
+        setIsTriggering(true);
+        try {
+            const res = await salesAPI.triggerReminders(companyId);
+            addNotification(`Reminders Triggered: ${res.data.sent} sent, ${res.data.skipped} skipped, ${res.data.errors} errors.`, 'success');
+            fetchInvoices();
+        } catch (err) {
+            console.error('Trigger Reminders Error:', err);
+            addNotification(err.response?.data?.error || err.message || 'Failed to trigger reminders.', 'error');
+        } finally {
+            setIsTriggering(false);
+        }
+    };
 
     const handleDelete = async () => {
         if (!idToDelete) return;
@@ -864,6 +892,14 @@ const InvoicesTableView = ({ invoices, loading, onSelect, navigate, fetchInvoice
                       className="bg-[#1e61f0] hover:bg-[#1a54d1] text-white px-4 py-2 rounded-md font-medium flex items-center gap-1.5 transition-all shadow-sm"
                    >
                       <Plus size={18} strokeWidth={2.5}/> New Invoice
+                   </button>
+                   <button 
+                      onClick={handleTriggerReminders}
+                      disabled={isTriggering}
+                      className="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white px-4 py-2 rounded-md font-medium flex items-center gap-1.5 transition-all shadow-sm"
+                      title="Manually trigger Smart Payment Reminders for all open invoices"
+                   >
+                      {isTriggering ? <Loader2 size={18} className="animate-spin" /> : <Clock size={18} />} Trigger Reminders
                    </button>
                    <div className="relative">
                       <button className="p-2 text-slate-500 hover:text-slate-800 border border-slate-200 bg-white rounded-md hover:bg-slate-50 transition-colors shadow-sm">
@@ -1105,6 +1141,7 @@ const SalesInvoicesView = ({ companyId }) => {
                     navigate={navigate}
                     fetchInvoices={fetchInvoices}
                     filterType={filterType}
+                    companyId={companyId}
                 />
             </div>
         );

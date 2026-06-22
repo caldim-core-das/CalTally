@@ -103,8 +103,12 @@ exports.createEmployee = async (req, res, next) => {
     const employeeId = req.body.employeeId || await generateEmployeeCode(companyId);
     const name = `${req.body.firstName || ''} ${req.body.middleName ? req.body.middleName + ' ' : ''}${req.body.lastName || ''}`.trim();
 
+    const payload = { ...req.body };
+    if (payload.previousExperience === '') payload.previousExperience = null;
+    if (payload.yearOfPassing === '') payload.yearOfPassing = null;
+
     const employee = await Employee.create({
-      ...req.body,
+      ...payload,
       mobileNumber: req.body.phone || req.body.mobileNumber,
       employeeId,
       name,
@@ -240,8 +244,12 @@ exports.updateEmployee = async (req, res, next) => {
 
     const name = `${req.body.firstName || ''} ${req.body.middleName ? req.body.middleName + ' ' : ''}${req.body.lastName || ''}`.trim();
     
+    const payload = { ...req.body };
+    if (payload.previousExperience === '') payload.previousExperience = null;
+    if (payload.yearOfPassing === '') payload.yearOfPassing = null;
+
     const updateData = { 
-      ...req.body, 
+      ...payload, 
       mobileNumber: req.body.phone || req.body.mobileNumber,
       name, 
       ModifiedBy: req.user?.id 
