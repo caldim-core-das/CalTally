@@ -354,6 +354,25 @@ class PDFService {
             doc.on('end', () => resolve(Buffer.concat(buffers)));
             doc.on('error', reject);
 
+            const currency = vendor?.currency || company?.baseCurrency || 'INR';
+            const currencySymbol = getCurrencySymbol(currency);
+            const format = (val) => formatAmount(val, currency);
+
+            const companyName = company?.name || 'Our Company';
+            const vendorName = vendor?.name || order.vendorName || 'Vendor';
+
+            // ── Date formatter (no timezone shift) ──────────────────
+            const formatDate = (dateVal) => {
+                if (!dateVal) return '—';
+                try {
+                    const match = String(dateVal).match(/^(\d{4})-(\d{2})-(\d{2})/);
+                    if (match) return `${match[3]}/${match[2]}/${match[1]}`;
+                    const d = new Date(dateVal);
+                    if (isNaN(d.getTime())) return '—';
+                    return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
+                } catch (e) { return '—'; }
+            };
+
             const primaryColor = '#0f172a'; // dark slate
             const accentColor = '#2563eb'; // blue
             const labelColor = '#3b82f6'; // light blue for labels
@@ -382,19 +401,19 @@ class PDFService {
             doc.fontSize(24).font('Times-Bold').fillColor(primaryColor)
                .text('PURCHASE ORDER', 250, 40, { width: 305, align: 'right' });
 
-            doc.fontSize(11).font('Helvetica-Bold').fillColor(lightText)
-               .text(`# ${order.orderNumber || 'PENDING'}`, 250, 70, { width: 305, align: 'right' });
+            doc.fontSize(10).font('Helvetica-Bold').fillColor('#333333')
+               .text(`# ${order.orderNumber || order.poNumber || '—'}`, 250, 68, { width: 305, align: 'right' });
 
-            // ─── ADDRESSES & DATES SECTION ────────────────────────────────
-            const addressY = 140;
-            
-            // 1. Vendor Address
+            // ─── VENDOR / DELIVER-TO ───────────────────────────────────────
+            const addressY = 130;
+
+            // Vendor Address
             doc.fillColor(labelColor).fontSize(8).font('Helvetica-Bold')
                .text('VENDOR ADDRESS', 40, addressY);
             
             doc.fillColor(primaryColor).fontSize(10).font('Helvetica-Bold')
                .text(vendor?.name || order.vendorName || 'Vendor Name', 40, addressY + 15);
-            
+
             // Build vendor address lines
             const vendorLines = [];
             const rawAddr = vendor?.billingAddressJson || vendor?.billingAddress || vendor?.address;
@@ -477,20 +496,6 @@ class PDFService {
             doc.moveTo(40, dateDividerY).lineTo(555, dateDividerY).strokeColor('#e2e8f0').lineWidth(1).stroke();
 
             // 3. Date / Order Info
-            const formatDate = (dateVal) => {
-                if (!dateVal) return '—';
-                try {
-                    const d = new Date(dateVal);
-                    if (isNaN(d.getTime())) return '—';
-                    const day = String(d.getDate()).padStart(2, '0');
-                    const month = String(d.getMonth() + 1).padStart(2, '0');
-                    const year = d.getFullYear();
-                    return `${day}/${month}/${year}`;
-                } catch (e) {
-                    return '—';
-                }
-            };
-
             const orderDate = formatDate(order.date);
             const deliveryDate = formatDate(order.deliveryDate);
             
@@ -525,6 +530,7 @@ class PDFService {
             if (!Array.isArray(items)) {
                 try { parsedItems = JSON.parse(items || '[]'); } catch (e) { parsedItems = []; }
             }
+
             doc.font('Helvetica');
 
             parsedItems.forEach((item, idx) => {
@@ -548,10 +554,10 @@ class PDFService {
                    
                 doc.fillColor(textColor).fontSize(9).font('Helvetica')
                    .text(qty.toFixed(2), 340, currentY + 10, { width: 50, align: 'center' })
-                   .text(rate.toLocaleString('en-IN', { minimumFractionDigits: 2 }), 400, currentY + 10, { width: 70, align: 'right' });
+                   .text(format(rate), 400, currentY + 10, { width: 70, align: 'right' });
                    
                 doc.fillColor(primaryColor).font('Helvetica-Bold')
-                   .text(amount.toLocaleString('en-IN', { minimumFractionDigits: 2 }), 480, currentY + 10, { width: 70, align: 'right' });
+                   .text(format(amount), 480, currentY + 10, { width: 70, align: 'right' });
 
                 currentY += textHeight;
                 doc.moveTo(40, currentY).lineTo(555, currentY).strokeColor('#f1f5f9').lineWidth(1).stroke();
@@ -578,29 +584,29 @@ class PDFService {
             doc.fillColor(primaryColor).fontSize(9).font('Helvetica-Bold')
                .text('Sub Total', 350, totY)
                .fillColor(primaryColor).font('Helvetica-Bold')
-               .text(`${subtotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, 450, totY, { width: 100, align: 'right' });
+               .text(format(subtotal), 450, totY, { width: 100, align: 'right' });
             totY += 20;
 
             if (discountAmt > 0) {
                 doc.fillColor(primaryColor).font('Helvetica-Bold').text(`Discount (${order.discount || 0}%)`, 350, totY);
-                doc.fillColor('#ef4444').font('Helvetica-Bold').text(`- ${discountAmt.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, 450, totY, { width: 100, align: 'right' });
+                doc.fillColor('#ef4444').font('Helvetica-Bold').text(`- ${format(discountAmt)}`, 450, totY, { width: 100, align: 'right' });
                 totY += 20;
             }
             if (taxAmt > 0) {
                 const taxLabel = order.taxRate ? `Tax (${order.taxRate}%)` : `Tax`;
                 doc.fillColor(primaryColor).font('Helvetica-Bold').text(taxLabel, 350, totY);
-                doc.fillColor(primaryColor).font('Helvetica-Bold').text(`+ ${taxAmt.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, 450, totY, { width: 100, align: 'right' });
+                doc.fillColor(primaryColor).font('Helvetica-Bold').text(`+ ${format(taxAmt)}`, 450, totY, { width: 100, align: 'right' });
                 totY += 20;
             }
             if (tdsAmt > 0) {
                 const tdsLabel = order.tdsName ? `TDS (${order.tdsName} - ${order.tdsRate}%)` : `TDS`;
                 doc.fillColor(primaryColor).font('Helvetica-Bold').text(tdsLabel, 350, totY, { width: 130 });
-                doc.fillColor('#ef4444').font('Helvetica-Bold').text(`- ${tdsAmt.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, 450, totY, { width: 100, align: 'right' });
+                doc.fillColor('#ef4444').font('Helvetica-Bold').text(`- ${format(tdsAmt)}`, 450, totY, { width: 100, align: 'right' });
                 totY += Math.max(20, doc.heightOfString(tdsLabel, { width: 130 }) + 5);
             }
             if (adjustment !== 0) {
                 doc.fillColor(primaryColor).font('Helvetica-Bold').text('Adjustment', 350, totY);
-                doc.fillColor(primaryColor).font('Helvetica-Bold').text(`${adjustment > 0 ? '+' : ''} ${adjustment.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, 450, totY, { width: 100, align: 'right' });
+                doc.fillColor(primaryColor).font('Helvetica-Bold').text(`${adjustment > 0 ? '+' : ''} ${format(adjustment)}`, 450, totY, { width: 100, align: 'right' });
                 totY += 20;
             }
 
@@ -611,7 +617,29 @@ class PDFService {
             doc.fillColor(primaryColor).fontSize(11).font('Helvetica-Bold')
                .text('Total', 350, totY)
                .fillColor(accentColor)
-               .text(`₹ ${total.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, 450, totY, { width: 100, align: 'right' });
+               .text(`${currencySymbol} ${format(total)}`, 450, totY, { width: 100, align: 'right' });
+
+            // ─── NOTES / TERMS ──────────────────────────────────────────────
+            if (order.notes || order.terms) {
+                const notesY = totY + 40;
+                if (order.notes) {
+                    doc.fillColor('#888888').fontSize(9).font('Helvetica-Oblique')
+                       .text('Notes:', 40, notesY);
+                    doc.fillColor('#555555').font('Helvetica').fontSize(9)
+                       .text(order.notes, 40, notesY + 13, { width: 250 });
+                }
+                if (order.terms) {
+                    doc.fillColor('#888888').fontSize(9).font('Helvetica-Oblique')
+                       .text('Terms & Conditions:', 310, notesY);
+                    doc.fillColor('#555555').font('Helvetica').fontSize(9)
+                       .text(order.terms, 310, notesY + 13, { width: 240 });
+                }
+            }
+
+            // ─── AUTHORIZED SIGNATURE ───────────────────────────────────────
+            const sigY = Math.max(totY + 120, 710);
+            doc.fillColor('#000000').fontSize(9).font('Helvetica')
+               .text('Authorized Signature ____________________', 40, sigY);
 
             doc.end();
         });

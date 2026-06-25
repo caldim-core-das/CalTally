@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Building2, Save, Upload, CheckCircle2, AlertCircle, Loader2, 
-  Plus, Calendar, ShieldAlert, Check, RefreshCw 
+  Plus, Calendar, ShieldAlert, Check, RefreshCw, Trash2 
 } from 'lucide-react';
 import { companyAPI, settingsAPI } from '../../services/api';
 import { INDIAN_STATES } from '../../utils/indianStates';
@@ -429,11 +429,19 @@ const CompanySettings = ({ companyId, onCompanyChange }) => {
                 </p>
               </div>
 
-              <div className="w-full pt-4">
+              <div className="w-full pt-4 space-y-2">
                 <label className="w-full h-10 border border-slate-200 rounded-lg hover:bg-slate-50 flex items-center justify-center text-[12px] font-bold text-slate-600 uppercase tracking-wider cursor-pointer gap-1.5 transition-colors">
-                  <Upload size={14} /> Upload Logo
+                  {profileData.logoUrl ? <RefreshCw size={14} /> : <Upload size={14} />} {profileData.logoUrl ? 'Update Logo' : 'Upload Logo'}
                   <input type="file" onChange={handleLogoUpload} accept="image/*" className="hidden" />
                 </label>
+                {profileData.logoUrl && (
+                  <button
+                    onClick={() => handleProfileChange('logoUrl', '')}
+                    className="w-full h-10 border border-red-200 bg-red-50 hover:bg-red-100 rounded-lg flex items-center justify-center text-[12px] font-bold text-red-600 uppercase tracking-wider gap-1.5 transition-colors"
+                  >
+                    <Trash2 size={14} /> Delete Logo
+                  </button>
+                )}
               </div>
             </div>
           </div>
@@ -486,50 +494,21 @@ const CompanySettings = ({ companyId, onCompanyChange }) => {
               </div>
             </div>
 
-            {/* Create Company Panel */}
-            <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm space-y-6">
-              <h2 className="text-xs font-bold uppercase tracking-widest text-slate-800 border-b border-slate-100 pb-3">
-                Create New Company
-              </h2>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Company Name *</label>
-                  <input
-                    type="text"
-                    value={createData.name}
-                    onChange={e => handleCreateChange('name', e.target.value)}
-                    className="w-full h-10 border border-slate-200 rounded-lg px-3 text-[13px] text-slate-800 outline-none focus:border-blue-500"
-                    placeholder="Enter workspace name"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">State *</label>
-                  <select
-                    value={createData.state}
-                    onChange={e => handleCreateChange('state', e.target.value)}
-                    className="w-full h-10 border border-slate-200 rounded-lg px-3 text-[13px] text-slate-800 outline-none focus:border-blue-500 bg-white"
-                  >
-                    {INDIAN_STATES.map(st => <option key={st} value={st}>{st}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">GSTIN (Optional)</label>
-                  <input
-                    type="text"
-                    value={createData.gstNumber}
-                    onChange={e => handleCreateChange('gstNumber', e.target.value)}
-                    className="w-full h-10 border border-slate-200 rounded-lg px-3 text-[13px] text-slate-800 outline-none focus:border-blue-500 uppercase"
-                    placeholder="33AAAAA1111A1Z1"
-                  />
-                </div>
-                <button
-                  onClick={createCompany}
-                  disabled={saving}
-                  className="w-full bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold uppercase tracking-wider py-3 rounded-lg flex items-center justify-center gap-1.5 shadow-md transition-colors"
-                >
-                  {saving ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />} Create Workspace
-                </button>
+            {/* Create Company Redirect */}
+            <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm flex flex-col items-center justify-center text-center space-y-4 min-h-[300px]">
+              <Building2 className="text-slate-300" size={48} />
+              <div>
+                <h2 className="text-sm font-bold text-slate-800">Need a New Workspace?</h2>
+                <p className="text-xs text-slate-500 mt-1 max-w-[250px] mx-auto">
+                  Set up a new company with full details including GSTIN, address, and financial settings.
+                </p>
               </div>
+              <button
+                onClick={() => window.location.href = '/setup-company'}
+                className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold uppercase tracking-wider px-6 py-2.5 rounded-lg flex items-center justify-center gap-1.5 shadow-md transition-colors"
+              >
+                <Plus size={14} /> Go to Setup Company
+              </button>
             </div>
           </div>
         )}
