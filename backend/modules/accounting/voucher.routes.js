@@ -10,13 +10,13 @@ router.use(verifyToken, tenantAccess);
 router.post('/bulk-update', authorizeRoles('ACCOUNTANT', 'ADMIN', 'SUPER_ADMIN'), voucherController.bulkUpdateTransactions);
 
 // Create voucher
-router.post('/', trackModifiers, authorizeRoles('EMPLOYEE', 'ACCOUNTANT', 'ADMIN', 'SUPER_ADMIN'), voucherController.createVoucher);
-router.put('/:id', guardLockedVoucher, trackModifiers, authorizeRoles('EMPLOYEE', 'ACCOUNTANT', 'ADMIN', 'SUPER_ADMIN'), voucherController.updateVoucher);
-router.delete('/:id', guardLockedVoucher, authorizeRoles('ADMIN', 'SUPER_ADMIN'), voucherController.deleteVoucher);
+router.post('/', trackModifiers, authorizeRoles('EMPLOYEE', 'MANAGER', 'ACCOUNTANT', 'ADMIN', 'SUPER_ADMIN'), voucherController.createVoucher);
+router.put('/:id', guardLockedVoucher, trackModifiers, authorizeRoles('EMPLOYEE', 'MANAGER', 'ACCOUNTANT', 'ADMIN', 'SUPER_ADMIN'), voucherController.updateVoucher);
+router.delete('/:id', guardLockedVoucher, authorizeRoles('ACCOUNTANT', 'ADMIN', 'SUPER_ADMIN'), voucherController.deleteVoucher);
 
-// Approval & Cancellation routes (ADMIN only)
-router.put('/:id/approve', authorizeRoles('ADMIN', 'SUPER_ADMIN'), voucherController.approveVoucher);
-router.put('/:id/cancel', authorizeRoles('ADMIN', 'SUPER_ADMIN'), voucherController.cancelVoucher);
+// Approval & Cancellation routes
+router.put('/:id/approve', authorizeRoles('MANAGER', 'ADMIN', 'SUPER_ADMIN'), voucherController.approveVoucher);
+router.put('/:id/cancel', authorizeRoles('MANAGER', 'ADMIN', 'SUPER_ADMIN'), voucherController.cancelVoucher);
 
 // View vouchers (all roles)
 router.get('/transactions/:companyId', voucherController.getTransactions);

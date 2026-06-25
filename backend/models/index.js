@@ -71,6 +71,8 @@ const StockMovement = require('./stockMovement.model')(sequelize, DataTypes);
 const AppNotification = require('./appNotification.model')(sequelize, DataTypes);
 const PeriodLock = require('./periodLock.model')(sequelize);
 const FinancialPeriod = require('./financialPeriod.model')(sequelize, DataTypes);
+const UserCompany = require('./userCompany.model')(sequelize, DataTypes);
+
 
 // ─── Associations ────────────────────────────────────────────────────────────
 
@@ -86,15 +88,16 @@ FinancialPeriod.belongsTo(Company, { foreignKey: 'CompanyId' });
 // 1. User & Company (Multi-tenancy)
 // junction table for multi-company access
 User.belongsToMany(Company, { 
-  through: 'UserCompanies',
-  foreignKey: { name: 'userId', type: DataTypes.UUID },
-  otherKey: { name: 'companyId', type: DataTypes.UUID }
+  through: UserCompany,
+  foreignKey: 'userId',
+  otherKey: 'companyId'
 });
 Company.belongsToMany(User, { 
-  through: 'UserCompanies',
-  foreignKey: { name: 'companyId', type: DataTypes.UUID },
-  otherKey: { name: 'userId', type: DataTypes.UUID }
+  through: UserCompany,
+  foreignKey: 'companyId',
+  otherKey: 'userId'
 });
+
 
 Company.belongsTo(User, { as: 'Owner', foreignKey: { name: 'userId', type: DataTypes.UUID } });
 User.hasMany(Company, { as: 'OwnedCompanies', foreignKey: { name: 'userId', type: DataTypes.UUID } });
@@ -639,6 +642,7 @@ module.exports = {
   StockMovement,
   AppNotification,
   PeriodLock,
-  FinancialPeriod
+  FinancialPeriod,
+  UserCompany
 };
 
