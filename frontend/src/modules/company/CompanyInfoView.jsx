@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { 
   Building2, Save, Upload, CheckCircle2, AlertCircle, Loader2, HelpCircle, 
   Plus, Trash2, X, Maximize2, Landmark, Check, ShieldAlert, Calendar, DollarSign,
-  Pencil, Users, UserPlus
+  Pencil, Users, UserPlus, ArrowLeft
 } from 'lucide-react';
 import { companyAPI, usersAPI } from '../../services/api';
 import { INDIAN_STATES } from '../../utils/indianStates';
@@ -100,6 +100,7 @@ const CompanyInfoView = ({ firstTime = false, onCompanyCreated }) => {
   const [loading, setLoading]     = useState(false);
   const [fetching, setFetching] = useState(true);
   const [status, setStatus]     = useState(null); // 'success' | 'error' | null
+  const [successMsg, setSuccessMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
   const [isImageZoomed, setIsImageZoomed] = useState(false);
   
@@ -186,6 +187,7 @@ const CompanyInfoView = ({ firstTime = false, onCompanyCreated }) => {
     setStatus(null);
     try {
       await usersAPI.inviteUser(inviteData);
+      setSuccessMsg('User invited successfully! An email has been sent.');
       setStatus('success');
       setShowInviteModal(false);
       setInviteData({ name: '', email: '', password: '', role: 'EMPLOYEE' });
@@ -218,6 +220,7 @@ const CompanyInfoView = ({ firstTime = false, onCompanyCreated }) => {
     try {
       await usersAPI.removeUser(confirmModal.userId);
       fetchCompanyUsers();
+      setSuccessMsg('User removed successfully.');
       setStatus('success');
       setTimeout(() => setStatus(null), 2000);
     } catch (err) {
@@ -365,6 +368,7 @@ const CompanyInfoView = ({ firstTime = false, onCompanyCreated }) => {
     try {
       const targetId = editingCompanyId || activeCompanyId;
       await companyAPI.update(targetId, formData);
+      setSuccessMsg('Changes saved successfully!');
       setStatus('success');
       if (targetId === activeCompanyId) {
         sessionStorage.setItem('companyName', formData.name);
@@ -414,6 +418,7 @@ const CompanyInfoView = ({ firstTime = false, onCompanyCreated }) => {
         sessionStorage.setItem('companyId', res.data.id);
         sessionStorage.setItem('companyName', res.data.name);
         setActiveCompanyId(res.data.id);
+        setSuccessMsg('Company created successfully!');
         setStatus('success');
         
         // Reset creation form
@@ -503,6 +508,14 @@ const CompanyInfoView = ({ firstTime = false, onCompanyCreated }) => {
           </h1>
         </div>
         <div className="flex items-center gap-3">
+          {firstTime && companies.length > 0 && (
+            <button 
+              onClick={() => window.location.href = '/settings/company'}
+              className="flex items-center gap-2 text-[13px] font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-300 px-4 py-2 rounded-lg shadow-sm transition-all"
+            >
+              <ArrowLeft size={16} /> Go Back
+            </button>
+          )}
           {!firstTime && (
             <button 
               onClick={() => window.location.href = '/dashboard'}
@@ -520,7 +533,7 @@ const CompanyInfoView = ({ firstTime = false, onCompanyCreated }) => {
           status === 'success' ? 'bg-emerald-50 text-emerald-800 border-emerald-200' : 'bg-rose-50 text-rose-800 border-rose-200'
         }`}>
           {status === 'success' ? <CheckCircle2 size={20} className="text-emerald-600" /> : <AlertCircle size={20} className="text-rose-600" />}
-          <span className="text-sm font-bold">{status === 'success' ? 'Changes saved successfully!' : errorMsg}</span>
+          <span className="text-sm font-bold">{status === 'success' ? successMsg : errorMsg}</span>
         </div>
       )}
 
@@ -689,12 +702,20 @@ const CompanyInfoView = ({ firstTime = false, onCompanyCreated }) => {
             </div>
 
             <div className="flex justify-end gap-3 mt-8 pt-5 border-t border-slate-100">
-              <button 
-                onClick={() => setActiveTab('switch')}
-                className="px-6 py-2.5 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-600 text-xs font-bold uppercase tracking-wider"
-              >
-                Cancel
-              </button>
+              {companies.length > 0 && (
+                <button 
+                  onClick={() => {
+                    if (firstTime) {
+                      window.location.href = '/settings/company';
+                    } else {
+                      setActiveTab('switch');
+                    }
+                  }}
+                  className="px-6 py-2.5 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-600 text-xs font-bold uppercase tracking-wider"
+                >
+                  Cancel
+                </button>
+              )}
               <button 
                 onClick={handleCreateCompany}
                 disabled={loading}
