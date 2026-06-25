@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 
 // ── Components ───────────────────────────────────────────────────
@@ -446,6 +446,8 @@ const AppShell = ({ children, onLogout, companies = [], currentCompanyId, onComp
   const location   = useLocation();
   const { pathname } = location;
   const [collapsed, setCollapsed] = useState(false);
+  const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
+  const profileDropdownRef = useRef(null);
   const user = getUser();
   const company = companies.find(c => c.id === currentCompanyId);
 
@@ -461,6 +463,17 @@ const AppShell = ({ children, onLogout, companies = [], currentCompanyId, onComp
       mainEl.style.overflowX = 'auto';
     }
   }, [pathname]);
+
+  // Close profile dropdown when clicking outside
+  useEffect(() => {
+    const handleOutsideClick = (e) => {
+      if (profileDropdownRef.current && !profileDropdownRef.current.contains(e.target)) {
+        setProfileDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleOutsideClick);
+    return () => document.removeEventListener('mousedown', handleOutsideClick);
+  }, []);
 
   // Breadcrumb
   const breadcrumbs = useMemo(() => {
@@ -522,10 +535,39 @@ const AppShell = ({ children, onLogout, companies = [], currentCompanyId, onComp
             if (section.group === 'Items' && !features.includes('INVENTORY')) return false;
             
             // RBAC FILTERING LOGIC
-            const role = user.Role?.name || user.role || 'VIEWER';
-            if (role !== 'SUPER_ADMIN' && section.group === 'Platform Admin') return false;
+            const role = (user.Role?.name || user.role || 'VIEWER').toUpperCase();
             
-            return true;
+            // 1. SUPER_ADMIN sees everything
+            if (role === 'SUPER_ADMIN') return true;
+
+            // Platform Admin is exclusive to SUPER_ADMIN
+            if (section.group === 'Platform Admin') return false;
+
+            // 2. ADMIN/COMPANY_ADMIN sees all operational modules
+            if (role === 'ADMIN' || role === 'COMPANY_ADMIN') return true;
+
+            // 3. AUDITOR sees only Home, Setup, Reports, and AI Assistant
+            if (role === 'AUDITOR') {
+              return ['Home', 'Setup', 'Reports', 'AI Assistant'].includes(section.group);
+            }
+
+            // 4. VIEWER sees only Home, Reports, and AI Assistant
+            if (role === 'VIEWER') {
+              return ['Home', 'Reports', 'AI Assistant'].includes(section.group);
+            }
+
+            // 5. EMPLOYEE sees Home, Items, Sales, Purchases, Banking, Accounting, Reports, and AI Assistant
+            if (role === 'EMPLOYEE') {
+              return ['Home', 'Items', 'Sales', 'Purchases', 'Banking', 'Accounting', 'Reports', 'AI Assistant'].includes(section.group);
+            }
+
+            // 6. ACCOUNTANT and MANAGER see all operational modules except Setup
+            if (role === 'ACCOUNTANT' || role === 'MANAGER') {
+              return section.group !== 'Setup';
+            }
+
+            // Fallback: default to VIEWER logic
+            return ['Home', 'Reports', 'AI Assistant'].includes(section.group);
           }).map(section => {
             // Further item-level feature gating
             const features = company?.SubscriptionPlan?.features || [];
@@ -564,23 +606,7 @@ const AppShell = ({ children, onLogout, companies = [], currentCompanyId, onComp
           <PanelLeftClose size={14} strokeWidth={3} />
         </button>
 
-        {/* User card */}
-        <div className="p-4 border-t border-slate-50">
-          <button
-            onClick={onLogout}
-            className={`flex items-center gap-3 w-full p-2.5 rounded-2xl border border-slate-50 hover:border-red-100 hover:bg-red-50 transition-all group ${collapsed ? 'justify-center' : ''}`}
-          >
-            <div className="w-9 h-9 rounded-xl bg-slate-900 flex items-center justify-center text-white text-[11px] font-bold shrink-0 shadow-lg shadow-slate-900/10">
-               {user.email?.substring(0, 1).toUpperCase() || 'A'}
-            </div>
-            {!collapsed && (
-                <div className="flex-1 min-w-0 text-left">
-                  <div className="text-[13px] font-bold text-slate-900 truncate tracking-tight">{user.email || 'Administrator'}</div>
-                  <div className="text-[9px] font-bold text-red-500 uppercase tracking-[0.2em] group-hover:text-red-700">Sign Out</div>
-                </div>
-            )}
-          </button>
-        </div>
+
       </aside>
 
       {/* ─── MAIN CONTENT ────────────────────────────────────── */}
@@ -596,19 +622,43 @@ const AppShell = ({ children, onLogout, companies = [], currentCompanyId, onComp
             <div className="text-[11px] font-bold text-gray-500 uppercase tracking-widest border-r border-gray-100 pr-6 mr-1">
                {new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
             </div>
-            <div className="flex items-center gap-3">
-               <button 
-                 onClick={() => navigate('/settings/company')}
-                 className="w-8 h-8 rounded-full hover:bg-slate-100 flex items-center justify-center text-slate-500 hover:text-slate-700 transition-colors"
-                 title="Workspace Settings"
-               >
-                 <Settings size={18} strokeWidth={2} />
-               </button>
-               <NotificationBell />
-               <div className="w-8 h-8 rounded-lg bg-slate-900 flex items-center justify-center text-white text-[10px] font-bold cursor-pointer">
-                  {user.email?.substring(0, 1).toUpperCase() || 'A'}
-               </div>
-            </div>
+             <div className="flex items-center gap-3 relative" ref={profileDropdownRef}>
+                <button 
+                  onClick={() => navigate('/settings/company')}
+                  className="w-8 h-8 rounded-full hover:bg-slate-100 flex items-center justify-center text-slate-500 hover:text-slate-700 transition-colors"
+                  title="Workspace Settings"
+                >
+                  <Settings size={18} strokeWidth={2} />
+                </button>
+                <NotificationBell />
+                <div 
+                  onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
+                  className="w-8 h-8 rounded-lg bg-slate-900 hover:bg-slate-800 transition-colors flex items-center justify-center text-white text-[10px] font-bold cursor-pointer relative"
+                >
+                    {(user.name || user.username || user.email || 'A').substring(0, 1).toUpperCase()}
+                </div>
+
+                {/* Profile Dropdown */}
+                {profileDropdownOpen && (
+                  <div className="absolute right-0 top-full mt-2 w-56 bg-white border border-slate-100 rounded-xl shadow-xl z-[70] py-2 animate-zoom-in">
+                    <div className="px-4 py-2 border-b border-slate-50">
+                      <p className="text-[12px] font-bold text-slate-700 truncate">{user.name || user.username || (user.email ? user.email.split('@')[0] : 'Administrator')}</p>
+                      <p className="text-[10px] text-slate-400 capitalize mt-0.5">{user.role || 'User'}</p>
+                    </div>
+
+                    <button
+                      onClick={() => {
+                        setProfileDropdownOpen(false);
+                        onLogout();
+                      }}
+                      className="w-full text-left px-4 py-2.5 text-[12.5px] font-bold text-red-650 hover:bg-red-50 hover:text-red-700 transition-colors flex items-center gap-2"
+                    >
+                      <LogOut size={13} className="text-red-400" />
+                      Sign Out
+                    </button>
+                  </div>
+                )}
+             </div>
           </div>
         </header>
 
@@ -619,7 +669,7 @@ const AppShell = ({ children, onLogout, companies = [], currentCompanyId, onComp
           </div>
         </main>
       </div>
-      <SupportHelpButton />
+
     </div>
   );
 };
