@@ -25,9 +25,24 @@ const hashToken = (token) =>
 /**
  * Issue a short-lived access JWT (15 minutes).
  */
-const signAccessToken = (user, companyId) =>
+const getCompanyRole = async (userId, globalRole, companyId) => {
+  if (globalRole === 'SUPER_ADMIN') return 'SUPER_ADMIN';
+  if (!companyId) return 'VIEWER';
+  try {
+    const { UserCompany } = require('../../models');
+    const relation = await UserCompany.findOne({
+      where: { userId, companyId }
+    });
+    return relation ? relation.role : 'VIEWER';
+  } catch (err) {
+    console.error('Error fetching company role:', err);
+    return 'VIEWER';
+  }
+};
+
+const signAccessToken = (user, companyId, resolvedRole) =>
   jwt.sign(
-    { id: user.id, role: user.role, companyId },
+    { id: user.id, role: resolvedRole || user.role, companyId },
     process.env.JWT_SECRET,
     { expiresIn: '15m' }
   );
@@ -301,7 +316,8 @@ async function _issueTokens(req, res, user, extraFields = {}) {
   }
 
   // Phase 2: short-lived access token + rotating refresh token
-  const accessToken = signAccessToken(user, activeCoId);
+  const resolvedRole = await getCompanyRole(user.id, user.role, activeCoId);
+  const accessToken = signAccessToken(user, activeCoId, resolvedRole);
   const rawRefreshToken = await issueRefreshToken(user.id);
   const csrfToken = require('crypto').randomBytes(24).toString('hex');
   
@@ -312,7 +328,7 @@ async function _issueTokens(req, res, user, extraFields = {}) {
   res.json({
     // We no longer return the accessToken in the JSON body.
     message: 'Authentication successful',
-    user: { id: user.id, email: user.email, name: user.name, role: user.role, activeCompanyId: activeCoId },
+    user: { id: user.id, email: user.email, name: user.name, role: resolvedRole, activeCompanyId: activeCoId },
     companies: userCompanies,
     ...extraFields
   });
@@ -361,7 +377,8 @@ exports.refresh = async (req, res) => {
       return res.status(401).json({ error: 'User not found.' });
     }
 
-    const accessToken = signAccessToken(user, user.activeCompanyId);
+    const resolvedRole = await getCompanyRole(user.id, user.role, user.activeCompanyId);
+    const accessToken = signAccessToken(user, user.activeCompanyId, resolvedRole);
     const rawNew = await issueRefreshToken(user.id);
     const csrfToken = require('crypto').randomBytes(24).toString('hex');
     
@@ -372,7 +389,7 @@ exports.refresh = async (req, res) => {
     await logAuthEvent('TOKEN_REFRESHED', { userId: user.id, ip, userAgent });
     res.json({
       message: 'Token refreshed',
-      user: { id: user.id, email: user.email, name: user.name, role: user.role, activeCompanyId: user.activeCompanyId }
+      user: { id: user.id, email: user.email, name: user.name, role: resolvedRole, activeCompanyId: user.activeCompanyId }
     });
   } catch (err) {
     const eId = require('crypto').randomBytes(6).toString('hex');
@@ -432,14 +449,15 @@ exports.switchCompany = async (req, res) => {
     await user.save();
 
     // Re-issue tokens with new companyId embedded
-    const accessToken = signAccessToken(user, companyId);
+    const resolvedRole = await getCompanyRole(user.id, user.role, companyId);
+    const accessToken = signAccessToken(user, companyId, resolvedRole);
     const rawNew = await issueRefreshToken(user.id);
     setRefreshCookie(res, rawNew);
 
     res.json({
       message: 'Company switched successfully',
       token: accessToken,
-      user: { id: user.id, email: user.email, name: user.name, role: user.role, activeCompanyId: user.activeCompanyId }
+      user: { id: user.id, email: user.email, name: user.name, role: resolvedRole, activeCompanyId: user.activeCompanyId }
     });
   } catch (err) {
     const eId = require('crypto').randomBytes(6).toString('hex');
@@ -687,8 +705,10 @@ exports.me = async (req, res) => {
       return res.status(404).json({ error: 'User not found.' });
     }
 
+    const resolvedRole = await getCompanyRole(user.id, user.role, user.activeCompanyId);
+
     res.json({
-      user: { id: user.id, email: user.email, name: user.name, role: user.role, activeCompanyId: user.activeCompanyId },
+      user: { id: user.id, email: user.email, name: user.name, role: resolvedRole, activeCompanyId: user.activeCompanyId },
       companies: user.Companies || []
     });
   } catch (err) {
@@ -701,10 +721,17 @@ exports.me = async (req, res) => {
 exports.getProfile = async (req, res) => {
   try {
     const user = await User.findByPk(req.user.id, {
-      attributes: ['id', 'name', 'email', 'role', 'oauthOnly']
+      attributes: ['id', 'name', 'email', 'role', 'activeCompanyId', 'oauthOnly']
     });
     if (!user) return res.status(404).json({ error: 'User not found.' });
-    res.json(user);
+    const resolvedRole = await getCompanyRole(user.id, user.role, user.activeCompanyId);
+    res.json({
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: resolvedRole,
+      oauthOnly: user.oauthOnly
+    });
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch profile.' });
   }

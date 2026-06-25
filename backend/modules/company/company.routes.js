@@ -6,8 +6,8 @@ const { verifyToken, authorizeRoles, tenantAccess } = require('../../middleware/
 // All company routes require authentication
 router.use(verifyToken);
 
-// Create a new company (any authenticated user can create one)
-router.post('/', companyController.createCompany);
+// Create a new company (SUPER_ADMIN only)
+router.post('/', authorizeRoles('SUPER_ADMIN'), companyController.createCompany);
 // List companies the user belongs to
 router.get('/', companyController.getCompanies);
 // Get a specific company (must belong to it)
@@ -20,8 +20,8 @@ router.post('/:id/sync-default-ledgers', tenantAccess, companyController.syncDef
 router.put('/:id', authorizeRoles('ADMIN', 'SUPER_ADMIN'), tenantAccess, companyController.updateCompany);
 // Close financial year (ADMIN only)
 router.post('/close-year/:id', authorizeRoles('ADMIN', 'SUPER_ADMIN'), tenantAccess, companyController.closeFinancialYear);
-// Delete company (ADMIN/SUPER_ADMIN only)
-router.delete('/:id', authorizeRoles('ADMIN', 'SUPER_ADMIN'), tenantAccess, companyController.deleteCompany);
+// Delete company (SUPER_ADMIN only)
+router.delete('/:id', authorizeRoles('SUPER_ADMIN'), tenantAccess, companyController.deleteCompany);
 
 module.exports = router;
 

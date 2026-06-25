@@ -85,7 +85,7 @@ exports.tenantAccess = async (req, res, next) => {
     return res.status(400).json({ error: 'Invalid Company ID format.' });
   }
 
-  const { Company, User } = require('../models');
+  const { Company, User, UserCompany } = require('../models');
   
   try {
     if (req.user.role === 'SUPER_ADMIN') {
@@ -94,19 +94,17 @@ exports.tenantAccess = async (req, res, next) => {
       return next();
     }
 
-    const user = await User.findByPk(req.user.id, {
-      include: [Company]
+    const userCompanyRel = await UserCompany.findOne({
+      where: { userId: req.user.id, companyId: companyIdToCheck }
     });
 
-    if (!user) {
-      return res.status(404).json({ error: 'User not found' });
-    }
-
-    const hasAccess = user.Companies && user.Companies.some(c => c.id === companyIdToCheck);
-    if (!hasAccess) {
-      console.warn(`[SECURITY ALERT] User ${req.user.id} (${user.email || 'Unknown'}) attempted to access data for unauthorized company: ${companyIdToCheck}`);
+    if (!userCompanyRel) {
+      console.warn(`[SECURITY ALERT] User ${req.user.id} attempted to access data for unauthorized company: ${companyIdToCheck}`);
       return res.status(403).json({ error: 'Access denied: You do not have access to this company' });
     }
+
+    // Set the workspace-level role for authorization
+    req.user.role = userCompanyRel.role || 'VIEWER';
   } catch (err) {
     return next(err);
   }
@@ -128,9 +126,9 @@ exports.trackModifiers = (req, res, next) => {
   next();
 };
 
-// 5. guardLockedVoucher -> block EMPLOYEE from editing/deleting approved vouchers or other peoples vouchers
+// 5. guardLockedVoucher -> block non-admins from editing/deleting approved vouchers, and restrict EMPLOYEE to their own vouchers
 exports.guardLockedVoucher = async (req, res, next) => {
-  if (!req.user || req.user.role !== 'EMPLOYEE') return next();
+  if (!req.user) return next();
 
   const voucherId = req.params.id;
   if (!voucherId) return next();
@@ -140,12 +138,18 @@ exports.guardLockedVoucher = async (req, res, next) => {
     const voucher = await Voucher.findByPk(voucherId);
     if (!voucher) return res.status(404).json({ error: 'Voucher not found' });
 
-    if (voucher.status === 'Approved' || voucher.status === 'locked' || voucher.status === 'approved') {
-      return res.status(403).json({ error: 'Cannot modify or delete an approved/locked voucher.' });
+    // Protect approved/locked vouchers from non-admins
+    if (req.user.role !== 'ADMIN' && req.user.role !== 'SUPER_ADMIN') {
+      if (voucher.status === 'Approved' || voucher.status === 'locked' || voucher.status === 'approved') {
+        return res.status(403).json({ error: 'Cannot modify or delete an approved/locked voucher.' });
+      }
     }
 
-    if (voucher.CreatedBy && voucher.CreatedBy !== req.user.id && voucher.UserId !== req.user.id) {
-      return res.status(403).json({ error: 'You can only edit your own unapproved vouchers.' });
+    // EMPLOYEE can only edit/delete their own vouchers
+    if (req.user.role === 'EMPLOYEE') {
+      if (voucher.CreatedBy && voucher.CreatedBy !== req.user.id && voucher.UserId !== req.user.id) {
+        return res.status(403).json({ error: 'You can only edit/delete your own unapproved vouchers.' });
+      }
     }
 
     next();
