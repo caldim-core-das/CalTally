@@ -56,6 +56,8 @@ app.use(helmet({
 // Build allowed origins dynamically from env — never hardcode production domains here
 const allowedOrigins = [
   process.env.CLIENT_URL || 'http://localhost:5173',
+  'http://localhost:5174',
+  'http://localhost:5175'
 ];
 if (process.env.ADDITIONAL_ALLOWED_ORIGINS) {
   // Support comma-separated list in env: ADDITIONAL_ALLOWED_ORIGINS=https://app.example.com,https://www.example.com
@@ -286,6 +288,8 @@ const startServer = async () => {
     try {
       await sequelize.authenticate();
       console.log('✅ Database connection authenticated.');
+      await sequelize.models.User.sync({ alter: true });
+      await sequelize.models.Company.sync({ alter: true });
       await sequelize.sync(syncOptions);
       const connectedTo = process.env.DATABASE_URL ? 'Cloud Postgres' : (process.env.DB_DIALECT || 'sqlite');
       console.log(`✅ Ledger Database Synced [${connectedTo}]`);
