@@ -11,6 +11,7 @@ import { ledgerAPI, inventoryAPI, salesAPI, companyAPI, projectAPI, mailAPI } fr
 import { getCurrencyDisplay } from '../../utils/currencies';
 import ConfirmModal from '../../components/ConfirmModal';
 import EmailSendModal from '../../components/EmailSendModal';
+import useNotificationStore from '../../store/notificationStore';
 
 // ─────────────────────────────────────────────────
 // ACCOUNT OPTIONS DEFINITION
@@ -334,6 +335,8 @@ export default function ProfessionalInvoiceView() {
   const [loading,   setLoading]   = useState(true);
   const [currencySymbol, setCurrencySymbol] = useState('₹');
   
+  const { addNotification, addActivity } = useNotificationStore();
+  
   // Header Info
   const [customerId, setCustomerId] = useState('');
   const [projectId,  setProjectId]  = useState('');
@@ -400,6 +403,7 @@ export default function ProfessionalInvoiceView() {
   const [adjustment,      setAdjustment]      = useState(0);
   const [taxType,         setTaxType]         = useState('GST');
   const [gstPercent,      setGstPercent]      = useState(0); // Default 0% - applied only when a tax is selected
+  const [tdsPercent,      setTdsPercent]      = useState(0); // Added for TDS/TCS
   const [taxId,           setTaxId]           = useState('');
 
   const [notes,      setNotes]      = useState('Thanks for your business.');
@@ -584,6 +588,8 @@ export default function ProfessionalInvoiceView() {
                 if (parsed.discountPercent) setDiscountPercent(parsed.discountPercent);
                 if (parsed.adjustment) setAdjustment(parsed.adjustment);
                 if (parsed.gstPercent) setGstPercent(parsed.gstPercent);
+                if (parsed.tdsPercent) setTdsPercent(parsed.tdsPercent);
+                if (parsed.tdsType) setTdsType(parsed.tdsType);
                 if (parsed.notes) setNotes(parsed.notes);
                 if (parsed.termsText) setTermsText(parsed.termsText);
                 if (parsed.currencyCode) setCurrencyCode(parsed.currencyCode);
@@ -604,7 +610,8 @@ export default function ProfessionalInvoiceView() {
       const draft = {
         customerId, invoiceNo, orderNo, invoiceDate, dueDate, terms,
         salesperson, subject, lineItems, discountPercent, adjustment,
-        gstPercent, notes, termsText, currencyCode, currencySymbol, exchangeRate
+        gstPercent, notes, termsText, currencyCode, currencySymbol, exchangeRate,
+        tdsPercent, tdsType
       };
       localStorage.setItem('invoice_draft_new', JSON.stringify(draft));
     }
@@ -631,7 +638,13 @@ export default function ProfessionalInvoiceView() {
 
   const discountAmount = useMemo(() => (subTotal * (discountPercent / 100)), [subTotal, discountPercent]);
   const gstAmount      = useMemo(() => ((subTotal - discountAmount) * (gstPercent / 100)), [subTotal, discountAmount, gstPercent]);
-  const total = useMemo(() => subTotal - discountAmount + gstAmount + parseFloat(adjustment || 0), [subTotal, discountAmount, gstAmount, adjustment]);
+  const tdsAmount      = useMemo(() => ((subTotal - discountAmount) * (tdsPercent / 100)), [subTotal, discountAmount, tdsPercent]);
+  const total = useMemo(() => {
+     let t = subTotal - discountAmount + gstAmount + parseFloat(adjustment || 0);
+     if (tdsType === 'TCS') t += tdsAmount;
+     else if (tdsType === 'TDS') t -= tdsAmount;
+     return t;
+  }, [subTotal, discountAmount, gstAmount, adjustment, tdsAmount, tdsType]);
 
   const totalQuantity = useMemo(() => lineItems.reduce((acc, line) => acc + parseFloat(line.quantity || 0), 0), [lineItems]);
 
@@ -672,7 +685,23 @@ export default function ProfessionalInvoiceView() {
     }));
   };
 
-  const handleSave = async (status = 'Confirmed') => {
+  const handleSave = async (status = 'Confirmed', skipStockCheck = false) => {
+    const checkStockAlerts = () => {
+        lineItems.forEach(line => {
+            if (line.itemId) {
+                const item = items.find(i => i.id === line.itemId);
+                if (item) {
+                    const newStock = (parseFloat(item.currentStock) || 0) - (parseFloat(line.quantity) || 0);
+                    if (item.reorderLevel > 0 && newStock < item.reorderLevel && newStock >= 0) {
+                        const msg = `Item "${item.name}" stock (${newStock}) is below reorder level (${item.reorderLevel}). Please restore stock immediately.`;
+                        addNotification(msg, 'warning');
+                        addActivity({ title: 'Low Stock Alert', detail: msg, module: 'Inventory', type: 'alert' });
+                    }
+                }
+            }
+        });
+    };
+
     if (!customerId) {
         setModalConfig({
             isOpen: true,
@@ -696,6 +725,33 @@ export default function ProfessionalInvoiceView() {
             confirmText: 'Got it'
         });
         return;
+    }
+
+    if (!skipStockCheck && status === 'Confirmed') {
+        let insufficientStockItem = null;
+        for (const line of validItems) {
+            const item = items.find(i => i.id === line.itemId);
+            if (item) {
+                const newStock = (parseFloat(item.currentStock) || 0) - (parseFloat(line.quantity) || 0);
+                if (newStock < 0) {
+                    insufficientStockItem = { name: item.name, available: parseFloat(item.currentStock) || 0, requested: parseFloat(line.quantity) || 0 };
+                    break;
+                }
+            }
+        }
+
+        if (insufficientStockItem) {
+            setModalConfig({
+                isOpen: true,
+                title: 'Insufficient Stock Warning',
+                message: `Warning: You only have ${insufficientStockItem.available} "${insufficientStockItem.name}" in stock! Are you sure you want to sell ${insufficientStockItem.requested}?`,
+                type: 'warning',
+                showCancel: true,
+                confirmText: 'Yes, Sell anyway',
+                onConfirm: () => handleSave(status, true)
+            });
+            return;
+        }
     }
 
     setIsSaving(true);
@@ -722,6 +778,7 @@ export default function ProfessionalInvoiceView() {
       if (id) {
          await salesAPI.updateInvoice(id, payload);
          if (status === 'Confirmed') {
+             checkStockAlerts();
              const customer = customers.find(c => String(c.id) === String(customerId));
              setSavedInvoiceData({
                   ...payload,
@@ -753,6 +810,7 @@ export default function ProfessionalInvoiceView() {
          const newId = res.data?.id;
          if (newId) {
              if (status === 'Confirmed') {
+                 checkStockAlerts();
                  const customer = customers.find(c => String(c.id) === String(customerId));
                  setSavedInvoiceData({
                      ...payload,
@@ -1493,14 +1551,21 @@ export default function ProfessionalInvoiceView() {
                    </label>
                  </div>
                  <div className="flex items-center gap-2">
-                    <select className="h-9 px-3 bg-white border border-slate-200 rounded-lg text-[13px] font-medium text-slate-500 outline-none min-w-[140px] focus:border-blue-500 transition-all cursor-pointer">
-                      <option value="">Select a Tax</option>
-                      <option value="1">TDS @ 1%</option>
-                      <option value="2">TDS @ 2%</option>
-                      <option value="5">TDS @ 5%</option>
-                      <option value="10">TDS @ 10%</option>
+                    <select 
+                       value={tdsPercent}
+                       onChange={(e) => setTdsPercent(parseFloat(e.target.value) || 0)}
+                       className="h-9 px-3 bg-white border border-slate-200 rounded-lg text-[13px] font-medium text-slate-500 outline-none min-w-[140px] focus:border-blue-500 transition-all cursor-pointer"
+                    >
+                      <option value="0">Select a Tax</option>
+                      <option value="1">{tdsType} @ 1%</option>
+                      <option value="2">{tdsType} @ 2%</option>
+                      <option value="5">{tdsType} @ 5%</option>
+                      <option value="10">{tdsType} @ 10%</option>
                     </select>
-                    <span className="text-slate-600 font-bold">- {currencySymbol} 0.00</span>
+                    <span className="text-slate-600 font-bold min-w-[60px] text-right">
+                      {tdsType === 'TDS' ? '- ' : '+ '}
+                      {tdsAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    </span>
                  </div>
                </div>
  
@@ -1577,7 +1642,10 @@ export default function ProfessionalInvoiceView() {
         <ConfirmModal
           isOpen={modalConfig.isOpen}
           onClose={() => setModalConfig({ ...modalConfig, isOpen: false })}
-          onConfirm={() => setModalConfig({ ...modalConfig, isOpen: false })}
+          onConfirm={() => {
+              if (modalConfig.onConfirm) modalConfig.onConfirm();
+              setModalConfig(prev => ({ ...prev, isOpen: false }));
+          }}
           title={modalConfig.title}
           message={modalConfig.message}
           type={modalConfig.type}

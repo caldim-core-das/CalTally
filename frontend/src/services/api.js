@@ -163,14 +163,26 @@ export const exchangeOAuthToken = () => api.post('/auth/oauth-token-exchange', {
 export const getCurrentUser = () => api.get('/auth/me');
 export const logout = () => api.post('/auth/logout');
 
-export const authAPI = { register, login, logout, googleLogin, exchangeOAuthToken, getCurrentUser };
+export const authAPI = {
+  register,
+  login,
+  logout,
+  googleLogin,
+  exchangeOAuthToken,
+  getCurrentUser,
+  getProfile: () => api.get('/auth/profile'),
+  changePassword: (data) => api.post('/auth/change-password', data),
+  getNotificationPreferences: () => api.get('/auth/notification-preferences'),
+  saveNotificationPreferences: (data) => api.post('/auth/notification-preferences', data)
+};
 
 // ─── Users ─────────────────────────────────────────
 export const usersAPI = {
   getCompanyUsers: () => api.get('/users'),
   inviteUser: (data) => api.post('/users/invite', data),
   updateUserRole: (userId, data) => api.put(`/users/${userId}/role`, data),
-  removeUser: (userId) => api.delete(`/users/${userId}`)
+  removeUser: (userId) => api.delete(`/users/${userId}`),
+  requestEmailChange: (newEmail) => api.post('/users/request-email-change', { newEmail })
 };
 
 // ─── Companies ─────────────────────────────────────
@@ -181,6 +193,28 @@ export const companyAPI = {
   update: (id, data) => api.put(`/companies/${id}`, data),
   getCompanyUsers: () => api.get('/users'),
   syncDefaultLedgers: (id) => api.post(`/companies/${id}/sync-default-ledgers`),
+  closeFinancialYear: (id) => api.post(`/companies/close-year/${id}`),
+};
+
+export const settingsAPI = {
+  createFinancialPeriod: (data) => api.post('/settings/financial-periods', data),
+  getFinancialPeriods: () => api.get('/settings/financial-periods'),
+  togglePeriodLock: (id, isLocked) => api.patch(`/settings/financial-periods/${id}/lock`, { isLocked }),
+  setLegacyPeriodLock: (data) => api.post('/settings/period-lock', data),
+  getLegacyPeriodLock: () => api.get('/settings/period-lock'),
+};
+
+export const supportAPI = {
+  createTicket: (data) => api.post('/support', data),
+  getCompanyTickets: () => api.get('/support'),
+  getAllTicketsAdmin: () => api.get('/support/admin'),
+  replyToTicket: (id, data) => api.put(`/support/admin/${id}`, data),
+};
+
+export const subscriptionAPI = {
+  getPlans: () => api.get('/subscription/plans'),
+  createOrder: (planId) => api.post('/subscription/create-order', { planId }),
+  mockSuccess: (orderId) => api.post('/subscription/mock-success', { orderId }),
 };
 
 // ─── Groups ────────────────────────────────────────
@@ -222,6 +256,7 @@ export const purchaseAPI = {
   getVendors: (companyId) => api.get(`/${companyId}/purchases/vendors`),
   getOrders: (companyId) => api.get(`/${companyId}/purchases/orders`),
   createOrder: (data) => api.post(`/${data.companyId || sessionStorage.getItem('companyId')}/purchases/orders`, data),
+  batchRestock: (data) => api.post(`/${data.companyId || sessionStorage.getItem('companyId')}/purchases/orders/batch-restock`, data),
   updateOrder: (id, data) => api.put(`/${data.companyId || sessionStorage.getItem('companyId')}/purchases/orders/${id}`, data),
   deleteOrder: (id) => api.delete(`/${sessionStorage.getItem('companyId')}/purchases/orders/${id}`),
   getBills: (companyId) => api.get(`/${companyId}/purchases/bills`),
@@ -279,7 +314,7 @@ export const reportsAPI = {
   daybook: (companyId, from, to) => api.get(`/reports/daybook/${companyId}`, { params: { from, to } }),
   dashboard: (companyId) => api.get(`/reports/dashboard/${companyId}`),
   ledgerStatement: (ledgerId, from, to) => api.get(`/reports/ledger-statement/${ledgerId}`, { params: { from, to } }),
-  auditTrail: (companyId) => api.get(`/reports/audit/${companyId}`),
+  auditTrail: (companyId, from, to) => api.get(`/reports/audit/${companyId}`, { params: { from, to } }),
   cashFlow: (companyId, from, to) => api.get(`/reports/cash-flow/${companyId}`, { params: { from, to } }),
   receivablesReport: (companyId, status) => api.get(`/reports/receivables-report/${companyId}`, { params: { status } }),
   payablesReport: (companyId) => api.get(`/reports/payables-report/${companyId}`),
@@ -294,6 +329,7 @@ export const inventoryAPI = {
   getByCompany: (companyId, type) => api.get(`/inventory/${companyId}`, { params: { type } }),
   updateItem: (itemId, data) => api.put(`/inventory/${itemId}`, data),
   updateStock: (itemId, data) => api.post(`/inventory/stock/${itemId}`, data),
+  adjustStock: (itemId, data) => api.post(`/inventory/${itemId}/adjust`, data),
   uploadImage: (formData) => api.post('/inventory/upload', formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
   getItemHistory: (id) => api.get(`/inventory/${id}/history`),
   deleteItem: (id) => api.delete(`/inventory/${id}`),
@@ -353,7 +389,8 @@ export const salesAPI = {
   getOpenInvoices: (customerId) => api.get(`/sales/invoices/open/${customerId}`),
   recordPayment: (data) => api.post('/sales/payments/record', data),
   applyCredit: (data) => api.post('/sales/credits/apply', data),
-  getNextNumber: (companyId, type) => api.get(`/sales/next-number/${companyId}/${type}`)
+  getNextNumber: (companyId, type) => api.get(`/sales/next-number/${companyId}/${type}`),
+  triggerReminders: (companyId) => api.post(`/sales/trigger-reminders/${companyId}`)
 };
 
 export const paymentAPI = {
