@@ -47,6 +47,20 @@ exports.inviteUser = async (req, res, next) => {
         role: role || 'VIEWER'
       });
 
+      // Update name and role if provided during the re-invite
+      let updated = false;
+      if (name && user.name !== name) {
+        user.name = name;
+        updated = true;
+      }
+      if (role && user.role !== role) {
+        user.role = role;
+        updated = true;
+      }
+      if (updated) {
+        await user.save();
+      }
+
       await AuditService.log({
         action: 'ADD_EXISTING_USER_TO_COMPANY',
         tableName: 'UserCompanies',
@@ -57,23 +71,24 @@ exports.inviteUser = async (req, res, next) => {
         req
       });
 
-      // Send email to existing user notifying them they've been added to this company
+      // Send email to notify the existing user they were added to a new workspace
+      const company = await Company.findByPk(req.companyId);
       const companyName = company?.name || 'our organization';
       MailService.sendMail({
-        to: email,
+        to: user.email,
         subject: `You have been added to ${companyName} on CalTally`,
         html: `
           <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px;">
-            <h2 style="color: #2563eb; margin-top: 0;">New Workspace Access!</h2>
-            <p>Hi <strong>${user.name || name}</strong>,</p>
-            <p>You have been added to the workspace <strong>${companyName}</strong> on CalTally with the role of <strong>${role || 'Viewer'}</strong>.</p>
-            <p>You can now switch to this company from your Dashboard or Company Hub after logging in.</p>
-            <p><strong>Login URL:</strong> <a href="${process.env.CLIENT_URL || 'http://localhost:5173'}/login" style="color: #2563eb; text-decoration: none;">http://localhost:5173/login</a></p>
+            <h2 style="color: #2563eb; margin-top: 0;">Workspace Invitation</h2>
+            <p>Hi <strong>${user.name || 'User'}</strong>,</p>
+            <p>You have been granted access to the <strong>${companyName}</strong> workspace on the CalTally ERP platform with the role of <strong>${user.role}</strong>.</p>
+            <p>Since you already have a CalTally account, simply log in with your existing password. You will now be able to switch to this new workspace from your dashboard.</p>
+            <a href="${process.env.CLIENT_URL || 'http://localhost:5173'}/login" style="display:inline-block; background:#2563eb; color:#fff; text-decoration:none; padding:10px 20px; border-radius:6px; font-weight:bold; margin: 15px 0;">Log In to CalTally</a>
             <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 20px 0;">
-            <p style="margin-bottom: 0;">Regards,<br><strong>CalTally Operations Team</strong></p>
+            <p style="margin-bottom: 0; font-size: 12px; color: #64748b;">Regards,<br><strong>CalTally Operations Team</strong></p>
           </div>
         `
-      }).catch(mailErr => console.error('✉️ Failed to send addition email to existing user:', mailErr));
+      }).catch(mailErr => console.error('✉️ Failed to send workspace addition email:', mailErr));
 
       return res.status(200).json({ message: 'Existing user added to company', user: { id: user.id, email: user.email } });
     }
