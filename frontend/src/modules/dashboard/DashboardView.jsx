@@ -13,7 +13,7 @@ import {
   LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid,
   Tooltip, Legend, ResponsiveContainer, Cell, PieChart, Pie
 } from 'recharts';
-import { reportsAPI, voucherAPI } from '../../services/api';
+import { reportsAPI, voucherAPI, ledgerAPI, projectAPI } from '../../services/api';
 import AIAssistant from '../../components/AIAssistant';
 
 // ── Formatters ────────────────────────────────────────────────────
@@ -147,82 +147,7 @@ const ACT_ICONS = {
   voucher:  { Icon: BookOpen,       bg: 'bg-blue-50', color: 'text-blue-600' },
 };
 
-// ── Top Ranked List ────────────────────────────────────────────────
-const TopRankedList = ({ title, items, valueKey, navigate, path, loading }) => (
-  <div className="bg-white rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.08)] border border-slate-100 p-5">
-    <div className="flex items-center justify-between mb-4">
-      <h3 className="text-[13px] font-bold text-slate-800">{title}</h3>
-      <button onClick={() => navigate(path)} className="text-[11px] font-semibold text-[#1A73E8] hover:underline flex items-center gap-0.5">
-        View All <ChevronRight size={12} />
-      </button>
-    </div>
-    {loading ? (
-      <div className="flex items-center justify-center h-24"><Loader size={20} className="text-blue-400 animate-spin" /></div>
-    ) : items.length === 0 ? (
-      <p className="text-[12px] text-slate-400 text-center py-6">No data yet</p>
-    ) : (
-      <div className="space-y-3">
-        {items.map((item, idx) => (
-          <div key={item.name} className="flex items-center gap-3">
-            <span className="text-[11px] font-bold text-slate-400 w-4 shrink-0">{idx + 1}</span>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-[12px] font-semibold text-slate-700 truncate">{item.name}</span>
-                <span className="text-[12px] font-bold text-slate-800 ml-2 shrink-0">{fmtK(item[valueKey])}</span>
-              </div>
-              <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-gradient-to-r from-[#1A73E8] to-blue-500 rounded-full transition-all duration-700"
-                  style={{ width: `${item.pct || 0}%` }}
-                />
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-    )}
-  </div>
-);
 
-// ── Inventory Mini Table ───────────────────────────────────────────
-const InventoryMiniTable = ({ items, navigate, path, loading, darkMode }) => (
-  <div className={`rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.08)] border p-5 ${darkMode ? 'bg-[#2A2A3E] border-slate-700' : 'bg-white border-slate-100'}`}>
-    <div className="flex items-center justify-between mb-4">
-      <h3 className={`text-[13px] font-bold ${darkMode ? 'text-slate-200' : 'text-slate-800'}`}>Recommended Dashboard</h3>
-      <button onClick={() => navigate(path)} className="text-[11px] font-semibold text-[#1A73E8] hover:underline flex items-center gap-0.5">
-        View All <ChevronRight size={12} />
-      </button>
-    </div>
-    {loading ? (
-      <div className="flex items-center justify-center h-24"><Loader size={20} className="text-blue-400 animate-spin" /></div>
-    ) : items.length === 0 ? (
-      <p className="text-[12px] text-slate-400 text-center py-6">No data yet</p>
-    ) : (
-      <div className="overflow-x-auto">
-        <table className="w-full text-left text-[11px]">
-          <thead className={`border-b ${darkMode ? 'text-slate-400 border-slate-700' : 'text-slate-500 border-slate-100'}`}>
-            <tr>
-              <th className="pb-2 font-semibold">Product</th>
-              <th className="pb-2 font-semibold text-right">Purchased</th>
-              <th className="pb-2 font-semibold text-right">Sold</th>
-              <th className="pb-2 font-semibold text-right">Available</th>
-            </tr>
-          </thead>
-          <tbody className={`divide-y ${darkMode ? 'divide-slate-700/50 text-slate-300' : 'divide-slate-50 text-slate-700'}`}>
-            {items.map((item, idx) => (
-              <tr key={item.id || idx} className="group">
-                <td className="py-2.5 font-medium truncate max-w-[80px]">{item.name}</td>
-                <td className="py-2.5 text-right font-medium text-emerald-600">{item.purchases || 0}</td>
-                <td className="py-2.5 text-right font-medium text-rose-600">{item.sales || 0}</td>
-                <td className="py-2.5 text-right font-bold">{item.currentStock || 0}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    )}
-  </div>
-);
 
 
 // ══════════════════════════════════════════════════════════════════
@@ -245,6 +170,57 @@ const DashboardView = ({ companyId: propCompanyId }) => {
   const [error, setError]     = useState(null);
   const [darkMode, setDarkMode] = useState(() => localStorage.getItem('darkMode') === 'true');
   const [activeChart, setActiveChart] = useState('cashflow');
+  const [activeDropdown, setActiveDropdown] = useState(null); // 'vouchers' | 'ledgers' | 'projects' | 'banks'
+  const [dropdownItems, setDropdownItems] = useState({
+    vouchers: [],
+    ledgers: [],
+    projects: [],
+    banks: []
+  });
+  const [loadingDropdown, setLoadingDropdown] = useState(false);
+  const statsFooterRef = useRef(null);
+
+  const fetchDropdownData = async (type) => {
+    if (!companyId) return;
+    setLoadingDropdown(true);
+    setActiveDropdown(type);
+    try {
+      if (type === 'vouchers') {
+        const res = await voucherAPI.getByCompany(companyId);
+        setDropdownItems(prev => ({ ...prev, vouchers: Array.isArray(res.data) ? res.data : [] }));
+      } else if (type === 'ledgers') {
+        const res = await ledgerAPI.getByCompany(companyId);
+        setDropdownItems(prev => ({ ...prev, ledgers: Array.isArray(res.data) ? res.data : [] }));
+      } else if (type === 'projects') {
+        const res = await projectAPI.getByCompany(companyId);
+        setDropdownItems(prev => ({ ...prev, projects: Array.isArray(res.data) ? res.data : [] }));
+      } else if (type === 'banks') {
+        setDropdownItems(prev => ({ ...prev, banks: bankAccounts }));
+      }
+    } catch (err) {
+      console.error(`Error loading dropdown data for ${type}:`, err);
+    } finally {
+      setLoadingDropdown(false);
+    }
+  };
+
+  const handleStatCardClick = (type) => {
+    if (activeDropdown === type) {
+      setActiveDropdown(null);
+    } else {
+      fetchDropdownData(type);
+    }
+  };
+
+  useEffect(() => {
+    const handleOutsideClick = (e) => {
+      if (statsFooterRef.current && !statsFooterRef.current.contains(e.target)) {
+        setActiveDropdown(null);
+      }
+    };
+    document.addEventListener('mousedown', handleOutsideClick);
+    return () => document.removeEventListener('mousedown', handleOutsideClick);
+  }, []);
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', darkMode);
@@ -658,14 +634,8 @@ const DashboardView = ({ companyId: propCompanyId }) => {
           </div>
         </div>
 
-        {/* ══ TOP LISTS + ACTIVITY ════════════════════════════════ */}
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
-          <div className="xl:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-4">
-            <TopRankedList title="Top Customers" items={topCustomers} valueKey="revenue"   navigate={navigate} path="/customers" loading={loading} />
-            <TopRankedList title="Top Vendors"   items={topVendors}   valueKey="purchases" navigate={navigate} path="/vendors"   loading={loading} />
-            <InventoryMiniTable items={inventory} navigate={navigate} path="/inventory" loading={loading} darkMode={darkMode} />
-          </div>
-
+        {/* ══ ACTIVITY ════════════════════════════════ */}
+        <div className="grid grid-cols-1 gap-4">
           {/* Recent Activity */}
           <div className={`rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.08)] border p-5 ${darkMode ? 'bg-[#2A2A3E] border-slate-700' : 'bg-white border-slate-100'}`}>
             <div className="flex items-center justify-between mb-4">
@@ -707,37 +677,6 @@ const DashboardView = ({ companyId: propCompanyId }) => {
             )}
           </div>
         </div>
-
-        {/* ══ QUICK ACTIONS ═══════════════════════════════════════ */}
-        {canCreate && (
-          <div className={`rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.08)] border p-5 ${darkMode ? 'bg-[#2A2A3E] border-slate-700' : 'bg-white border-slate-100'}`}>
-            <h3 className={`text-[11px] font-bold uppercase tracking-widest mb-4 ${darkMode ? 'text-slate-400' : 'text-slate-400'}`}>Quick Actions</h3>
-            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
-              {[
-                { label: 'New Invoice',      icon: FileText,       path: '/sales-invoices/new',       color: 'text-blue-600',   bg: 'bg-blue-50'   },
-                { label: 'New Bill',         icon: FileStack,      path: '/bills/new',                color: 'text-orange-600', bg: 'bg-orange-50' },
-                { label: 'Receive Payment',  icon: ArrowDownRight, path: '/payments/new',             color: 'text-emerald-600',bg: 'bg-emerald-50'},
-                { label: 'Make Payment',     icon: ArrowUpRight,   path: '/payments-made/new',        color: 'text-rose-600',   bg: 'bg-rose-50'   },
-                { label: 'Bank Recon',       icon: RefreshCcw,     path: '/reconciliation',           color: 'text-blue-600', bg: 'bg-blue-50' },
-                { label: 'GST Report',       icon: Shield,         path: '/reports/gst',              color: 'text-purple-600', bg: 'bg-purple-50' },
-                { label: 'Journal Entry',    icon: BookOpen,       path: '/accountant/journals/new',  color: 'text-amber-600',  bg: 'bg-amber-50'  },
-                { label: 'P&L Report',       icon: BarChart2,      path: '/reports/pl',               color: 'text-teal-600',   bg: 'bg-teal-50'   },
-              ].map(action => (
-                <button
-                  key={action.label}
-                  onClick={() => navigate(action.path)}
-                  className={`flex flex-col items-center gap-2 p-3 rounded-xl border transition-all duration-200 group hover:-translate-y-1 hover:shadow-md
-                    ${darkMode ? 'border-slate-600 hover:border-slate-400 hover:bg-slate-700/60' : 'border-slate-100 hover:border-blue-200 hover:bg-blue-50/30'}`}
-                >
-                  <div className={`w-10 h-10 ${action.bg} ${action.color} rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform`}>
-                    <action.icon size={18} strokeWidth={1.8} />
-                  </div>
-                  <span className={`text-[10.5px] font-bold text-center leading-tight ${darkMode ? 'text-slate-300' : 'text-slate-600'}`}>{action.label}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
 
         {/* ══ RECENT VOUCHERS (from backend) ══════════════════════ */}
         {vouchers.length > 0 && (
@@ -786,16 +725,83 @@ const DashboardView = ({ companyId: propCompanyId }) => {
 
         {/* Stats footer */}
         {!loading && data && (
-          <div className={`rounded-xl border px-6 py-4 grid grid-cols-2 sm:grid-cols-4 gap-4 ${darkMode ? 'bg-slate-800/60 border-slate-700' : 'bg-white border-slate-100'}`}>
+          <div ref={statsFooterRef} className={`rounded-xl border px-6 py-4 grid grid-cols-2 sm:grid-cols-4 gap-4 relative overflow-visible ${darkMode ? 'bg-slate-800/60 border-slate-700' : 'bg-white border-slate-100'}`}>
             {[
-              { label: 'Total Vouchers', value: data.voucherCount },
-              { label: 'Chart of Accounts', value: data.ledgerCount },
-              { label: 'Active Projects', value: data.projectCount },
-              { label: 'Bank Accounts', value: bankAccounts.length },
+              { type: 'vouchers', label: 'Total Vouchers', value: data.voucherCount },
+              { type: 'ledgers', label: 'Chart of Accounts', value: data.ledgerCount },
+              { type: 'projects', label: 'Active Projects', value: data.projectCount },
+              { type: 'banks', label: 'Bank Accounts', value: bankAccounts.length },
             ].map(s => (
-              <div key={s.label} className="text-center">
-                <p className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-slate-900'}`}>{s.value}</p>
-                <p className={`text-[11px] font-medium ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>{s.label}</p>
+              <div 
+                key={s.label} 
+                className={`relative text-center cursor-pointer p-3.5 rounded-xl transition-all duration-200 select-none border border-transparent
+                  ${darkMode ? 'hover:bg-slate-700/40 hover:border-slate-600' : 'hover:bg-slate-50 hover:border-slate-200'}`} 
+                onClick={() => handleStatCardClick(s.type)}
+              >
+                <p className={`text-2xl font-bold flex items-center justify-center gap-1.5 ${darkMode ? 'text-white' : 'text-slate-900'}`}>
+                  {s.value}
+                  <ChevronDown size={14} className={`text-slate-400 transition-transform duration-250 ${activeDropdown === s.type ? 'rotate-180 text-blue-500' : ''}`} />
+                </p>
+                <p className={`text-[11.5px] font-bold ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>{s.label}</p>
+
+                {/* Dropdown Menu */}
+                {activeDropdown === s.type && (
+                  <div 
+                    className={`absolute bottom-full mb-3 left-1/2 -translate-x-1/2 w-64 rounded-xl shadow-2xl z-50 py-2 border max-h-60 overflow-y-auto text-left transition-all duration-200
+                      ${darkMode ? 'bg-[#2A2A3E] border-slate-700 text-slate-200' : 'bg-white border-slate-100 text-slate-800'}`}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    {loadingDropdown ? (
+                      <div className="flex items-center justify-center py-5">
+                        <Loader size={16} className="text-blue-500 animate-spin" />
+                      </div>
+                    ) : (dropdownItems[s.type]?.length || 0) === 0 ? (
+                      <p className="px-4 py-3 text-[11.5px] text-slate-400 text-center">No active records found</p>
+                    ) : (
+                      <div className="divide-y divide-slate-100 dark:divide-slate-750">
+                        {dropdownItems[s.type].map(item => {
+                          let labelText = '';
+                          let subText = '';
+                          let targetPath = '';
+
+                          if (s.type === 'vouchers') {
+                            const amt = (item.Transactions || []).reduce((sum, tx) => sum + (parseFloat(tx.debit) || 0), 0);
+                            labelText = `#${item.voucherNumber} · ${item.voucherType}`;
+                            subText = `₹${amt.toLocaleString('en-IN')} · ${item.date ? new Date(item.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : '—'}`;
+                            targetPath = `/vouchers`; // Navigate to voucher list/edit
+                          } else if (s.type === 'ledgers') {
+                            labelText = item.name;
+                            subText = item.Group?.name || item.nature || 'Ledger';
+                            targetPath = `/ledger-statement/${item.id}`;
+                          } else if (s.type === 'projects') {
+                            labelText = item.name;
+                            subText = item.status || 'Active';
+                            targetPath = `/time-tracking/projects`;
+                          } else if (s.type === 'banks') {
+                            labelText = item.name;
+                            subText = `₹${(item.balance || 0).toLocaleString('en-IN')}`;
+                            targetPath = `/banking/view/${item.id}`;
+                          }
+
+                          return (
+                            <button
+                              key={item.id}
+                              onClick={() => {
+                                navigate(targetPath);
+                                setActiveDropdown(null);
+                              }}
+                              className={`w-full text-left px-4 py-2.5 transition-colors flex flex-col gap-0.5
+                                ${darkMode ? 'hover:bg-slate-700/60' : 'hover:bg-blue-50/50'}`}
+                            >
+                              <span className="text-[12.5px] font-bold truncate w-full">{labelText}</span>
+                              <span className="text-[10px] text-slate-400 truncate w-full">{subText}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             ))}
           </div>
