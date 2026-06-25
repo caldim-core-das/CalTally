@@ -10,9 +10,9 @@ router.get('/:companyId', ledgerController.getLedgers);
 router.get('/balance/:id', ledgerController.getLedgerBalance);
 router.get('/transactions/:id', ledgerController.getLedgerTransactions);
 
-// Write — EMPLOYEE, ACCOUNTANT, MANAGER and above
-router.post('/', authorizeRoles('EMPLOYEE', 'MANAGER', 'ACCOUNTANT', 'ADMIN', 'SUPER_ADMIN'), ledgerController.createLedger);
-router.put('/:id', authorizeRoles('EMPLOYEE', 'MANAGER', 'ACCOUNTANT', 'ADMIN', 'SUPER_ADMIN'), ledgerController.updateLedger);
-router.delete('/:id', authorizeRoles('ADMIN', 'SUPER_ADMIN'), ledgerController.deleteLedger);
+// Write — ACCOUNTANT, ADMIN, SUPER_ADMIN
+router.post('/', authorizeRoles('ACCOUNTANT', 'ADMIN', 'SUPER_ADMIN'), ledgerController.createLedger);
+router.put('/:id', authorizeRoles('ACCOUNTANT', 'ADMIN', 'SUPER_ADMIN'), ledgerController.updateLedger);
+router.delete('/:id', authorizeRoles('ACCOUNTANT', 'ADMIN', 'SUPER_ADMIN'), ledgerController.deleteLedger);
 
 module.exports = router;

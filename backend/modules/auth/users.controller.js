@@ -1,4 +1,4 @@
-const { User, Company } = require('../../models');
+const { User, Company, UserCompany } = require('../../models');
 const bcrypt = require('bcryptjs');
 const AuditService = require('../../services/AuditService');
 const MailService = require('../../services/MailService');
@@ -9,12 +9,17 @@ exports.getCompanyUsers = async (req, res, next) => {
     const company = await Company.findByPk(req.companyId, {
       include: [{
         model: User,
-        through: { attributes: [] },
+        through: { model: UserCompany, attributes: ['role'] },
         attributes: ['id', 'name', 'email', 'role', 'activeCompanyId', 'createdAt']
       }]
     });
     if (!company) return res.status(404).json({ error: 'Company not found' });
-    res.json({ users: company.Users });
+    const users = company.Users.map(u => {
+      const raw = u.get({ plain: true });
+      raw.role = (u.UserCompany && u.UserCompany.role) || raw.role || 'VIEWER';
+      return raw;
+    });
+    res.json({ users });
   } catch (err) {
     next(err);
   }
@@ -32,9 +37,15 @@ exports.inviteUser = async (req, res, next) => {
 
     let user = await User.findOne({ where: { email } });
 
+    const company = await Company.findByPk(req.companyId);
+
     if (user) {
-      // User already exists — link them to this company
-      await user.addCompany(req.companyId);
+      // User already exists — link them to this company with specified role
+      await UserCompany.upsert({
+        userId: user.id,
+        companyId: req.companyId,
+        role: role || 'VIEWER'
+      });
 
       // Update name and role if provided during the re-invite
       let updated = false;
@@ -54,7 +65,7 @@ exports.inviteUser = async (req, res, next) => {
         action: 'ADD_EXISTING_USER_TO_COMPANY',
         tableName: 'UserCompanies',
         recordId: user.id,
-        newData: { email: user.email, companyId: req.companyId },
+        newData: { email: user.email, companyId: req.companyId, role: role || 'VIEWER' },
         companyId: req.companyId,
         userId: req.user?.id,
         req
@@ -94,14 +105,19 @@ exports.inviteUser = async (req, res, next) => {
       activeCompanyId: req.companyId
     });
 
-    const company = await Company.findByPk(req.companyId);
-    if (company) await company.addUser(user);
+    if (company) {
+      await UserCompany.create({
+        userId: user.id,
+        companyId: req.companyId,
+        role: role || 'VIEWER'
+      });
+    }
 
     await AuditService.log({
       action: 'INVITE_NEW_USER',
       tableName: 'Users',
       recordId: user.id,
-      newData: { email: user.email, role: user.role, companyId: req.companyId },
+      newData: { email: user.email, role: role || 'VIEWER', companyId: req.companyId },
       companyId: req.companyId,
       userId: req.user?.id,
       req
@@ -156,30 +172,30 @@ exports.updateUserRole = async (req, res, next) => {
     const user = await User.findByPk(req.params.userId);
     if (!user) return res.status(404).json({ error: 'User not found' });
 
-    // Verify user belongs to the requesting company
-    const company = await Company.findByPk(req.companyId, {
-      include: [{ model: User, where: { id: user.id }, through: { attributes: [] } }]
+    // Verify user belongs to the requesting company and update role in junction table
+    const userCompanyRel = await UserCompany.findOne({
+      where: { userId: user.id, companyId: req.companyId }
     });
-    if (!company || company.Users.length === 0) {
+    if (!userCompanyRel) {
       return res.status(403).json({ error: 'User does not belong to your company' });
     }
 
-    const oldData = { id: user.id, role: user.role };
-    user.role = role;
-    await user.save();
+    const oldData = { id: user.id, role: userCompanyRel.role };
+    userCompanyRel.role = role;
+    await userCompanyRel.save();
 
     await AuditService.log({
       action: 'UPDATE_USER_ROLE',
-      tableName: 'Users',
-      recordId: user.id,
+      tableName: 'UserCompanies',
+      recordId: `${user.id}-${req.companyId}`,
       oldData,
-      newData: { id: user.id, role: user.role },
+      newData: { id: user.id, role: userCompanyRel.role },
       companyId: req.companyId,
       userId: req.user?.id,
       req
     });
 
-    res.json({ message: 'User role updated', user: { id: user.id, email: user.email, role: user.role } });
+    res.json({ message: 'User role updated', user: { id: user.id, email: user.email, role: userCompanyRel.role } });
   } catch (err) {
     next(err);
   }

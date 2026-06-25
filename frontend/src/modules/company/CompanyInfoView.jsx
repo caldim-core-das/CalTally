@@ -5,7 +5,7 @@ import {
   Plus, Trash2, X, Maximize2, Landmark, Check, ShieldAlert, Calendar, DollarSign,
   Pencil, Users, UserPlus, ArrowLeft
 } from 'lucide-react';
-import { companyAPI, usersAPI } from '../../services/api';
+import { companyAPI, usersAPI, authAPI } from '../../services/api';
 import { INDIAN_STATES } from '../../utils/indianStates';
 import { CURRENCIES } from '../../utils/currencies';
 import ConfirmModal from '../../components/ConfirmModal';
@@ -522,6 +522,21 @@ const CompanyInfoView = ({ firstTime = false, onCompanyCreated }) => {
               className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-800 font-semibold px-4 py-2 border border-slate-200 rounded-lg bg-white shadow-sm hover:bg-slate-50 transition-colors"
             >
               Close Settings <X size={16} className="text-red-400" />
+            </button>
+          ) : (
+            <button 
+              onClick={async () => {
+                try {
+                  await authAPI.logout();
+                } catch (e) {
+                  console.error('Logout failed', e);
+                }
+                ['token', 'companyId', 'companyName', 'user'].forEach(k => sessionStorage.removeItem(k));
+                window.location.href = '/login';
+              }}
+              className="flex items-center gap-1.5 text-sm text-red-650 hover:text-red-700 font-bold px-4 py-2 border border-red-200 rounded-lg bg-white shadow-sm hover:bg-red-50 transition-colors"
+            >
+              Sign Out
             </button>
           )}
         </div>
