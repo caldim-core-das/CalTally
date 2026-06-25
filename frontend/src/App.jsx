@@ -13,6 +13,8 @@ import DashboardView from './modules/dashboard/DashboardView';
 import SupportHelpButton from './components/SupportHelpButton';
 import SupportCenter from './modules/settings/SupportCenter';
 import { useAuth } from './store/AuthContext';
+import usePermissions from './hooks/usePermissions';
+import { WriteProtectedRoute, ReadProtectedRoute } from './components/ProtectedRoute';
 import LedgersView from './modules/accounting/LedgersView';
 import LedgerStatementView from './modules/accounting/LedgerStatementView';
 import VoucherListView from './modules/accounting/VoucherListView';
@@ -198,7 +200,7 @@ const NAV = [
     ]
   },
   {
-    group: 'Platform Admin',
+    group: 'Help & Support',
     icon: Shield,
     items: [
       { label: 'Support Tickets',  path: '/support', icon: LifeBuoy }
@@ -245,6 +247,7 @@ const isPathActive = (itemPath, pathname, location) => {
 // SIDEBAR GROUP
 // ═══════════════════════════════════════════════════════════════════
 const NavGroup = ({ group, icon: Icon, items, collapsed, pathname, location, navigate }) => {
+  const { canCreate } = usePermissions();
   const [expanded, setExpanded] = useState(
     pathname.includes(group.toLowerCase().replace(' ', '-')) ||
     items.some(it => isPathActive(it.path, pathname, location))
@@ -302,7 +305,7 @@ const NavGroup = ({ group, icon: Icon, items, collapsed, pathname, location, nav
                         {item.label}
                       </span>
                     </div>
-                    {item.showPlus && (
+                    {item.showPlus && canCreate && (
                        <button 
                          onClick={(e) => { e.stopPropagation(); navigate(item.plusPath); setIsHovered(false); }}
                          className="flex items-center justify-center w-6 h-6 rounded-full bg-slate-200 text-slate-600 shrink-0 shadow-sm transition-all hover:bg-blue-600 hover:text-white"
@@ -373,7 +376,7 @@ const NavGroup = ({ group, icon: Icon, items, collapsed, pathname, location, nav
                     {item.label}
                   </button>
                 </div>
-                {(item.showPlus) && (
+                {item.showPlus && canCreate && (
                    <button 
                      onClick={(e) => { e.stopPropagation(); navigate(item.plusPath); }}
                      title={`Add New ${item.label}`}
@@ -517,19 +520,12 @@ const AppShell = ({ children, onLogout, companies = [], currentCompanyId, onComp
             // FEATURE GATING LOGIC (SaaS Plan)
             const features = company?.SubscriptionPlan?.features || [];
             if (section.group === 'Items' && !features.includes('INVENTORY')) return false;
-
-            // Let's filter out specific items from groups if needed
-            // For now, if the group is purely 'Items' (Inventory), we hide it entirely.
             
             // RBAC FILTERING LOGIC
             const role = user.Role?.name || user.role || 'VIEWER';
-            if (role !== 'SUPER_ADMIN' && role !== 'COMPANY_ADMIN' && role !== 'ADMIN' && section.group === 'Platform Admin') return false;
+            if (role !== 'SUPER_ADMIN' && section.group === 'Platform Admin') return false;
             
-            if (role === 'VIEWER') return ['Home', 'Reports'].includes(section.group);
-            if (role === 'AUDITOR') return ['Home', 'Reports', 'Setup'].includes(section.group);
-            if (role === 'DATA_ENTRY') return ['Home', 'Items', 'Banking', 'Sales', 'Purchases', 'Accounting', 'Operations', 'Payroll'].includes(section.group);
-            if (role === 'EMPLOYEE') return ['Home', 'Items', 'Sales', 'Purchases', 'Banking', 'Accounting', 'Reports'].includes(section.group);
-            return true; // ADMIN, SUPER_ADMIN, ACCOUNTANT, MANAGER see all
+            return true;
           }).map(section => {
             // Further item-level feature gating
             const features = company?.SubscriptionPlan?.features || [];
@@ -628,6 +624,20 @@ const AppShell = ({ children, onLogout, companies = [], currentCompanyId, onComp
   );
 };
 
+const ProtectedShell = ({ Component, props, onLogout, companies, companyId, handleCompanyChange, stats }) => {
+  const location = useLocation();
+  const isWrite = location.pathname.includes('/new') || location.pathname.includes('/edit');
+  const Wrapper = isWrite ? WriteProtectedRoute : ReadProtectedRoute;
+  
+  return (
+    <Wrapper>
+      <AppShell onLogout={onLogout} companies={companies} currentCompanyId={companyId} onCompanyChange={handleCompanyChange} stats={stats}>
+        <Component companyId={companyId} {...props} />
+      </AppShell>
+    </Wrapper>
+  );
+};
+
 // ═══════════════════════════════════════════════════════════════════
 // AUTHENTICATED APP
 // ═══════════════════════════════════════════════════════════════════
@@ -709,10 +719,18 @@ function AuthenticatedApp() {
     fetchContext();
   }, [companyId]);
 
+
+
   const shell = (Component, props = {}) => (
-    <AppShell onLogout={handleLogout} companies={companies} currentCompanyId={companyId} onCompanyChange={handleCompanyChange} stats={stats}>
-      <Component companyId={companyId} {...props} />
-    </AppShell>
+    <ProtectedShell 
+       Component={Component} 
+       props={props} 
+       onLogout={handleLogout} 
+       companies={companies} 
+       companyId={companyId} 
+       handleCompanyChange={handleCompanyChange} 
+       stats={stats} 
+    />
   );
 
   return (
