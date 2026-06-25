@@ -101,7 +101,7 @@ const SettingsDashboard = () => {
   return (
     <div className="flex h-screen bg-slate-50 overflow-hidden font-sans">
       {/* Left Sidebar Pane - Desktop */}
-      <aside className="hidden md:flex md:flex-col md:w-64 bg-white border-r border-slate-200 shrink-0">
+      <aside className="hidden md:flex md:flex-col md:w-64 bg-white border-r border-slate-200 shrink-0 print:hidden">
         <div className="h-16 flex items-center px-6 border-b border-slate-100 bg-slate-50/50">
           <div className="flex flex-col">
             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Workspace Settings</span>
@@ -171,7 +171,7 @@ const SettingsDashboard = () => {
       {/* Main Content Workspace Pane */}
       <main className="flex-1 flex flex-col overflow-y-auto min-w-0">
         {/* Mobile Header Banner */}
-        <div className="md:hidden h-16 bg-white border-b border-slate-200 px-4 flex items-center justify-between shrink-0">
+        <div className="md:hidden print:hidden h-16 bg-white border-b border-slate-200 px-4 flex items-center justify-between shrink-0">
           <div className="flex flex-col">
             <span className="text-[8px] font-bold text-slate-400 uppercase">Settings</span>
             <span className="text-xs font-bold text-slate-800 truncate max-w-[150px]">{companyName}</span>
