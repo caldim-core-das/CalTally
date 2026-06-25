@@ -522,7 +522,6 @@ const InvoiceDetail = ({ id, company, navigate, onRefresh }) => {
                         </div>
                     )}
 
-                    <div>
                       {/* —— Top Header: Company (left) | TAX INVOICE (right) —— */}
                       <div className="flex justify-between items-start mb-12">
                         <div className="space-y-1 relative z-10">
