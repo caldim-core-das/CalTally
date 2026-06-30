@@ -215,6 +215,27 @@ module.exports = (sequelize, DataTypes) => {
     image: {
       type: DataTypes.TEXT,
       allowNull: true
+    },
+    tdsApplicable: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false
+    },
+    tds_section: {
+      type: DataTypes.STRING,
+      allowNull: true
+    },
+    tds_rate: {
+      type: DataTypes.DOUBLE,
+      allowNull: true
+    },
+    tcsApplicable: {
+      type: DataTypes.BOOLEAN,
+      allowNull: true,
+      defaultValue: false
+    },
+    tcsRate: {
+      type: DataTypes.DOUBLE,
+      allowNull: true
     }
   }, {
     paranoid: true

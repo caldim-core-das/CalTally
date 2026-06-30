@@ -11,6 +11,7 @@ import { ledgerAPI, inventoryAPI, salesAPI, companyAPI, projectAPI, mailAPI } fr
 import { getCurrencyDisplay } from '../../utils/currencies';
 import ConfirmModal from '../../components/ConfirmModal';
 import EmailSendModal from '../../components/EmailSendModal';
+import useNotificationStore from '../../store/notificationStore';
 
 // ─────────────────────────────────────────────────
 // ACCOUNT OPTIONS DEFINITION
@@ -334,6 +335,8 @@ export default function ProfessionalInvoiceView() {
   const [loading,   setLoading]   = useState(true);
   const [currencySymbol, setCurrencySymbol] = useState('₹');
   
+  const { addNotification, addActivity } = useNotificationStore();
+  
   // Header Info
   const [customerId, setCustomerId] = useState('');
   const [projectId,  setProjectId]  = useState('');
@@ -401,6 +404,8 @@ export default function ProfessionalInvoiceView() {
   const [taxType,         setTaxType]         = useState('GST');
   const [gstPercent,      setGstPercent]      = useState(0); // Default 0% - applied only when a tax is selected
   const [taxId,           setTaxId]           = useState('');
+  const [tcsApplicable,   setTcsApplicable]   = useState(false);
+  const [tcsRate,         setTcsRate]         = useState(0);
 
   const [notes,      setNotes]      = useState('Thanks for your business.');
   const [termsText,  setTermsText]  = useState('');
@@ -584,6 +589,8 @@ export default function ProfessionalInvoiceView() {
                 if (parsed.discountPercent) setDiscountPercent(parsed.discountPercent);
                 if (parsed.adjustment) setAdjustment(parsed.adjustment);
                 if (parsed.gstPercent) setGstPercent(parsed.gstPercent);
+                if (parsed.tcsApplicable) setTcsApplicable(parsed.tcsApplicable);
+                if (parsed.tcsRate) setTcsRate(parsed.tcsRate);
                 if (parsed.notes) setNotes(parsed.notes);
                 if (parsed.termsText) setTermsText(parsed.termsText);
                 if (parsed.currencyCode) setCurrencyCode(parsed.currencyCode);
@@ -604,11 +611,12 @@ export default function ProfessionalInvoiceView() {
       const draft = {
         customerId, invoiceNo, orderNo, invoiceDate, dueDate, terms,
         salesperson, subject, lineItems, discountPercent, adjustment,
-        gstPercent, notes, termsText, currencyCode, currencySymbol, exchangeRate
+        gstPercent, notes, termsText, currencyCode, currencySymbol, exchangeRate,
+        tcsApplicable, tcsRate
       };
       localStorage.setItem('invoice_draft_new', JSON.stringify(draft));
     }
-  }, [id, loading, customerId, invoiceNo, orderNo, invoiceDate, dueDate, terms, salesperson, subject, lineItems, discountPercent, adjustment, gstPercent, notes, termsText, currencyCode, currencySymbol, exchangeRate]);
+  }, [id, loading, customerId, invoiceNo, orderNo, invoiceDate, dueDate, terms, salesperson, subject, lineItems, discountPercent, adjustment, gstPercent, notes, termsText, currencyCode, currencySymbol, exchangeRate, tcsApplicable, tcsRate]);
 
   // ─── Calculation Logic ──────────────────────────────────────────
   const filteredCustomers = useMemo(() => {
@@ -631,7 +639,11 @@ export default function ProfessionalInvoiceView() {
 
   const discountAmount = useMemo(() => (subTotal * (discountPercent / 100)), [subTotal, discountPercent]);
   const gstAmount      = useMemo(() => ((subTotal - discountAmount) * (gstPercent / 100)), [subTotal, discountAmount, gstPercent]);
-  const total = useMemo(() => subTotal - discountAmount + gstAmount + parseFloat(adjustment || 0), [subTotal, discountAmount, gstAmount, adjustment]);
+  const tcsAmount      = useMemo(() => (tcsApplicable ? ((subTotal - discountAmount + gstAmount) * (parseFloat(tcsRate || 0) / 100)) : 0), [subTotal, discountAmount, gstAmount, tcsApplicable, tcsRate]);
+  const total = useMemo(() => {
+     let t = subTotal - discountAmount + gstAmount + parseFloat(adjustment || 0) + tcsAmount;
+     return t;
+  }, [subTotal, discountAmount, gstAmount, adjustment, tcsAmount]);
 
   const totalQuantity = useMemo(() => lineItems.reduce((acc, line) => acc + parseFloat(line.quantity || 0), 0), [lineItems]);
 
@@ -672,7 +684,23 @@ export default function ProfessionalInvoiceView() {
     }));
   };
 
-  const handleSave = async (status = 'Confirmed') => {
+  const handleSave = async (status = 'Confirmed', skipStockCheck = false) => {
+    const checkStockAlerts = () => {
+        lineItems.forEach(line => {
+            if (line.itemId) {
+                const item = items.find(i => i.id === line.itemId);
+                if (item) {
+                    const newStock = (parseFloat(item.currentStock) || 0) - (parseFloat(line.quantity) || 0);
+                    if (item.reorderLevel > 0 && newStock < item.reorderLevel && newStock >= 0) {
+                        const msg = `Item "${item.name}" stock (${newStock}) is below reorder level (${item.reorderLevel}). Please restore stock immediately.`;
+                        addNotification(msg, 'warning');
+                        addActivity({ title: 'Low Stock Alert', detail: msg, module: 'Inventory', type: 'alert' });
+                    }
+                }
+            }
+        });
+    };
+
     if (!customerId) {
         setModalConfig({
             isOpen: true,
@@ -696,6 +724,33 @@ export default function ProfessionalInvoiceView() {
             confirmText: 'Got it'
         });
         return;
+    }
+
+    if (!skipStockCheck && status === 'Confirmed') {
+        let insufficientStockItem = null;
+        for (const line of validItems) {
+            const item = items.find(i => i.id === line.itemId);
+            if (item) {
+                const newStock = (parseFloat(item.currentStock) || 0) - (parseFloat(line.quantity) || 0);
+                if (newStock < 0) {
+                    insufficientStockItem = { name: item.name, available: parseFloat(item.currentStock) || 0, requested: parseFloat(line.quantity) || 0 };
+                    break;
+                }
+            }
+        }
+
+        if (insufficientStockItem) {
+            setModalConfig({
+                isOpen: true,
+                title: 'Insufficient Stock Warning',
+                message: `Warning: You only have ${insufficientStockItem.available} "${insufficientStockItem.name}" in stock! Are you sure you want to sell ${insufficientStockItem.requested}?`,
+                type: 'warning',
+                showCancel: true,
+                confirmText: 'Yes, Sell anyway',
+                onConfirm: () => handleSave(status, true)
+            });
+            return;
+        }
     }
 
     setIsSaving(true);
@@ -722,6 +777,7 @@ export default function ProfessionalInvoiceView() {
       if (id) {
          await salesAPI.updateInvoice(id, payload);
          if (status === 'Confirmed') {
+             checkStockAlerts();
              const customer = customers.find(c => String(c.id) === String(customerId));
              setSavedInvoiceData({
                   ...payload,
@@ -753,6 +809,7 @@ export default function ProfessionalInvoiceView() {
          const newId = res.data?.id;
          if (newId) {
              if (status === 'Confirmed') {
+                 checkStockAlerts();
                  const customer = customers.find(c => String(c.id) === String(customerId));
                  setSavedInvoiceData({
                      ...payload,
@@ -1483,25 +1540,31 @@ export default function ProfessionalInvoiceView() {
  
                <div className="flex justify-between items-center text-[13px] py-2">
                  <div className="flex items-center gap-4">
-                   <label className="flex items-center gap-2 cursor-pointer">
-                     <input type="radio" checked={tdsType === 'TDS'} onChange={() => setTdsType('TDS')} className="accent-blue-600 w-4 h-4" />
-                     <span className="text-[13px] font-bold text-slate-700">TDS</span>
-                   </label>
-                   <label className="flex items-center gap-2 cursor-pointer">
-                     <input type="radio" checked={tdsType === 'TCS'} onChange={() => setTdsType('TCS')} className="accent-blue-600 w-4 h-4" />
-                     <span className="text-[13px] font-bold text-slate-700">TCS</span>
-                   </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                        <input 
+                            type="checkbox" 
+                            checked={tcsApplicable} 
+                            onChange={e => setTcsApplicable(e.target.checked)} 
+                            className="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"
+                        />
+                        <span className="text-[13px] font-bold text-slate-700">Apply TCS</span>
+                    </label>
                  </div>
+                 {tcsApplicable && (
                  <div className="flex items-center gap-2">
-                    <select className="h-9 px-3 bg-white border border-slate-200 rounded-lg text-[13px] font-medium text-slate-500 outline-none min-w-[140px] focus:border-blue-500 transition-all cursor-pointer">
-                      <option value="">Select a Tax</option>
-                      <option value="1">TDS @ 1%</option>
-                      <option value="2">TDS @ 2%</option>
-                      <option value="5">TDS @ 5%</option>
-                      <option value="10">TDS @ 10%</option>
-                    </select>
-                    <span className="text-slate-600 font-bold">- 0.00</span>
+                    <label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">TCS Rate (%)</label>
+                    <input 
+                        type="number"
+                        value={tcsRate} 
+                        onChange={e => setTcsRate(e.target.value)}
+                        className="w-24 h-9 px-3 border border-slate-200 rounded text-[13px] outline-none focus:border-blue-400 font-medium text-slate-700" 
+                        placeholder="e.g. 1"
+                    />
+                    <span className="text-slate-600 font-bold min-w-[60px] text-right">
+                      + {tcsAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    </span>
                  </div>
+                 )}
                </div>
  
                <div className="flex justify-between items-center text-[13px]">
@@ -1577,7 +1640,10 @@ export default function ProfessionalInvoiceView() {
         <ConfirmModal
           isOpen={modalConfig.isOpen}
           onClose={() => setModalConfig({ ...modalConfig, isOpen: false })}
-          onConfirm={() => setModalConfig({ ...modalConfig, isOpen: false })}
+          onConfirm={() => {
+              if (modalConfig.onConfirm) modalConfig.onConfirm();
+              setModalConfig(prev => ({ ...prev, isOpen: false }));
+          }}
           title={modalConfig.title}
           message={modalConfig.message}
           type={modalConfig.type}

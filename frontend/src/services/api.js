@@ -7,6 +7,10 @@ const api = axios.create({
   withCredentials: true // Always send cookies
 });
 
+// In-memory fallback for cross-domain setups (Vercel -> Render)
+// where document.cookie cannot read cross-domain cookies
+let memoryCsrfToken = null;
+
 // Helper to extract a cookie by name
 const getCookie = (name) => {
   const value = `; ${document.cookie}`;
@@ -15,11 +19,25 @@ const getCookie = (name) => {
   return null;
 };
 
+// Intercept responses to aggressively capture any new CSRF tokens from headers
+api.interceptors.response.use((response) => {
+  const headerCsrf = response.headers['x-csrf-token'];
+  if (headerCsrf) {
+    memoryCsrfToken = headerCsrf;
+  }
+  return response;
+}, (error) => {
+  if (error.response?.headers?.['x-csrf-token']) {
+    memoryCsrfToken = error.response.headers['x-csrf-token'];
+  }
+  return Promise.reject(error);
+});
+
 // Attach CSRF token and active company ID to every request
 api.interceptors.request.use(config => {
   // Add CSRF token for state-changing requests
   if (config.method && ['post', 'put', 'patch', 'delete'].includes(config.method.toLowerCase())) {
-    const csrfToken = getCookie('csrfToken');
+    const csrfToken = getCookie('csrfToken') || memoryCsrfToken;
     if (csrfToken) {
       config.headers['X-CSRF-Token'] = csrfToken;
     }
@@ -61,20 +79,20 @@ api.interceptors.response.use(
       !originalRequest._csrfRetry &&
       !originalRequest.url?.includes('/auth/');
 
-    if (isCsrfError) {
-      originalRequest._csrfRetry = true;
-      try {
-        await axios.post(`${API_BASE}/auth/refresh`, {}, { withCredentials: true });
-        await new Promise(r => setTimeout(r, 50)); // let browser register new cookie
-        const freshCsrf = getCookie('csrfToken');
-        if (freshCsrf) {
-          originalRequest.headers['X-CSRF-Token'] = freshCsrf;
+      if (isCsrfError) {
+        originalRequest._csrfRetry = true;
+        try {
+          const refreshRes = await axios.post(`${API_BASE}/auth/refresh`, {}, { withCredentials: true });
+          const freshCsrf = refreshRes.headers['x-csrf-token'] || getCookie('csrfToken') || memoryCsrfToken;
+          if (freshCsrf) {
+            memoryCsrfToken = freshCsrf;
+            originalRequest.headers['X-CSRF-Token'] = freshCsrf;
+          }
+          return api(originalRequest);
+        } catch (_refreshErr) {
+          // Refresh failed — fall through to normal reject
         }
-        return api(originalRequest);
-      } catch (_refreshErr) {
-        // Refresh failed — fall through to normal reject
       }
-    }
 
     // ── Access token expired (401) ────────────────────────────────────
     if (error.response?.status === 401 && !originalRequest._retry) {
@@ -86,13 +104,13 @@ api.interceptors.response.use(
       if (isRefreshing) {
         // Queue this request until the refresh completes
         return new Promise((resolve, reject) => {
-          failedQueue.push({ resolve, reject });
-        }).then(() => {
-          const freshCsrf = getCookie('csrfToken');
+          failedQueue.push({ resolve, reject, config: originalRequest });
+        }).then((token) => {
+          // Retry the original request without needing to manually attach a token
+          const freshCsrf = getCookie('csrfToken') || memoryCsrfToken;
           if (freshCsrf) {
             originalRequest.headers['X-CSRF-Token'] = freshCsrf;
           }
-          // Retry the original request without needing to manually attach a token
           return api(originalRequest);
         }).catch(err => Promise.reject(err));
       }
@@ -101,18 +119,12 @@ api.interceptors.response.use(
       isRefreshing = true;
 
       try {
-        // Refresh token is in httpOnly cookie — sent automatically
-        const refreshRes = await axios.post(
-          `${API_BASE}/auth/refresh`,
-          {},
-          { withCredentials: true }
-        );
-
+        const refreshRes = await axios.post(`${API_BASE}/auth/refresh`, {}, { withCredentials: true });
+        
         if (refreshRes.data) {
-          // Wait for a short moment to ensure cookies are registered by the browser
-          await new Promise(r => setTimeout(r, 50));
-          const freshCsrf = getCookie('csrfToken');
+          const freshCsrf = refreshRes.headers['x-csrf-token'] || getCookie('csrfToken') || memoryCsrfToken;
           if (freshCsrf) {
+            memoryCsrfToken = freshCsrf;
             originalRequest.headers['X-CSRF-Token'] = freshCsrf;
           }
           processQueue(null);
@@ -148,18 +160,38 @@ export const googleLogin = (credential) => api.post('/auth/google-login', { cred
  * This endpoint validates that cookie and sets the full session cookies.
  */
 export const exchangeOAuthToken = () => api.post('/auth/oauth-token-exchange', {});
-
 export const getCurrentUser = () => api.get('/auth/me');
+export const logout = () => api.post('/auth/logout');
 
-export const authAPI = { register, login, googleLogin, exchangeOAuthToken, getCurrentUser };
+export const authAPI = {
+  register,
+  login,
+  logout,
+  googleLogin,
+  exchangeOAuthToken,
+  getCurrentUser,
+  getProfile: () => api.get('/auth/profile'),
+  changePassword: (data) => api.post('/auth/change-password', data),
+  getNotificationPreferences: () => api.get('/auth/notification-preferences'),
+  saveNotificationPreferences: (data) => api.post('/auth/notification-preferences', data)
+};
 
 // ─── Users ─────────────────────────────────────────
 export const usersAPI = {
   getCompanyUsers: () => api.get('/users'),
   inviteUser: (data) => api.post('/users/invite', data),
   updateUserRole: (userId, data) => api.put(`/users/${userId}/role`, data),
-  removeUser: (userId) => api.delete(`/users/${userId}`)
+  removeUser: (userId) => api.delete(`/users/${userId}`),
+  requestEmailChange: (newEmail) => api.post('/users/request-email-change', { newEmail })
 };
+
+// ─── Roles ─────────────────────────────────────────
+export const rolesAPI = {
+  getRoles: () => api.get('/roles'),
+  createRole: (data) => api.post('/roles', data),
+  updateRole: (id, data) => api.put(`/roles/${id}`, data)
+};
+
 
 // ─── Companies ─────────────────────────────────────
 export const companyAPI = {
@@ -169,6 +201,28 @@ export const companyAPI = {
   update: (id, data) => api.put(`/companies/${id}`, data),
   getCompanyUsers: () => api.get('/users'),
   syncDefaultLedgers: (id) => api.post(`/companies/${id}/sync-default-ledgers`),
+  closeFinancialYear: (id) => api.post(`/companies/close-year/${id}`),
+};
+
+export const settingsAPI = {
+  createFinancialPeriod: (data) => api.post('/settings/financial-periods', data),
+  getFinancialPeriods: () => api.get('/settings/financial-periods'),
+  togglePeriodLock: (id, isLocked) => api.patch(`/settings/financial-periods/${id}/lock`, { isLocked }),
+  setLegacyPeriodLock: (data) => api.post('/settings/period-lock', data),
+  getLegacyPeriodLock: () => api.get('/settings/period-lock'),
+};
+
+export const supportAPI = {
+  createTicket: (data) => api.post('/support', data),
+  getCompanyTickets: () => api.get('/support'),
+  getAllTicketsAdmin: () => api.get('/support/admin'),
+  replyToTicket: (id, data) => api.put(`/support/admin/${id}`, data),
+};
+
+export const subscriptionAPI = {
+  getPlans: () => api.get('/subscription/plans'),
+  createOrder: (planId) => api.post('/subscription/create-order', { planId }),
+  mockSuccess: (orderId) => api.post('/subscription/mock-success', { orderId }),
 };
 
 // ─── Groups ────────────────────────────────────────
@@ -210,6 +264,7 @@ export const purchaseAPI = {
   getVendors: (companyId) => api.get(`/${companyId}/purchases/vendors`),
   getOrders: (companyId) => api.get(`/${companyId}/purchases/orders`),
   createOrder: (data) => api.post(`/${data.companyId || sessionStorage.getItem('companyId')}/purchases/orders`, data),
+  batchRestock: (data) => api.post(`/${data.companyId || sessionStorage.getItem('companyId')}/purchases/orders/batch-restock`, data),
   updateOrder: (id, data) => api.put(`/${data.companyId || sessionStorage.getItem('companyId')}/purchases/orders/${id}`, data),
   deleteOrder: (id) => api.delete(`/${sessionStorage.getItem('companyId')}/purchases/orders/${id}`),
   getBills: (companyId) => api.get(`/${companyId}/purchases/bills`),
@@ -231,7 +286,7 @@ export const paymentMadeAPI = {
   update: (id, data) => api.put(`/${data.companyId || sessionStorage.getItem('companyId')}/purchases/payments-made/${id}`, data),
   delete: (id) => api.delete(`/${sessionStorage.getItem('companyId')}/purchases/payments-made/${id}`),
   markAsPaid: (id) => api.patch(`/${sessionStorage.getItem('companyId')}/purchases/payments-made/${id}/mark-paid`),
-  getUnpaidBills: (vendorId, companyId, excludePaymentId = null) => api.get(`/${companyId}/purchases/unpaid-bills/${vendorId}`, { params: { excludePaymentId } }),
+  getUnpaidBills: (vendorId, companyId, excludePaymentId = null) => api.get(`/${companyId}/purchases/unpaid-bills/${vendorId}`, { params: { companyId, excludePaymentId } }),
   getNextNumber: (companyId) => api.get(`/${companyId}/purchases/payments-made/next-number`),
 };
 
@@ -267,7 +322,7 @@ export const reportsAPI = {
   daybook: (companyId, from, to) => api.get(`/reports/daybook/${companyId}`, { params: { from, to } }),
   dashboard: (companyId) => api.get(`/reports/dashboard/${companyId}`),
   ledgerStatement: (ledgerId, from, to) => api.get(`/reports/ledger-statement/${ledgerId}`, { params: { from, to } }),
-  auditTrail: (companyId) => api.get(`/reports/audit/${companyId}`),
+  auditTrail: (companyId, from, to) => api.get(`/reports/audit/${companyId}`, { params: { from, to } }),
   cashFlow: (companyId, from, to) => api.get(`/reports/cash-flow/${companyId}`, { params: { from, to } }),
   receivablesReport: (companyId, status) => api.get(`/reports/receivables-report/${companyId}`, { params: { status } }),
   payablesReport: (companyId) => api.get(`/reports/payables-report/${companyId}`),
@@ -282,6 +337,7 @@ export const inventoryAPI = {
   getByCompany: (companyId, type) => api.get(`/inventory/${companyId}`, { params: { type } }),
   updateItem: (itemId, data) => api.put(`/inventory/${itemId}`, data),
   updateStock: (itemId, data) => api.post(`/inventory/stock/${itemId}`, data),
+  adjustStock: (itemId, data) => api.post(`/inventory/${itemId}/adjust`, data),
   uploadImage: (formData) => api.post('/inventory/upload', formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
   getItemHistory: (id) => api.get(`/inventory/${id}/history`),
   deleteItem: (id) => api.delete(`/inventory/${id}`),
@@ -341,7 +397,20 @@ export const salesAPI = {
   getOpenInvoices: (customerId) => api.get(`/sales/invoices/open/${customerId}`),
   recordPayment: (data) => api.post('/sales/payments/record', data),
   applyCredit: (data) => api.post('/sales/credits/apply', data),
-  getNextNumber: (companyId, type) => api.get(`/sales/next-number/${companyId}/${type}`)
+  getNextNumber: (companyId, type) => api.get(`/sales/next-number/${companyId}/${type}`),
+  triggerReminders: (companyId) => api.post(`/sales/trigger-reminders/${companyId}`)
+};
+
+export const paymentAPI = {
+  getGateways: () => api.get('/payment/gateways'),
+  saveGateway: (data) => api.post('/payment/gateways', data),
+  updateGatewayStatus: (id, isActive) => api.put(`/payment/gateways/${id}/status`, { isActive }),
+  testConnection: (data) => api.post('/payment/gateways/test', data),
+  generateLink: (invoiceId) => api.post(`/payment/invoices/${invoiceId}/link`),
+  getTransactions: (invoiceId) => api.get(`/payment/invoices/${invoiceId}/transactions`),
+  getPublicInvoice: (shareToken) => api.get(`/sales/public/invoices/${shareToken}`),
+  recordSettlement: (data) => api.post('/payment/settlements/reconcile', data),
+  getUnsettledTransactions: () => api.get('/payment/settlements/unsettled')
 };
 
 // ─── Quotes ────────────────────────────────────────
@@ -372,7 +441,9 @@ export const recurringInvoiceAPI = {
   update: (id, data) => api.put(`/recurring-invoices/${id}`, data),
   delete: (id) => api.delete(`/recurring-invoices/${id}`),
   getHistory: (id) => api.get(`/recurring-invoices/history/${id}`),
-  processDue: () => api.post('/recurring-invoices/process-due')
+  processDue: () => api.post('/recurring-invoices/process-due'),
+  getChildInvoices: (id, companyId) => api.get(`/recurring-invoices/child-invoices/${id}`, { params: { companyId } }),
+  createManualInvoice: (id, data) => api.post(`/recurring-invoices/create-manual/${id}`, data),
 };
 
 export const deliveryChallanAPI = {
@@ -541,5 +612,3 @@ export const gstAPI = {
 };
 
 export default api;
-
-

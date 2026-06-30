@@ -4,6 +4,8 @@ import {
   RefreshCcw, Printer, Mail, Download, AlertCircle, Package, Layers, AlertTriangle, ShieldCheck
 } from 'lucide-react';
 import { reportsAPI, inventoryAPI } from '../../services/api';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 const InventoryReportView = () => {
   const navigate = useNavigate();
@@ -60,6 +62,77 @@ const InventoryReportView = () => {
 
   const fmt = (v) => `₹${Number(v || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
 
+  const handleDownloadPDF = () => {
+    const doc = new jsPDF();
+    const companyName = sessionStorage.getItem('companyName') || 'CalTally Company';
+    
+    // Title
+    doc.setFontSize(20);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(30, 41, 59);
+    doc.text('INVENTORY VALUATION SUMMARY', 14, 22);
+    
+    // Sub-header
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(100, 116, 139);
+    doc.text(`Company: ${companyName}`, 14, 28);
+    doc.text(`Filter status: ${filterStatus} | Category: ${selectedCategory ? 'Filtered' : 'All'} | Godown: ${selectedGodown ? 'Filtered' : 'All'}`, 14, 33);
+    doc.text(`Generated: ${new Date().toLocaleString('en-IN')}`, 14, 38);
+    
+    // Draw line
+    doc.setDrawColor(226, 232, 240);
+    doc.line(14, 42, 196, 42);
+    
+    // Summary Metrics
+    if (summary) {
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(15, 23, 42);
+      doc.text('Inventory Status Summary', 14, 50);
+      
+      const summaryData = [
+        ['Total Items Count', String(summary.totalItems)],
+        ['Total Valuation', fmt(summary.totalValue)],
+        ['In Stock / Low Stock / Out of Stock', `${summary.inStockCount} / ${summary.lowStockCount} / ${summary.outOfStockCount}`]
+      ];
+      
+      autoTable(doc, {
+        startY: 54,
+        head: [['Metric', 'Value']],
+        body: summaryData,
+        theme: 'grid',
+        headStyles: { fillColor: [15, 23, 42], textColor: [255, 255, 255] },
+        styles: { fontSize: 9, cellPadding: 3 },
+        columnStyles: { 0: { fontStyle: 'bold' } }
+      });
+    }
+    
+    // Table rows
+    const itemRows = filteredItems.map(item => [
+      `${item.name}\nSKU: ${item.sku}`,
+      item.category,
+      item.reorderPoint > 0 ? `${item.reorderPoint} ${item.unit}` : '—',
+      `${item.currentStock} ${item.unit}`,
+      fmt(item.costPrice),
+      fmt(item.sellingPrice),
+      item.stockStatus,
+      fmt(item.stockValue)
+    ]);
+    
+    autoTable(doc, {
+      startY: doc.lastAutoTable ? doc.lastAutoTable.finalY + 12 : 54,
+      head: [['Item Name / SKU', 'Category', 'Reorder Pt', 'Current Stock', 'Cost (INR)', 'Price (INR)', 'Status', 'Value (INR)']],
+      body: itemRows,
+      theme: 'striped',
+      headStyles: { fillColor: [30, 41, 59] },
+      styles: { fontSize: 8, cellPadding: 2 }
+    });
+    
+    // Save PDF
+    doc.save(`Inventory_Report_${companyName.replace(/\s+/g, '_')}.pdf`);
+  };
+
   const filteredItems = React.useMemo(() => {
     if (filterStatus === 'All') return items;
     return items.filter(item => item.stockStatus === filterStatus);
@@ -99,7 +172,7 @@ const InventoryReportView = () => {
            <button onClick={() => window.print()} className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-lg text-[12px] font-bold text-slate-600 hover:bg-slate-50 transition-all">
              <Printer size={16}/> Print
            </button>
-           <button className="flex items-center gap-2 px-6 py-2 bg-[#1e61f0] text-white rounded-lg text-[12px] font-bold hover:bg-[#1a54d1] transition-all shadow-lg shadow-blue-500/20">
+           <button onClick={handleDownloadPDF} className="flex items-center gap-2 px-6 py-2 bg-[#1e61f0] text-white rounded-lg text-[12px] font-bold hover:bg-[#1a54d1] transition-all shadow-lg shadow-blue-500/20">
              <Download size={16}/> Export PDF
            </button>
         </div>
@@ -205,14 +278,10 @@ const InventoryReportView = () => {
              <table className="w-full text-left border-collapse">
                 <thead className="bg-slate-50/50 text-[10px] font-bold uppercase tracking-widest text-slate-400 border-b border-slate-100">
                   <tr>
-                    <th className="px-8 py-4">Item Name / SKU</th>
-                    <th className="px-4 py-4">Category</th>
-                    <th className="px-4 py-4 text-right font-medium">Reorder Pt</th>
-                    <th className="px-4 py-4 text-right font-medium">Current Stock</th>
-                    <th className="px-4 py-4 text-right">Purchase Price (₹)</th>
-                    <th className="px-4 py-4 text-right">Sales Price (₹)</th>
-                    <th className="px-4 py-4 text-center">Status</th>
-                    <th className="px-8 py-4 text-right">Inventory Value (₹)</th>
+                    <th className="px-8 py-4">Product</th>
+                    <th className="px-4 py-4 text-right font-medium">Purchased</th>
+                    <th className="px-4 py-4 text-right font-medium">Sold</th>
+                    <th className="px-4 py-4 text-right font-medium">Available</th>
                   </tr>
                 </thead>
                 <tbody className="text-[12px] text-slate-600">
@@ -224,7 +293,7 @@ const InventoryReportView = () => {
                     </tr>
                   ) : filteredItems.length === 0 ? (
                     <tr>
-                      <td colSpan={8} className="text-center py-12 text-slate-400">No inventory items found matching this filter</td>
+                      <td colSpan={4} className="text-center py-12 text-slate-400">No inventory items found matching this filter</td>
                     </tr>
                   ) : (
                     filteredItems.map((item) => (
@@ -239,21 +308,9 @@ const InventoryReportView = () => {
                             <span className="text-[10px] text-slate-400 font-normal">SKU: {item.sku}</span>
                           </div>
                         </td>
-                        <td className="px-4 py-4 uppercase tracking-tight text-[10px] font-medium text-slate-500">{item.category}</td>
-                        <td className="px-4 py-4 text-right text-slate-500">{item.reorderPoint > 0 ? `${item.reorderPoint} ${item.unit}` : '—'}</td>
+                        <td className="px-4 py-4 text-right font-medium">{item.purchases} {item.unit}</td>
+                        <td className="px-4 py-4 text-right font-medium">{item.sales} {item.unit}</td>
                         <td className="px-4 py-4 text-right font-bold text-slate-700">{item.currentStock} {item.unit}</td>
-                        <td className="px-4 py-4 text-right font-medium text-slate-500">{fmt(item.costPrice)}</td>
-                        <td className="px-4 py-4 text-right font-medium text-slate-500">{fmt(item.sellingPrice)}</td>
-                        <td className="px-4 py-4 text-center">
-                          <span className={`px-2 py-0.5 rounded text-[9px] font-bold border uppercase tracking-wider ${
-                            item.stockStatus === 'In Stock' ? 'bg-emerald-50 border-emerald-200 text-emerald-600' :
-                            item.stockStatus === 'Low Stock' ? 'bg-amber-50 border-amber-200 text-amber-600' :
-                            'bg-rose-50 border-rose-200 text-rose-600'
-                          }`}>
-                            {item.stockStatus}
-                          </span>
-                        </td>
-                        <td className="px-8 py-4 text-right font-black text-slate-900">{fmt(item.stockValue)}</td>
                       </tr>
                     ))
                   )}

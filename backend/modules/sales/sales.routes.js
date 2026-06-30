@@ -3,6 +3,9 @@ const router = express.Router();
 const salesController = require('./sales.controller');
 const { verifyToken, authorizeRoles, tenantAccess } = require('../../middleware/auth.middleware');
 
+// Public shared route for customer checkout — bypasses auth token requirement
+router.get('/public/invoices/:share_token', salesController.getPublicInvoiceByShareToken);
+
 router.use(verifyToken, tenantAccess);
 
 // Create orders & invoices — ACCOUNTANT and above
@@ -27,5 +30,8 @@ router.get('/invoices/open/:customerId', salesController.getOpenInvoices);
 router.get('/next-number/:companyId/:type', salesController.getNextNumber);
 router.post('/payments/record', authorizeRoles('ACCOUNTANT', 'ADMIN', 'SUPER_ADMIN'), salesController.recordPayment);
 router.post('/credits/apply', authorizeRoles('ACCOUNTANT', 'ADMIN', 'SUPER_ADMIN'), salesController.applyCredit);
+
+// Smart Payment Reminder Trigger
+router.post('/trigger-reminders/:companyId', authorizeRoles('ACCOUNTANT', 'ADMIN', 'SUPER_ADMIN'), salesController.triggerReminders);
 
 module.exports = router;

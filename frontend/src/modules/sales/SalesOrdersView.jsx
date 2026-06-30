@@ -4,16 +4,19 @@ import {
   Plus, Search, Filter, Download, Columns, Rows, ChevronLeft, ChevronRight, ChevronDown,
   Settings, X, HelpCircle, Package, User, Calendar, FileText, Trash2,
   ArrowLeft, Save, Send, Clock, MoreHorizontal, CheckCircle2, AlertCircle, Loader2, Edit2, RefreshCw, ShieldCheck,
-  Printer, History, Share2, Bold, Italic, Underline, ArrowUp, ArrowDown
+  Printer, History, Share2, Bold, Italic, Underline, ArrowUp, ArrowDown, Mail
 } from 'lucide-react';
-import { salesAPI, ledgerAPI, inventoryAPI, companyAPI, projectAPI } from '../../services/api';
+import { salesAPI, ledgerAPI, inventoryAPI, companyAPI, projectAPI, mailAPI } from '../../services/api';
 import ConfirmModal from '../../components/ConfirmModal';
+import EmailSendModal from '../../components/EmailSendModal';
 import useNotificationStore from '../../store/notificationStore';
 import { getCurrencyDisplay } from '../../utils/currencies';
+import { getUser } from '../../stores/authStore';
+import usePermissions from '../../hooks/usePermissions';
 
-// ─────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // MANAGE SALESPERSONS MODAL (Internal)
-// ─────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const ManageSalespersonsModal = ({ isOpen, onClose, salespersons, onSave, onSelect }) => {
   const [search, setSearch] = useState('');
   const [showAddForm, setShowAddForm] = useState(false);
@@ -93,7 +96,7 @@ const ManageSalespersonsModal = ({ isOpen, onClose, salespersons, onSave, onSele
               filtered.map(s => (
                 <div key={s.id} onClick={() => { onSelect(s.name); onClose(); }} className="grid grid-cols-2 py-3 border-b border-slate-50 hover:bg-blue-50 cursor-pointer rounded transition-colors">
                   <span className="text-[13px] font-bold text-blue-600">{s.name}</span>
-                  <span className="text-[13px] text-slate-500 font-medium">{s.email || '—'}</span>
+                  <span className="text-[13px] text-slate-500 font-medium">{s.email || 'â€”'}</span>
                 </div>
               ))
             )}
@@ -105,9 +108,9 @@ const ManageSalespersonsModal = ({ isOpen, onClose, salespersons, onSave, onSele
   );
 };
 
-// ─────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // CUSTOMER SEARCH SELECTOR
-// ─────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const CustomerSearchSelector = ({ value, onChange, customers, placeholder, onNewCustomer }) => {
     const [isOpen, setIsOpen] = useState(false);
     const [search, setSearch] = useState('');
@@ -197,9 +200,9 @@ const CustomerSearchSelector = ({ value, onChange, customers, placeholder, onNew
     );
 };
 
-// ─────────────────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // ITEM SEARCH SELECTOR
-// ─────────────────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const ItemSearchSelector = ({ value, onChange, items, placeholder, onNewItem }) => {
     const [isOpen, setIsOpen] = useState(false);
     const [search, setSearch] = useState('');
@@ -294,6 +297,7 @@ const ItemSearchSelector = ({ value, onChange, items, placeholder, onNewItem }) 
 };
 
 const SalesOrdersView = ({ companyId }) => {
+    const { canCreate, canEdit, canDelete } = usePermissions();
     const navigate = useNavigate();
     const location = useLocation();
     const [view, setView] = useState(location.pathname === '/sales-orders/new' ? 'form' : 'list'); // 'list', 'form', 'detail'
@@ -303,6 +307,7 @@ const SalesOrdersView = ({ companyId }) => {
     const [customers, setCustomers] = useState([]);
     const [items, setItems] = useState([]);
     const [projects, setProjects] = useState([]);
+    const [currentCompany, setCurrentCompany] = useState(null);
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedOrder, setSelectedOrder] = useState(null);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -310,7 +315,28 @@ const SalesOrdersView = ({ companyId }) => {
     const [salespersons, setSalespersons] = useState([]);
     const [isSalespersonModalOpen, setIsSalespersonModalOpen] = useState(false);
     const [modalConfig, setModalConfig] = useState({ isOpen: false, title: '', message: '', type: 'info', showCancel: false });
+    const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
     const { addNotification } = useNotificationStore();
+
+    const currentUserEmail = useMemo(() => {
+        try {
+            const u = getUser();
+            return u?.email || '';
+        } catch (e) {
+            return '';
+        }
+    }, []);
+
+    const formatDate = (dateStr, options = { day: '2-digit', month: '2-digit', year: 'numeric' }) => {
+        if (!dateStr) return '—';
+        try {
+            const d = new Date(dateStr);
+            if (isNaN(d.getTime())) return '—';
+            return d.toLocaleDateString('en-IN', options);
+        } catch (e) {
+            return '—';
+        }
+    };
 
     // List view states moved to top level
     const [isOptionsOpen, setIsOptionsOpen] = useState(false);
@@ -329,8 +355,11 @@ const SalesOrdersView = ({ companyId }) => {
         subTotal: 0,
         discount: 0,
         taxPercent: 18,
-        taxAmount: 0,
+        tax: 0,
         adjustment: 0,
+        tcsApplicable: false,
+        tcsRate: '',
+        tcsAmount: 0,
         totalAmount: 0,
         status: 'Draft',
         customerNotes: '',
@@ -339,14 +368,18 @@ const SalesOrdersView = ({ companyId }) => {
     });
 
     const fetchData = async () => {
-        if (!companyId) return;
+        if (!companyId) {
+            setLoading(false);
+            return;
+        }
         setLoading(true);
         try {
-            const [oRes, cRes, iRes, projRes] = await Promise.all([
+            const [oRes, cRes, iRes, projRes, compRes] = await Promise.all([
                 salesAPI.getOrders(companyId),
                 ledgerAPI.getByCompany(companyId),
                 inventoryAPI.getByCompany(companyId, 'sales'),
-                projectAPI.getByCompany(companyId)
+                projectAPI.getByCompany(companyId),
+                companyAPI.getById(companyId)
             ]);
 
             setOrders(Array.isArray(oRes.data) ? oRes.data : []);
@@ -358,6 +391,7 @@ const SalesOrdersView = ({ companyId }) => {
             ) : []);
             setItems(Array.isArray(iRes.data) ? iRes.data : []);
             setProjects(Array.isArray(projRes.data) ? projRes.data : []);
+            setCurrentCompany(compRes.data || null);
         } catch (err) {
             console.error('Fetch error:', err);
             addNotification('Failed to sync sales data.', 'error');
@@ -377,10 +411,11 @@ const SalesOrdersView = ({ companyId }) => {
         const subTotal = formData.items.reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0);
         const discountAmt = subTotal * (parseFloat(formData.discount || 0) / 100);
         const taxableAmount = subTotal - discountAmt;
-        const taxAmount = taxableAmount * (parseFloat(formData.taxPercent || 0) / 100);
-        const total = taxableAmount + taxAmount + (parseFloat(formData.adjustment || 0));
-        setFormData(prev => ({ ...prev, subTotal, taxAmount, totalAmount: total }));
-    }, [formData.items, formData.discount, formData.taxPercent, formData.adjustment]);
+        const tax = taxableAmount * (parseFloat(formData.taxPercent || 0) / 100);
+        const tcsAmt = formData.tcsApplicable ? (taxableAmount + tax) * (parseFloat(formData.tcsRate || 0) / 100) : 0;
+        const total = taxableAmount + tax + (parseFloat(formData.adjustment || 0)) + tcsAmt;
+        setFormData(prev => ({ ...prev, subTotal, tax, tcsAmount: tcsAmt, totalAmount: total }));
+    }, [formData.items, formData.discount, formData.taxPercent, formData.adjustment, formData.tcsApplicable, formData.tcsRate]);
 
     const handleItemUpdate = (id, field, value) => {
         setFormData(prev => {
@@ -428,15 +463,35 @@ const SalesOrdersView = ({ companyId }) => {
         setSaving(true);
         try {
             const payload = { ...formData, companyId, status: statusValue };
+            let savedOrder;
             if (formData.id) {
-                await salesAPI.updateOrder(formData.id, payload);
+                const res = await salesAPI.updateOrder(formData.id, payload);
+                savedOrder = res.data;
                 addNotification('Sales Order updated.', 'success');
             } else {
-                await salesAPI.createOrder(payload);
+                const res = await salesAPI.createOrder(payload);
+                savedOrder = res.data;
                 addNotification('Sales Order created.', 'success');
             }
-            setView('list');
+            
             fetchData();
+            
+            if (statusValue === 'Sent') {
+                const customer = customers.find(c => c.id === formData.customerId);
+                const detailedOrder = {
+                    ...formData,
+                    ...savedOrder,
+                    id: savedOrder?.id || formData.id,
+                    Customer: customer,
+                    Items: formData.items,
+                    LedgerId: formData.customerId
+                };
+                setSelectedOrder(detailedOrder);
+                setView('detail');
+                setTimeout(() => setIsEmailModalOpen(true), 100);
+            } else {
+                setView('list');
+            }
         } catch (err) {
             addNotification('Failed to save sales order.', 'error');
         } finally {
@@ -459,6 +514,19 @@ const SalesOrdersView = ({ companyId }) => {
     };
 
     const resetForm = async () => {
+        // Restore a stashed draft if navigated back from project creation
+        const stashed = localStorage.getItem('so_draft_form');
+        if (stashed) {
+            try {
+                const draft = JSON.parse(stashed);
+                localStorage.removeItem('so_draft_form');
+                setFormData(draft);
+                return;
+            } catch (e) {
+                localStorage.removeItem('so_draft_form');
+            }
+        }
+
         let nextNo = `SO-${String(orders.length + 1).padStart(5, '0')}`;
         try {
             const nextRes = await salesAPI.getNextNumber(companyId, 'order');
@@ -480,8 +548,11 @@ const SalesOrdersView = ({ companyId }) => {
             subTotal: 0,
             discount: 0,
             taxPercent: 18,
-            taxAmount: 0,
+            tax: 0,
             adjustment: 0,
+            tcsApplicable: false,
+            tcsRate: '',
+            tcsAmount: 0,
             totalAmount: 0,
             status: 'Draft',
             customerNotes: '',
@@ -495,7 +566,23 @@ const SalesOrdersView = ({ companyId }) => {
             setFormData({
                 ...order,
                 customerId: order.LedgerId,
-                items: order.Items?.map(i => ({ ...i, id: i.id })) || [{ id: Date.now(), itemId: '', detail: '', quantity: 1, rate: 0, amount: 0 }]
+                items: order.Items?.map(i => ({ 
+                    ...i, 
+                    id: i.id, 
+                    itemId: i.ItemId || i.itemId,
+                    quantity: parseFloat(i.quantity) || 0,
+                    rate: parseFloat(i.rate) || 0,
+                    amount: parseFloat(i.amount) || 0
+                })) || [{ id: Date.now(), itemId: '', detail: '', quantity: 1, rate: 0, amount: 0 }],
+                subTotal: parseFloat(order.subTotal) || 0,
+                discount: parseFloat(order.discount) || 0,
+                taxPercent: parseFloat(order.taxPercent) || 0,
+                tax: parseFloat(order.tax) || 0,
+                adjustment: parseFloat(order.adjustment) || 0,
+                tcsApplicable: order.tcsApplicable || false,
+                tcsRate: order.tcsRate || '',
+                tcsAmount: parseFloat(order.tcsAmount) || 0,
+                totalAmount: parseFloat(order.totalAmount) || 0,
             });
         } else {
             await resetForm();
@@ -509,6 +596,7 @@ const SalesOrdersView = ({ companyId }) => {
                 resetForm();
                 setView('form');
             }
+            setLoading(false);
         } else if (location.pathname === '/sales-orders') {
             setView('list');
         }
@@ -571,12 +659,14 @@ const SalesOrdersView = ({ companyId }) => {
                         <ChevronDown size={18} className="text-blue-600 mt-1" />
                     </div>
                     <div className="flex items-center gap-3">
-                        <button 
-                            onClick={() => navigate('/sales-orders/new')}
-                            className="bg-[#1e61f0] hover:bg-[#1a54d1] text-white px-5 py-2.5 rounded-md font-bold text-[12px] uppercase tracking-widest flex items-center gap-2 transition-all shadow-sm"
-                        >
-                            <Plus size={18} strokeWidth={2.5} /> New Order
-                        </button>
+                        {canCreate && (
+                            <button 
+                                onClick={() => navigate('/sales-orders/new')}
+                                className="bg-[#1e61f0] hover:bg-[#1a54d1] text-white px-5 py-2.5 rounded-md font-bold text-[12px] uppercase tracking-widest flex items-center gap-2 transition-all shadow-sm"
+                            >
+                                <Plus size={18} strokeWidth={2.5} /> New Order
+                            </button>
+                        )}
                         <div className="relative">
                             <button 
                                 onClick={(e) => { e.stopPropagation(); setIsOptionsOpen(!isOptionsOpen); }}
@@ -648,7 +738,7 @@ const SalesOrdersView = ({ companyId }) => {
                                         className="hover:bg-slate-50/80 transition-all cursor-pointer group border-b border-slate-50"
                                     >
                                         <td className="px-6 py-6 text-[13px] font-medium text-slate-500 tabular-nums whitespace-nowrap">
-                                            {new Date(order.date).toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit' })}
+                                            {formatDate(order.date, { day: '2-digit', month: '2-digit' })}
                                         </td>
                                         <td className="px-6 py-6">
                                             <div className="text-[14px] font-bold text-[#1e61f0] group-hover:underline uppercase tracking-tight">{order.orderNumber}</div>
@@ -671,18 +761,22 @@ const SalesOrdersView = ({ companyId }) => {
                                         </td>
                                         <td className="px-6 py-6" onClick={e => e.stopPropagation()}>
                                             <div className="flex items-center justify-center gap-2">
-                                                <button 
-                                                    onClick={() => openForm(order)} 
-                                                    className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 text-slate-600 hover:text-blue-600 hover:border-blue-200 rounded shadow-sm transition-all text-[12px] font-medium"
-                                                >
-                                                    <Edit2 size={13} /> Edit
-                                                </button>
-                                                <button 
-                                                    onClick={() => { setDeleteId(order.id); setIsDeleteModalOpen(true); }}
-                                                    className="flex items-center justify-center p-1.5 bg-white border border-slate-200 text-slate-400 hover:text-red-600 hover:border-red-200 hover:bg-red-50 rounded shadow-sm transition-all"
-                                                >
-                                                    <Trash2 size={16} />
-                                                </button>
+                                                {canEdit && (
+                                                    <button 
+                                                        onClick={() => openForm(order)} 
+                                                        className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 text-slate-600 hover:text-blue-600 hover:border-blue-200 rounded shadow-sm transition-all text-[12px] font-medium"
+                                                    >
+                                                        <Edit2 size={13} /> Edit
+                                                    </button>
+                                                )}
+                                                {canDelete && (
+                                                    <button 
+                                                        onClick={() => { setDeleteId(order.id); setIsDeleteModalOpen(true); }}
+                                                        className="flex items-center justify-center p-1.5 bg-white border border-slate-200 text-slate-400 hover:text-red-600 hover:border-red-200 hover:bg-red-50 rounded shadow-sm transition-all"
+                                                    >
+                                                        <Trash2 size={16} />
+                                                    </button>
+                                                )}
                                             </div>
                                         </td>
                                     </tr>
@@ -695,37 +789,40 @@ const SalesOrdersView = ({ companyId }) => {
         );
     };
 
-    const renderFormView = () => (
-        <div className="flex flex-col h-full bg-[#f8fafc] relative">
-            {/* Form Header */}
-            <header className="bg-white border-b border-slate-200 px-8 py-4 flex items-center justify-between shrink-0 sticky top-0 z-20">
-                <div className="flex items-center gap-6">
-                    <button 
-                        onClick={() => navigate('/sales-orders')}
-                        className="p-2 hover:bg-slate-100 rounded text-slate-400 hover:text-slate-900 transition-all"
-                    >
-                        <ArrowLeft size={22} />
-                    </button>
-                    <div>
-                        <h2 className="text-[18px] font-bold text-slate-900 tracking-tight">
-                            {formData.id ? 'Modify Sales Order' : 'Create Sales Order'}
-                        </h2>
-                        <div className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Sales / Orders</div>
-                    </div>
-                </div>
-                <div className="flex items-center gap-4">
-                    <button className="p-2 text-slate-400 hover:text-slate-600 transition-colors"><Settings size={20}/></button>
-                    <div className="w-px h-6 bg-slate-200" />
-                    <button onClick={() => setView('list')} className="p-2 text-slate-400 hover:text-red-500 transition-colors">
-                        <X size={24} />
-                    </button>
-                </div>
-            </header>
+    const renderFormView = () => {
+        const customer = customers.find(c => c.id === formData.customerId);
+        const currencySymbol = getCurrencyDisplay(customer?.currency) || '₹';
 
-            <div className="flex-1 bg-[#f8fafc] overflow-y-auto no-scrollbar">
-                <div className="max-w-[1000px] mx-auto py-10 px-6">
-                    <div className="bg-white rounded border border-slate-200 shadow-2xl shadow-slate-200/50 p-12 space-y-12 animate-fade-in">
-                        
+        return (
+            <div className="flex flex-col h-full bg-[#f8fafc] relative">
+                {/* Form Header */}
+                <header className="bg-white border-b border-slate-200 px-8 py-4 flex items-center justify-between shrink-0 sticky top-0 z-20">
+                    <div className="flex items-center gap-6">
+                        <button 
+                            onClick={() => navigate('/sales-orders')}
+                            className="p-2 hover:bg-slate-100 rounded text-slate-400 hover:text-slate-900 transition-all"
+                        >
+                            <ArrowLeft size={22} />
+                        </button>
+                        <div>
+                            <h2 className="text-[18px] font-bold text-slate-900 tracking-tight">
+                                {formData.id ? 'Modify Sales Order' : 'Create Sales Order'}
+                            </h2>
+                            <div className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Sales / Orders</div>
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-4">
+                        <button className="p-2 text-slate-400 hover:text-slate-600 transition-colors"><Settings size={20}/></button>
+                        <div className="w-px h-6 bg-slate-200" />
+                        <button onClick={() => setView('list')} className="p-2 text-slate-400 hover:text-red-500 transition-colors">
+                            <X size={24} />
+                        </button>
+                    </div>
+                </header>
+
+            <div className="flex-1 bg-white overflow-y-auto no-scrollbar pb-32">
+                <div className="max-w-[1200px] mx-auto pt-6 px-10">
+                    <div className="space-y-12 animate-fade-in">
                         {/* Section Header */}
                         <div className="flex items-center gap-4 mb-8">
                             <h3 className="text-[14px] font-bold text-slate-800">Primary Details</h3>
@@ -824,11 +921,20 @@ const SalesOrdersView = ({ companyId }) => {
                                 <div className="flex-1 max-w-2xl relative group">
                                     <select 
                                         value={formData.projectId} 
-                                        onChange={e => setFormData(p => ({ ...p, projectId: e.target.value }))}
+                                        onChange={e => {
+                                            const val = e.target.value;
+                                            if (val === '__create_new_project__') {
+                                                localStorage.setItem('so_draft_form', JSON.stringify(formData));
+                                                navigate('/time-tracking/projects/new', { state: { returnTo: '/sales-orders/new' } });
+                                            } else {
+                                                setFormData(p => ({ ...p, projectId: val }));
+                                            }
+                                        }}
                                         className="w-full h-9 px-3 bg-white border border-slate-200 rounded text-[13px] font-bold text-slate-900 outline-none focus:border-blue-400 transition-all appearance-none"
                                     >
                                         <option value="">Select or associate project</option>
                                         {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                                        <option value="__create_new_project__">+ Create New Project</option>
                                     </select>
                                     <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
                                 </div>
@@ -865,7 +971,7 @@ const SalesOrdersView = ({ companyId }) => {
                                                         placeholder="Type to select item..."
                                                         onChange={(it) => handleItemUpdate(line.id, 'itemId', it.id)}
                                                         onNewItem={() => {
-                                                            localStorage.setItem('so_draft', JSON.stringify(formData));
+                                                            localStorage.setItem('so_draft_form', JSON.stringify(formData));
                                                             window.open('/inventory/new', '_blank');
                                                         }}
                                                     />
@@ -935,63 +1041,97 @@ const SalesOrdersView = ({ companyId }) => {
                                     </div>
                              </div>
 
-                             <div className="w-96 space-y-4">
-                                    <div className="flex justify-between items-center text-[13px]">
-                                        <span className="font-bold text-slate-500 uppercase tracking-widest">Sub Total</span>
-                                        <div className="flex items-center gap-3">
+                             <div className="w-[480px] space-y-4">
+                                    <div className="flex justify-between items-start text-[13px]">
+                                        <div className="flex flex-col gap-1 whitespace-nowrap">
+                                            <span className="text-slate-700">Sub Total</span>
+                                            <span className="text-slate-600">Total Quantity : {formData.items ? formData.items.reduce((sum, item) => sum + (parseFloat(item.quantity) || 0), 0) : 0}</span>
+                                        </div>
+                                        <div className="flex items-center gap-3 pt-0.5">
                                             <div className="w-36" />
-                                            <span className="w-24 text-right font-bold text-slate-900 font-mono">{formData.subTotal.toFixed(2)}</span>
+                                            <span className="w-32 whitespace-nowrap text-right text-slate-700 font-mono">{currencySymbol} {formData.subTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                                         </div>
                                     </div>
 
                                     <div className="flex justify-between items-center text-[13px]">
-                                        <span className="font-bold text-slate-500 uppercase tracking-widest">Discount (%)</span>
+                                        <span className="text-slate-700">Discount (%)</span>
                                         <div className="flex items-center gap-3">
                                             <div className="w-36 flex justify-end">
                                                 <input type="number" value={formData.discount} onChange={e => setFormData({ ...formData, discount: parseFloat(e.target.value) || 0 })} className="w-24 h-9 px-3 bg-white border border-slate-200 rounded text-right font-bold outline-none focus:border-blue-400 transition-all tabular-nums" />
                                             </div>
-                                            <span className="w-24 text-right font-bold text-slate-600 font-mono">- {(formData.subTotal * (parseFloat(formData.discount || 0) / 100)).toFixed(2)}</span>
+                                            <span className="w-32 whitespace-nowrap text-right text-slate-700 font-mono">- {currencySymbol} {(formData.subTotal * (parseFloat(formData.discount || 0) / 100)).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                                         </div>
                                     </div>
 
                                     <div className="flex justify-between items-center text-[13px]">
-                                        <span className="font-bold text-slate-500 uppercase tracking-widest">Tax (GST)</span>
+                                        <span className="text-slate-700">Tax (GST)</span>
                                         <div className="flex items-center gap-3">
                                             <div className="relative w-36">
                                                 <select 
                                                         value={formData.taxPercent} 
                                                         onChange={e => {
-                                                            const rate = parseFloat(e.target.value) || 0;
-                                                            setFormData(p => ({ ...p, taxPercent: rate, tax: p.subTotal * (rate/100) }));
-                                                        }}
-                                                        className="w-full h-9 px-3 bg-white border border-slate-200 rounded text-[12px] font-bold text-slate-700 outline-none focus:border-blue-400 transition-all appearance-none"
-                                                >
-                                                        <option value="0">GST (0%)</option>
-                                                        <option value="5">GST (5%)</option>
-                                                        <option value="12">GST (12%)</option>
-                                                        <option value="18">GST (18%)</option>
-                                                        <option value="28">GST (28%)</option>
-                                                </select>
-                                                <ChevronDown size={12} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-                                            </div>
-                                            <span className="w-24 text-right font-bold text-slate-600 font-mono">+ {formData.taxAmount.toFixed(2)}</span>
+                                                        const rate = parseFloat(e.target.value) || 0;
+                                                        setFormData(p => ({ ...p, taxPercent: rate }));
+                                                    }}
+                                                    className="w-full h-9 px-3 bg-white border border-slate-200 rounded text-[12px] font-bold text-slate-700 outline-none focus:border-blue-400 transition-all appearance-none"
+                                            >
+                                                    <option value="0">Select a Tax (0%)</option>
+                                                    <option value="5">GST (5%)</option>
+                                                    <option value="12">GST (12%)</option>
+                                                    <option value="18">GST (18%)</option>
+                                                    <option value="28">GST (28%)</option>
+                                            </select>
+                                            <ChevronDown size={12} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
                                         </div>
+                                        <span className="w-32 whitespace-nowrap text-right text-slate-700 font-mono">+ {currencySymbol} {(parseFloat(formData.tax) || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                    </div>
                                     </div>
 
                                     <div className="flex justify-between items-center text-[13px]">
-                                        <span className="font-bold text-slate-500 uppercase tracking-widest">Adjustment</span>
+                                        <span className="text-slate-700">Adjustment</span>
                                         <div className="flex items-center gap-3">
                                             <div className="w-36 flex justify-end">
                                                 <input type="number" value={formData.adjustment} onChange={e => setFormData({ ...formData, adjustment: e.target.value })} className="w-24 h-9 px-3 bg-white border border-slate-200 rounded text-right font-bold outline-none focus:border-blue-400 transition-all tabular-nums" />
                                             </div>
-                                            <span className="w-24 text-right font-bold text-slate-600 font-mono">{parseFloat(formData.adjustment || 0) >= 0 ? '+' : ''}{parseFloat(formData.adjustment || 0).toFixed(2)}</span>
+                                            <span className="w-32 whitespace-nowrap text-right text-slate-700 font-mono">{parseFloat(formData.adjustment || 0) >= 0 ? '+' : '-'} {currencySymbol} {Math.abs(parseFloat(formData.adjustment || 0)).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex justify-between items-center text-[13px] py-1">
+                                        <label className="flex items-center gap-2 cursor-pointer whitespace-nowrap">
+                                            <input 
+                                                type="checkbox" 
+                                                checked={formData.tcsApplicable} 
+                                                onChange={e => setFormData({ ...formData, tcsApplicable: e.target.checked })} 
+                                                className="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"
+                                            />
+                                            <span className="text-slate-700">Apply TCS</span>
+                                        </label>
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-36 flex justify-end">
+                                                {formData.tcsApplicable && (
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">Rate %</span>
+                                                        <input 
+                                                            type="number"
+                                                            value={formData.tcsRate} 
+                                                            onChange={e => setFormData({ ...formData, tcsRate: e.target.value })}
+                                                            className="w-16 h-9 px-2 bg-white border border-slate-200 rounded text-right font-bold outline-none focus:border-blue-400 transition-all tabular-nums" 
+                                                            placeholder="e.g. 1"
+                                                        />
+                                                    </div>
+                                                )}
+                                            </div>
+                                            <span className="w-32 whitespace-nowrap text-right font-bold text-slate-600 font-mono">
+                                                {formData.tcsApplicable ? `+ ${currencySymbol} ${(formData.tcsAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}` : '-'}
+                                            </span>
                                         </div>
                                     </div>
 
                                     <div className="pt-6 mt-6 border-t border-slate-200">
                                         <div className="flex justify-between items-center">
                                             <span className="text-[15px] font-bold text-slate-900 uppercase tracking-widest">Total Amount</span>
-                                            <span className="text-[24px] font-bold text-blue-600 font-mono">{getCurrencyDisplay(customers.find(c => c.id === formData.customerId)?.currency)} {formData.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                            <span className="text-[24px] font-bold text-blue-600 font-mono">{getCurrencyDisplay(customers.find(c => c.id === formData.customerId)?.currency)} {(parseFloat(formData.totalAmount) || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                                         </div>
                                     </div>
                                     <div className="text-right">
@@ -1020,7 +1160,7 @@ const SalesOrdersView = ({ companyId }) => {
                         {saving ? 'Processing...' : 'Save Draft'}
                     </button>
                     <button 
-                        onClick={() => handleSave('Open')}
+                        onClick={() => handleSave('Sent')}
                         disabled={saving}
                         className="px-8 py-2.5 bg-blue-600 text-white rounded-xl text-[12px] font-bold hover:bg-blue-700 shadow-lg shadow-blue-600/20 transition-all flex items-center gap-2 uppercase tracking-widest active:scale-95"
                     >
@@ -1030,7 +1170,8 @@ const SalesOrdersView = ({ companyId }) => {
                 </div>
             </footer>
         </div>
-    );
+        );
+    };
 
     const renderDetailView = () => {
         const order = selectedOrder;
@@ -1057,119 +1198,231 @@ const SalesOrdersView = ({ companyId }) => {
                     <div className="flex items-center gap-1">
                         <button onClick={() => openForm(order)} className="px-3 py-1.5 text-slate-600 hover:bg-slate-50 rounded-none flex items-center gap-1.5 text-[12px] font-bold border border-transparent hover:border-slate-100 transition-all"><Edit2 size={14}/> Modify</button>
                         <button onClick={() => window.print()} className="px-3 py-1.5 text-slate-600 hover:bg-slate-50 rounded-none flex items-center gap-1.5 text-[12px] font-bold transition-all"><Printer size={14}/> PDF / Print</button>
+                        <button onClick={() => setIsEmailModalOpen(true)} className="px-3 py-1.5 text-blue-600 hover:bg-blue-50 rounded-none flex items-center gap-1.5 text-[12px] font-bold border border-transparent hover:border-blue-100 transition-all"><Mail size={14}/> Send Email</button>
                     </div>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-4 md:p-12 flex flex-col items-center custom-scrollbar print:p-0 print:bg-white transition-all bg-slate-50/50">
-                    <div id="printable-order" className="bg-white shadow-[0_40px_100px_-20px_rgba(0,0,0,0.08)] rounded-none min-h-[842px] w-full max-w-[800px] mx-auto p-8 md:p-20 relative overflow-hidden border border-slate-100 mb-20 group">
-                        <div className="absolute top-16 right-16 rotate-[12deg] opacity-[0.03] no-print pointer-events-none select-none">
-                            <div className="border-[12px] border-slate-900 text-slate-900 px-12 py-6 text-7xl font-bold uppercase tracking-[0.2em] rounded-none">ORDER</div>
+                 <div className="flex-1 overflow-y-auto p-4 md:p-10 flex flex-col items-center custom-scrollbar print:p-0 print:bg-white transition-all bg-slate-100">
+
+                    {/* PDF PREVIEW PAPER â€” matches Purchase Order style */}
+                    <div id="printable-order" className="pdf-preview-paper bg-white w-full max-w-[800px] min-h-[1050px] shadow-lg border border-slate-200/80 p-12 relative overflow-hidden flex flex-col justify-between">
+
+                      {/* Draft ribbon */}
+                      {order.status?.toLowerCase() === 'draft' && (
+                        <div style={{position:'absolute',top:0,left:0,width:'120px',height:'120px',overflow:'hidden',pointerEvents:'none',zIndex:0}}>
+                          <div style={{position:'absolute',top:'20px',left:'-35px',width:'140px',background:'#f1f5f9',color:'#64748b',textAlign:'center',textTransform:'uppercase',fontSize:'9px',fontWeight:800,letterSpacing:'0.15em',padding:'4px 0',transform:'rotate(-45deg)',border:'1px dashed #cbd5e1'}}>Draft</div>
+                        </div>
+                      )}
+
+                      <div>
+                        {/* â”€â”€ Top Header: Company (left) | SALES ORDER (right) â”€â”€ */}
+                        <div className="flex justify-between items-start mb-12">
+                          <div className="space-y-1 relative z-10">
+                            <h3 className="text-[18px] font-extrabold text-slate-900 tracking-tight">{currentCompany?.name || order.Customer?.companyName || 'Company'}</h3>
+                            {currentCompany?.street1 && <p className="text-[13px] font-semibold text-slate-500">{currentCompany.street1}</p>}
+                            <p className="text-[13px] font-semibold text-slate-500">{currentCompany?.location || 'India'}</p>
+                            {currentCompany?.phone && <p className="text-[13px] font-semibold text-slate-500">{currentCompany.phone}</p>}
+                            <p className="text-[13px] font-semibold text-slate-500">{currentUserEmail || currentCompany?.email || ''}</p>
+                          </div>
+                          <div className="text-right">
+                            <h1 className="text-[28px] font-bold text-slate-800 uppercase tracking-wider mb-2" style={{fontFamily:'Georgia, serif'}}>SALES ORDER</h1>
+                            <p className="text-[15px] font-bold text-slate-500"># {order.orderNumber}</p>
+                          </div>
                         </div>
 
-                        <div className="flex justify-between items-start mb-16 border-b border-slate-900 pb-12">
-                            <div className="flex gap-4 items-start max-w-[65%]">
-                                <div className="w-12 h-12 bg-slate-900 flex items-center justify-center text-white font-bold text-xl shrink-0 rounded-none">M</div>
-                                <div className="space-y-1 min-w-0">
-                                    <h2 className="text-[18px] font-bold text-slate-900 tracking-tight uppercase leading-tight">OFFICIAL SUPPLY CHAIN</h2>
-                                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest leading-none">Fulfillment & Operations</p>
-                                </div>
+                        {/* â”€â”€ Customer Bill To / Ship To â”€â”€ */}
+                        <div className="grid grid-cols-2 gap-8 mb-12">
+                          {/* Bill To */}
+                          <div className="space-y-2">
+                            <h4 className="text-[11px] font-bold text-blue-600 uppercase tracking-widest">Bill To</h4>
+                            <div className="text-[13px] text-slate-800 leading-relaxed font-semibold">
+                              <p className="font-extrabold text-slate-950 text-[14px]">{order.Customer?.displayName || order.Customer?.name}</p>
+                              {(() => {
+                                try {
+                                  const raw = order.Customer?.billingAddress;
+                                  if (!raw) return null;
+                                  const p = typeof raw === 'string' ? JSON.parse(raw) : raw;
+                                  return (
+                                    <>
+                                      {p.street1 && <p className="font-semibold text-slate-700">{p.street1}</p>}
+                                      {p.street2 && <p className="font-semibold text-slate-700">{p.street2}</p>}
+                                      <p className="font-semibold text-slate-700">{[p.city, p.state, p.pinCode].filter(Boolean).join(', ')}</p>
+                                      {p.country && <p className="font-semibold text-slate-700">{p.country}</p>}
+                                    </>
+                                  );
+                                } catch(e) { return null; }
+                              })()}
+                              {order.Customer?.gstNumber && <p className="text-[12px] mt-1">GSTIN: {order.Customer.gstNumber}</p>}
                             </div>
-                            <div className="text-right">
-                                <h1 className="text-[18px] font-bold text-slate-900 tracking-[0.2em] uppercase leading-none mb-3">SALES ORDER</h1>
-                                <div className="space-y-1">
-                                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Order Ref #</p>
-                                    <p className="text-[15px] font-bold text-slate-900 tracking-tight uppercase">{order.orderNumber}</p>
-                                </div>
+                          </div>
+
+                          {/* Ship To */}
+                          <div className="space-y-2">
+                            <h4 className="text-[11px] font-bold text-blue-600 uppercase tracking-widest">Ship To</h4>
+                            <div className="text-[13px] text-slate-800 leading-relaxed font-semibold">
+                              <p className="font-extrabold text-slate-950 text-[14px]">{order.Customer?.displayName || order.Customer?.name}</p>
+                              {(() => {
+                                try {
+                                  const raw = order.Customer?.shippingAddress || order.Customer?.billingAddress;
+                                  if (!raw) return null;
+                                  const p = typeof raw === 'string' ? JSON.parse(raw) : raw;
+                                  return (
+                                    <>
+                                      {p.street1 && <p className="font-semibold text-slate-700">{p.street1}</p>}
+                                      {p.street2 && <p className="font-semibold text-slate-700">{p.street2}</p>}
+                                      <p className="font-semibold text-slate-700">{[p.city, p.state, p.pinCode].filter(Boolean).join(', ')}</p>
+                                      {p.country && <p className="font-semibold text-slate-700">{p.country}</p>}
+                                    </>
+                                  );
+                                } catch(e) { return null; }
+                              })()}
                             </div>
+                          </div>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-20 mb-16">
-                            <div className="space-y-4">
-                                <h5 className="text-[9px] font-bold text-slate-400 uppercase tracking-widest leading-none">Bill To Entity</h5>
-                                <div className="space-y-1">
-                                    <p className="text-[15px] font-bold text-slate-900 leading-tight uppercase">{order.Customer?.name}</p>
-                                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest leading-relaxed">{order.Customer?.email}</p>
-                                </div>
+                        {/* â”€â”€ Meta Row: Date / Payment Terms / Reference â”€â”€ */}
+                        <div className="flex items-center gap-12 border-t border-b border-slate-100 py-4 mb-10 text-[13px] font-semibold">
+                          <div>
+                            <span className="text-slate-400 block text-[10px] uppercase font-bold tracking-wider mb-0.5">Date</span>
+                            <span className="text-slate-700">{formatDate(order.date)}</span>
+                          </div>
+                          {order.expectedShipmentDate && (
+                            <div>
+                              <span className="text-slate-400 block text-[10px] uppercase font-bold tracking-wider mb-0.5">Shipment Date</span>
+                              <span className="text-slate-700">{formatDate(order.expectedShipmentDate)}</span>
                             </div>
-                            <div className="text-right space-y-6">
-                                <div>
-                                    <h5 className="text-[9px] font-bold text-slate-400 uppercase tracking-widest leading-none mb-1">Issue Date</h5>
-                                    <p className="text-[15px] font-bold text-slate-900 uppercase">{new Date(order.date).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}</p>
-                                </div>
-                                {order.expectedShipmentDate && (
-                                    <div>
-                                        <h5 className="text-[9px] font-bold text-slate-400 uppercase tracking-widest leading-none mb-1">Target Delivery</h5>
-                                        <p className="text-[15px] font-bold text-blue-600 uppercase">{new Date(order.expectedShipmentDate).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}</p>
-                                    </div>
-                                )}
+                          )}
+                          {order.paymentTerms && (
+                            <div>
+                              <span className="text-slate-400 block text-[10px] uppercase font-bold tracking-wider mb-0.5">Payment Terms</span>
+                              <span className="text-slate-700">{order.paymentTerms}</span>
                             </div>
+                          )}
+                          {order.referenceNumber && (
+                            <div>
+                              <span className="text-slate-400 block text-[10px] uppercase font-bold tracking-wider mb-0.5">Reference #</span>
+                              <span className="text-slate-700">{order.referenceNumber}</span>
+                            </div>
+                          )}
                         </div>
 
-                        <div className="relative mb-20">
-                            <table className="w-full">
-                                <thead>
-                                    <tr className="border-b-[3px] border-slate-900 text-[11px] font-bold uppercase tracking-[0.2em] text-slate-900">
-                                        <th className="py-6 text-left pb-4">Material / Service Specification</th>
-                                        <th className="py-6 text-right w-24 pb-4">Qty</th>
-                                        <th className="py-6 text-right w-32 pb-4">Rate</th>
-                                        <th className="py-6 text-right w-40 pb-4">Amount</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-slate-100">
-                                    {itemsList.map((it, idx) => (
-                                        <tr key={idx} className="group/row hover:bg-slate-50/50 transition-colors">
-                                            <td className="py-8">
-                                                <div className="flex items-start gap-4">
-                                                    <div className="w-10 h-10 bg-slate-50 flex items-center justify-center text-slate-400 group-hover/row:text-slate-900 font-bold text-[12px] rounded-none border border-transparent group-hover/row:border-slate-200 transition-all">{idx + 1}</div>
-                                                    <div>
-                                                        <p className="text-[16px] font-bold text-slate-900 tracking-tight mb-1 uppercase leading-none">{it.detail}</p>
-                                                        <p className="text-[11px] text-slate-400 font-bold uppercase tracking-widest leading-relaxed mt-1">{it.description || 'Standard Fulfillment Unit'}</p>
-                                                    </div>
-                                                </div>
-                                            </td>
-                                            <td className="py-8 text-right text-[15px] font-bold text-slate-500 tabular-nums uppercase">{it.quantity} units</td>
-                                            <td className="py-8 text-right text-[15px] font-bold text-slate-500 tabular-nums">{getCurrencyDisplay(order.Customer?.currency)} {parseFloat(it.rate).toLocaleString()}</td>
-                                            <td className="py-8 text-right text-[16px] font-bold text-slate-900 tabular-nums">{getCurrencyDisplay(order.Customer?.currency)} {parseFloat(it.amount).toLocaleString()}</td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
+                        {/* â”€â”€ Items Table â”€â”€ */}
+                        <table className="w-full text-left mb-10">
+                          <thead>
+                            <tr className="bg-slate-800 text-white text-[11px] font-bold uppercase tracking-wider">
+                              <th className="px-4 py-3 rounded-l">#</th>
+                              <th className="px-4 py-3">Item &amp; Description</th>
+                              <th className="px-4 py-3 text-right">Qty</th>
+                              <th className="px-4 py-3 text-right">Rate</th>
+                              <th className="px-4 py-3 text-right rounded-r">Amount</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100 text-[13px] font-semibold text-slate-700">
+                            {itemsList.length > 0 ? (
+                              itemsList.map((it, idx) => (
+                                <tr key={idx}>
+                                  <td className="px-4 py-3.5 text-slate-400">{idx + 1}</td>
+                                  <td className="px-4 py-3.5">
+                                    <p className="font-extrabold text-slate-800">{it.detail || it.name || it.itemName}</p>
+                                    {it.description && <p className="text-[11px] text-slate-400 mt-0.5 font-medium">{it.description}</p>}
+                                    {it.hsnCode && <p className="text-[11px] text-slate-400 mt-0.5 font-medium">HSN: {it.hsnCode}</p>}
+                                  </td>
+                                  <td className="px-4 py-3.5 text-right font-mono">{parseFloat(it.quantity || 0).toFixed(2)}</td>
+                                  <td className="px-4 py-3.5 text-right font-mono">{parseFloat(it.rate || 0).toLocaleString('en-IN', {minimumFractionDigits: 2})}</td>
+                                  <td className="px-4 py-3.5 text-right font-mono font-bold text-slate-900">{parseFloat(it.amount || 0).toLocaleString('en-IN', {minimumFractionDigits: 2})}</td>
+                                </tr>
+                              ))
+                            ) : (
+                              <tr>
+                                <td colSpan="5" className="px-4 py-8 text-center text-slate-400 italic">No items found</td>
+                              </tr>
+                            )}
+                          </tbody>
+                        </table>
 
-                        <div className="flex justify-end pt-12 border-t-2 border-slate-900">
-                            <div className="w-full max-w-md space-y-6">
-                                <div className="flex justify-between items-center px-2">
-                                    <span className="text-[11px] font-bold text-slate-400 uppercase tracking-[0.2em]">Net Subtotal</span>
-                                    <span className="text-[16px] font-bold text-slate-600 tabular-nums">{getCurrencyDisplay(order.Customer?.currency)} {parseFloat(order.subTotal).toLocaleString()}</span>
-                                </div>
-                                {parseFloat(order.taxAmount || 0) > 0 && (
-                                    <div className="flex justify-between items-center px-2">
-                                        <span className="text-[11px] font-bold text-slate-400 uppercase tracking-[0.2em]">Tax Levy</span>
-                                        <span className="text-[16px] font-bold text-slate-600 tabular-nums">{getCurrencyDisplay(order.Customer?.currency)} {parseFloat(order.taxAmount).toLocaleString()}</span>
-                                    </div>
-                                )}
-                                <div className="bg-slate-900 text-white p-6 md:p-8 shadow-2xl relative overflow-hidden rounded-none">
-                                    <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500 rounded-none blur-[60px] opacity-20"></div>
-                                    <div className="flex justify-between items-center relative z-10">
-                                        <span className="text-[11px] font-bold text-blue-300 uppercase tracking-[0.2em]">Order Total</span>
-                                        <span className="text-[24px] md:text-[32px] font-bold text-white tracking-tight tabular-nums leading-none">{getCurrencyDisplay(order.Customer?.currency)} {parseFloat(order.totalAmount).toLocaleString()}</span>
-                                    </div>
-                                </div>
+                        {/* â”€â”€ Totals â”€â”€ */}
+                        <div className="flex justify-end mb-16">
+                          <div className="w-80 space-y-2 text-[13px] font-bold text-slate-600">
+                            <div className="flex justify-between items-center py-1">
+                              <span>Sub Total</span>
+                              <span className="font-mono text-slate-800">{parseFloat(order.subTotal || 0).toLocaleString('en-IN', {minimumFractionDigits: 2})}</span>
                             </div>
+                            {parseFloat(order.discountAmount || 0) > 0 && (
+                              <div className="flex justify-between items-center py-1">
+                                <span>Discount {order.discount ? `(${order.discount}%)` : ''}</span>
+                                <span className="font-mono text-red-500">- {parseFloat(order.discountAmount || 0).toLocaleString('en-IN', {minimumFractionDigits: 2})}</span>
+                              </div>
+                            )}
+                            {parseFloat(order.tax || order.taxAmount || 0) > 0 && (
+                              <div className="flex justify-between items-center py-1">
+                                <span>GST {order.taxPercent ? `(${order.taxPercent}%)` : ''}</span>
+                                <span className="font-mono text-slate-800">+ {parseFloat(order.tax || order.taxAmount || 0).toLocaleString('en-IN', {minimumFractionDigits: 2})}</span>
+                              </div>
+                            )}
+                            {parseFloat(order.adjustment || 0) !== 0 && (
+                              <div className="flex justify-between items-center py-1">
+                                <span>Adjustment</span>
+                                <span className="font-mono text-slate-800">{parseFloat(order.adjustment || 0) > 0 ? '+' : ''}{parseFloat(order.adjustment || 0).toLocaleString('en-IN', {minimumFractionDigits: 2})}</span>
+                              </div>
+                            )}
+                            <div className="flex justify-between items-center border-t border-slate-200 py-3 text-[15px] text-slate-900 font-extrabold">
+                              <span>Total</span>
+                              <span className="font-mono text-[#1e61f0]">{getCurrencyDisplay(order.Customer?.currency)} {parseFloat(order.totalAmount || 0).toLocaleString('en-IN', {minimumFractionDigits: 2})}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* ——— Notes / Terms + Signature ——— */}
+                      <div className="mt-8 pt-8 border-t border-slate-100">
+                        {(order.customerNotes || order.termsConditions) && (
+                          <div className="grid grid-cols-2 gap-6 mb-10 text-[12px]">
+                            {order.customerNotes && (
+                              <div className="bg-slate-50/50 rounded-xl p-4 border border-slate-100/80">
+                                <span className="text-[10px] uppercase font-bold block text-slate-400 tracking-widest mb-2 flex items-center gap-1.5">
+                                  <FileText size={12} className="text-slate-400"/> Customer Notes
+                                </span>
+                                <p className="text-slate-600 font-semibold leading-relaxed">{order.customerNotes}</p>
+                              </div>
+                            )}
+                            {order.termsConditions && (
+                              <div className="bg-slate-50/50 rounded-xl p-4 border border-slate-100/80">
+                                <span className="text-[10px] uppercase font-bold block text-slate-400 tracking-widest mb-2 flex items-center gap-1.5">
+                                  <ShieldCheck size={12} className="text-slate-400"/> Terms &amp; Conditions
+                                </span>
+                                <p className="text-slate-600 font-semibold leading-relaxed">{order.termsConditions}</p>
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        <div className="grid grid-cols-2 gap-12 mt-12 text-[13px] font-bold text-slate-400">
+                          {/* Receiver's Signature */}
+                          <div className="space-y-4">
+                            <p className="text-slate-500 text-[11px] uppercase tracking-widest">Receiver's Signature &amp; Stamp</p>
+                            <div className="w-56 h-20 border border-dashed border-slate-200 rounded-xl bg-slate-50/20 flex items-center justify-center text-[11px] font-medium text-slate-400 italic">
+                              Stamp &amp; Signature Space
+                            </div>
+                          </div>
+
+                          {/* Authorized Signatory */}
+                          <div className="text-right space-y-4 flex flex-col items-end">
+                            <p className="text-slate-500 text-[11px] uppercase tracking-widest">For {currentCompany?.name || 'Authorized Signatory'}</p>
+                            <div className="w-56 h-20 border border-dashed border-slate-200 rounded-xl bg-slate-50/20 flex items-center justify-center text-[11px] font-medium text-slate-400 italic">
+                              Authorized Signature Space
+                            </div>
+                            <p className="text-[11px] font-extrabold text-slate-800 uppercase tracking-wider">{currentCompany?.name || 'Authorized Signatory'}</p>
+                          </div>
                         </div>
 
-                        <div className="mt-32 flex justify-between items-end opacity-40">
-                             <div className="space-y-1">
-                                 <p className="text-[10px] font-bold uppercase tracking-[0.2em]">Validated Order Status: {order.status}</p>
-                                 <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Hash ID: {order.id?.substring(0, 16)}</p>
-                             </div>
-                             <div className="text-right">
-                                 <div className="w-32 h-0.5 bg-slate-900 mb-2 ml-auto"></div>
-                                 <p className="text-[10px] font-bold uppercase tracking-[0.2em]">Authorized Signatory</p>
-                             </div>
+                        {/* Status footer */}
+                        <div className="mt-8 pt-4 border-t border-slate-100 flex justify-between text-[10px] text-slate-400 font-medium">
+                          <span>Status: {order.status}</span>
+                          <span>Order ID: {order.id?.substring?.(0,16) ?? order.id}</span>
                         </div>
+                      </div>
                     </div>
-                </div>
+                 </div>
             </div>
         );
     };
@@ -1194,6 +1447,45 @@ const SalesOrdersView = ({ companyId }) => {
                 title="CONFIRM ORDER DELETION"
                 message="Are you sure you want to permanently delete this sales order? This action cannot be reversed and all history will be lost."
             />
+
+            {selectedOrder && (
+                <EmailSendModal
+                    isOpen={isEmailModalOpen}
+                    onClose={() => setIsEmailModalOpen(false)}
+                    documentType="Sales Order"
+                    documentData={{
+                        number: selectedOrder.orderNumber,
+                        date: formatDate(selectedOrder.date),
+                        customerName: selectedOrder.Customer?.displayName || selectedOrder.Customer?.name || '',
+                        customerEmail: selectedOrder.Customer?.email || '',
+                        Customer: { email: selectedOrder.Customer?.email || '', currency: selectedOrder.Customer?.currency },
+                        items: (selectedOrder.Items || []).map(it => ({
+                            name: it.detail,
+                            quantity: it.quantity,
+                            rate: it.rate,
+                            amount: it.amount
+                        })),
+                        subTotal: selectedOrder.subTotal,
+                        taxAmount: selectedOrder.tax || selectedOrder.taxAmount,
+                        discount: selectedOrder.discount,
+                        discountAmount: selectedOrder.discountAmount,
+                        adjustment: selectedOrder.adjustment,
+                        tcsAmount: selectedOrder.tcsAmount,
+                        total: selectedOrder.totalAmount
+                    }}
+                    apiFunc={(_id, payload) => mailAPI.send({
+                        ...payload,
+                        companyId,
+                        ledgerId: selectedOrder.LedgerId,
+                        type: 'Sales Order',
+                        documentId: selectedOrder.id
+                    })}
+                    onSend={() => {
+                        addNotification('Email sent successfully!', 'success');
+                        setIsEmailModalOpen(false);
+                    }}
+                />
+            )}
         </div>
     );
 };

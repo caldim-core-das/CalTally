@@ -9,6 +9,13 @@ const path = require('path');
 // 1. Initial Config (Loaded from backend/.env)
 dotenv.config({ path: path.join(__dirname, '.env') });
 
+const fs = require('fs');
+const originalConsoleError = console.error;
+console.error = function (...args) {
+  fs.appendFileSync(path.join(__dirname, 'error_log.txt'), args.map(a => typeof a === 'object' ? JSON.stringify(a) : a).join(' ') + '\n');
+  originalConsoleError.apply(console, args);
+};
+
 // Phase 2: Validate required env vars before any other code runs
 // If JWT_SECRET or other critical vars are missing, process.exit(1) is called.
 require('./config/env.validate')();
@@ -49,6 +56,8 @@ app.use(helmet({
 // Build allowed origins dynamically from env — never hardcode production domains here
 const allowedOrigins = [
   process.env.CLIENT_URL || 'http://localhost:5173',
+  'http://localhost:5174',
+  'http://localhost:5175'
 ];
 if (process.env.ADDITIONAL_ALLOWED_ORIGINS) {
   // Support comma-separated list in env: ADDITIONAL_ALLOWED_ORIGINS=https://app.example.com,https://www.example.com
@@ -69,6 +78,7 @@ const corsOptions = {
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'x-company-id', 'X-CSRF-Token'],
+  exposedHeaders: ['X-CSRF-Token'],
   optionsSuccessStatus: 200
 };
 
@@ -78,7 +88,12 @@ if (!process.env.CLIENT_URL && process.env.NODE_ENV === 'production') {
 
 // 2. Middleware Strategy
 app.use(cors(corsOptions));
-app.use(express.json({ limit: '10mb' }));
+app.use(express.json({ 
+  limit: '10mb',
+  verify: (req, res, buf) => {
+    req.rawBody = buf.toString();
+  }
+}));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
 app.use(require('cookie-parser')()); // Phase 2: needed for httpOnly refresh token cookie
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
@@ -114,6 +129,9 @@ app.get('/api/auth/callback',
   }
 );
 // 4. Modular Hub Routing
+app.use('/api/payment', require('./modules/payment/payment.routes'));
+app.use('/api/subscription', require('./modules/subscription/subscription.routes')); // SaaS Razorpay Integration
+app.use('/api/support', require('./modules/support/support.routes')); // SaaS Support Ticket System
 app.use('/api/auth', require('./modules/auth/auth.routes'));
 app.use('/api/users', require('./modules/auth/users.routes'));          // User management (ADMIN)
 app.use('/api/companies', require('./modules/company/company.routes'));
@@ -121,6 +139,8 @@ app.use('/api/groups', require('./modules/accounting/group.routes'));
 app.use('/api/ledgers', require('./modules/accounting/ledger.routes'));
 app.use('/api/vouchers', require('./modules/accounting/voucher.routes'));
 app.use('/api/accounting', require('./modules/accounting/accounting.routes'));
+app.use('/api/settings', require('./modules/settings/settings.routes'));
+app.use('/api/roles', require('./modules/roles/roles.routes'));
 
 app.use('/api/reports', require('./modules/reports/reports.routes'));
 app.use('/api/sales', require('./modules/sales/sales.routes'));
@@ -140,7 +160,6 @@ app.use('/api/tax/gst', require('./modules/tax/gst.routes'));
 app.use('/api/payroll', require('./modules/payroll/payroll.routes'));
 app.use('/api/attendances', require('./modules/payroll/attendance.routes'));
 app.use('/api/salary', require('./modules/payroll/salary.routes'));
-app.use('/api/salary-slips', require('./modules/payroll/salarySlip.routes'));
 app.use('/api/fixed-assets', require('./modules/fixed_assets/fixedAssets.routes'));
 app.use('/api/manufacturing', require('./modules/manufacturing/manufacturing.routes'));
 app.use('/api/budgets', require('./modules/budgeting/budgeting.routes'));
@@ -189,15 +208,53 @@ app.get('/api/ping', (req, res) => res.json({ status: 'active', platform: 'Tally
 // 6. DB Sync & Boot Strategy
 const dialect = process.env.DB_DIALECT || 'sqlite';
 // Use alter:true only for local SQLite; disabled for cloud Postgres to prevent sync locks
-const syncOptions = process.env.DATABASE_URL ? {} : { alter: true };
+const syncOptions = { alter: false };
 
 const cron = require('node-cron');
 const recurringController = require('./modules/sales/recurringInvoice.controller');
+const ReminderService = require('./services/ReminderService');
 
 // Run everyday at midnight — recurring invoice automation
 cron.schedule('0 0 * * *', async () => {
   console.log('--- RUNNING RECURRING INVOICE AUTOMATION ---');
   await recurringController.processDueInvoices({}, { json: (r) => console.log('Cron Result:', r), status: () => ({ json: (r) => console.error('Cron Error:', r) }) });
+});
+
+// Run everyday at 8:00 AM - Smart Payment Reminders
+cron.schedule('0 8 * * *', async () => {
+  console.log('--- TRIGGERING SMART PAYMENT REMINDERS CRON ---');
+  await ReminderService.processPaymentReminders();
+});
+
+// Run monthly on the 1st at 2:00 AM — automatic depreciation run for all companies
+cron.schedule('0 2 1 * *', async () => {
+  console.log('--- RUNNING AUTOMATIC MONTHLY DEPRECIATION CRON ---');
+  try {
+    const { Company } = require('./models');
+    const fixedAssetsController = require('./modules/fixed_assets/fixedAssets.controller');
+    const companies = await Company.findAll();
+    for (const company of companies) {
+      const mockReq = {
+        params: { companyId: company.id },
+        companyId: company.id,
+        body: { date: new Date() },
+        user: { id: null }
+      };
+      const mockRes = {
+        status: () => ({ json: (r) => console.log(`Auto-depreciation response for ${company.name}:`, r) }),
+        json: (r) => console.log(`Auto-depreciation response for ${company.name}:`, r)
+      };
+      try {
+        await fixedAssetsController.depreciateBatch(mockReq, mockRes, (err) => {
+          if (err) console.error(`Error in auto-depreciation for ${company.name}:`, err.message);
+        });
+      } catch (err) {
+        console.error(`Failed to auto-depreciate for ${company.name}:`, err.message);
+      }
+    }
+  } catch (err) {
+    console.error('Auto-depreciation cron failed:', err.message);
+  }
 });
 
 // Extra 1: Run every day at 1am — purge expired refresh tokens to prevent DB bloat
@@ -232,8 +289,9 @@ app.use((err, req, res, next) => {
   const statusCode = err.statusCode || 500;
   res.status(statusCode).json({
     success: false,
-    error: 'An error occurred processing your request',
-    errorId: errorId // User can report this ID for support
+    error: err.message,
+    stack: err.stack,
+    errorId: errorId
   });
 });
 
@@ -262,9 +320,44 @@ const startServer = async () => {
     try {
       await sequelize.authenticate();
       console.log('✅ Database connection authenticated.');
+      await sequelize.models.User.sync({ alter: true });
+      await sequelize.models.Company.sync({ alter: true });
+      
+      try {
+        await sequelize.models.CustomRole.sync({ alter: true });
+        await sequelize.query('ALTER TABLE "UserCompanies" ADD COLUMN IF NOT EXISTS "customRoleId" INTEGER;');
+      } catch(e) {
+        console.error('Safe Column Add Error:', e.message);
+      }
+      
       await sequelize.sync(syncOptions);
       const connectedTo = process.env.DATABASE_URL ? 'Cloud Postgres' : (process.env.DB_DIALECT || 'sqlite');
       console.log(`✅ Ledger Database Synced [${connectedTo}]`);
+      
+      // Seed default SaaS roles
+      try {
+        const { Role, SubscriptionPlan } = require('./models');
+        const defaultRoles = ['SUPER_ADMIN', 'COMPANY_ADMIN', 'ACCOUNTANT', 'EMPLOYEE'];
+        for (const roleName of defaultRoles) {
+          await Role.findOrCreate({ where: { name: roleName }, defaults: { description: `Default ${roleName} role` } });
+        }
+        console.log('✅ Default RBAC Roles seeded.');
+
+        // Seed default Subscription Plans
+        const defaultPlans = [
+          { name: 'Basic Plan', price: 0.00, description: 'Sales, Purchases, Ledgers', features: ['SALES', 'PURCHASES', 'LEDGERS'] },
+          { name: 'Pro Plan', price: 999.00, description: 'Basic + Inventory, Multi-Currency, Cost Centers', features: ['SALES', 'PURCHASES', 'LEDGERS', 'INVENTORY', 'MULTI_CURRENCY', 'COST_CENTERS'] },
+          { name: 'Enterprise Plan', price: 4999.00, description: 'Pro + Multi-Branch, API Access, Priority Support', features: ['SALES', 'PURCHASES', 'LEDGERS', 'INVENTORY', 'MULTI_CURRENCY', 'COST_CENTERS', 'MULTI_BRANCH', 'API_ACCESS', 'PRIORITY_SUPPORT'] }
+        ];
+        for (const plan of defaultPlans) {
+          await SubscriptionPlan.findOrCreate({ where: { name: plan.name }, defaults: plan });
+        }
+        console.log('✅ Default Subscription Plans seeded.');
+
+      } catch (seedErr) {
+        console.error('❌ Failed to seed RBAC roles:', seedErr.message);
+      }
+
       break; // Success, exit retry loop
     } catch (err) {
       console.error('❌ Database connection/sync failed:', err.message);

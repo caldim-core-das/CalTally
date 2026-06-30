@@ -1,18 +1,19 @@
 import { getUser } from '../../stores/authStore';
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
-import { salesAPI, ledgerAPI, companyAPI, mailAPI } from '../../services/api';
+import { salesAPI, ledgerAPI, companyAPI, mailAPI, paymentAPI } from '../../services/api';
 import { 
   Plus, Search, Edit2, Trash2, 
   ChevronDown, MoreHorizontal, FileText,
   Check, AlertCircle, File, Mail, Printer,
   Share2, History, X, ChevronRight, Download,
   Send, Loader2, ArrowLeft, DollarSign, Clock,
-  Tag, Info, Paperclip, Sparkles
+  Tag, Info, Paperclip, Sparkles, CreditCard
 } from 'lucide-react';
 import ConfirmModal from '../../components/ConfirmModal';
 import useNotificationStore from '../../store/notificationStore';
 import { getCurrencyDisplay } from '../../utils/currencies';
+import usePermissions from '../../hooks/usePermissions';
 
 const formatAddress = (address) => {
     if (!address) return '';
@@ -43,6 +44,7 @@ const formatAddress = (address) => {
 // ─────────────────────────────────────────────────────────────────────────────
 
 const InvoicesList = ({ invoices, loading, selectedId, onSelect, navigate, onRefresh }) => {
+    const { canCreate } = usePermissions();
     const [searchTerm, setSearchTerm] = useState('');
     
     const filtered = invoices.filter(inv => 
@@ -61,12 +63,14 @@ const InvoicesList = ({ invoices, loading, selectedId, onSelect, navigate, onRef
                         </button>
                     </div>
                     <div className="flex items-center gap-2">
-                        <button 
-                            onClick={() => navigate('/sales-invoices/new')}
-                            className="p-1.5 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-all shadow-md shadow-blue-200"
-                        >
-                            <Plus size={18} />
-                        </button>
+                        {canCreate && (
+                            <button 
+                                onClick={() => navigate('/sales-invoices/new')}
+                                className="p-1.5 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-all shadow-md shadow-blue-200"
+                            >
+                                <Plus size={18} />
+                            </button>
+                        )}
                         <button className="p-1.5 hover:bg-slate-50 rounded-md text-slate-400 border border-transparent hover:border-slate-100">
                             <MoreHorizontal size={18} />
                         </button>
@@ -358,11 +362,13 @@ const InvoiceEmailView = ({ invoice, company, onCancel, onSent }) => {
 // ─────────────────────────────────────────────────────────────────────────────
 
 const InvoiceDetail = ({ id, company, navigate, onRefresh }) => {
+    const { canEdit, canDelete } = usePermissions();
     const { addNotification } = useNotificationStore();
     const [invoice, setInvoice] = useState(null);
     const [loading, setLoading] = useState(true);
     const [currentView, setCurrentView] = useState('detail'); // 'detail' or 'email'
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+    const [generatingLink, setGeneratingLink] = useState(false);
 
     useEffect(() => {
         if (!id) return;
@@ -372,6 +378,23 @@ const InvoiceDetail = ({ id, company, navigate, onRefresh }) => {
             .catch(err => console.error(err))
             .finally(() => setLoading(false));
     }, [id]);
+
+    const handleGenerateLink = async () => {
+        setGeneratingLink(true);
+        try {
+            const res = await paymentAPI.generateLink(id);
+            addNotification('Payment link generated successfully!', 'success');
+            // Refresh invoice data
+            const refreshed = await salesAPI.getById(id);
+            setInvoice(refreshed.data);
+            onRefresh();
+        } catch (err) {
+            console.error(err);
+            addNotification(err.response?.data?.error || 'Failed to generate payment link', 'error');
+        } finally {
+            setGeneratingLink(false);
+        }
+    };
 
     const handleDelete = async () => {
         try {
@@ -420,20 +443,35 @@ const InvoiceDetail = ({ id, company, navigate, onRefresh }) => {
                     <span className="text-[13px] font-bold text-slate-800">{invoice.invoiceNumber}</span>
                 </div>
                 <div className="flex items-center gap-3">
-                    <button className="p-2 text-slate-400 hover:text-slate-600 transition-colors"><Edit2 size={16}/></button>
+                    {canEdit && <button onClick={() => navigate(`/sales-invoices/edit/${invoice.id}`)} className="p-2 text-slate-400 hover:text-slate-600 transition-colors"><Edit2 size={16}/></button>}
                     <button onClick={() => setCurrentView('email')} className="p-2 text-slate-400 hover:text-blue-600 transition-colors"><Mail size={16}/></button>
-                    <button className="p-2 text-slate-400 hover:text-slate-600 transition-colors"><Printer size={16}/></button>
+                    <button onClick={() => window.print()} className="p-2 text-slate-400 hover:text-slate-600 transition-colors"><Printer size={16}/></button>
                     <span className="w-px h-6 bg-slate-200 mx-1" />
-                    <button onClick={() => setIsDeleteModalOpen(true)} className="p-2 text-slate-400 hover:text-rose-600 transition-colors"><Trash2 size={16}/></button>
+                    {canDelete && <button onClick={() => setIsDeleteModalOpen(true)} className="p-2 text-slate-400 hover:text-rose-600 transition-colors"><Trash2 size={16}/></button>}
                 </div>
             </div>
 
             {/* Sub-Toolbar (Zoho Style) */}
             <div className="px-6 py-2.5 bg-white border-b border-slate-100 flex items-center gap-3 no-print">
-                 <button onClick={() => navigate(`/sales-invoices/edit/${invoice.id}`)} className="px-3 py-1.5 border border-slate-200 rounded text-[12px] font-bold text-slate-600 hover:bg-slate-50 transition-all uppercase tracking-widest shadow-sm">Edit</button>
-                 <button onClick={() => setCurrentView('email')} className="px-3 py-1.5 border border-slate-200 rounded text-[12px] font-bold text-slate-600 hover:bg-slate-50 transition-all uppercase tracking-widest shadow-sm flex items-center gap-2"><Send size={14}/> Send Email</button>
-                 <button className="px-3 py-1.5 border border-slate-200 rounded text-[12px] font-bold text-slate-600 hover:bg-slate-50 transition-all uppercase tracking-widest shadow-sm">PDF/Print <ChevronDown size={14}/></button>
-                 <button className="px-3 py-1.5 border border-slate-200 rounded text-[12px] font-bold text-slate-600 hover:bg-slate-50 transition-all uppercase tracking-widest shadow-sm flex items-center gap-2"><DollarSign size={14}/> Record Payment</button>
+                 {canEdit && <button onClick={() => navigate(`/sales-invoices/edit/${invoice.id}`)} className="h-9 w-44 border border-slate-200 rounded text-[12px] font-bold text-slate-600 hover:bg-slate-50 transition-all uppercase tracking-widest shadow-sm flex items-center justify-center gap-2">Edit</button>}
+                 <button onClick={() => setCurrentView('email')} className="h-9 w-44 border border-slate-200 rounded text-[12px] font-bold text-slate-600 hover:bg-slate-50 transition-all uppercase tracking-widest shadow-sm flex items-center justify-center gap-2"><Send size={14}/> Send Email</button>
+                 <button onClick={() => window.print()} className="h-9 w-44 border border-slate-200 rounded text-[12px] font-bold text-slate-600 hover:bg-slate-50 transition-all uppercase tracking-widest shadow-sm flex items-center justify-center gap-2">PDF/Print <ChevronDown size={14}/></button>
+                 <button onClick={() => {
+                     localStorage.setItem('payment_draft', JSON.stringify({
+                         customerId: invoice.customerLedgerId || invoice.CustomerLedger?.id,
+                         amount: parseFloat(invoice.balance || invoice.totalAmount || 0)
+                     }));
+                     navigate('/payments/new');
+                 }} className="h-9 w-44 border border-slate-200 rounded text-[12px] font-bold text-slate-600 hover:bg-slate-50 transition-all uppercase tracking-widest shadow-sm flex items-center justify-center gap-2"><DollarSign size={14}/> Record Payment</button>
+                 {parseFloat(invoice.balance || invoice.totalAmount) > 0 && invoice.status !== 'Draft' && (
+                     <button 
+                         onClick={handleGenerateLink}
+                         disabled={generatingLink}
+                         className="h-9 w-44 bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-500 text-white rounded text-[12px] font-bold transition-all uppercase tracking-widest shadow-sm flex items-center justify-center gap-2"
+                     >
+                         {generatingLink ? <Loader2 size={14} className="animate-spin" /> : <CreditCard size={14}/>} Generate Payment Link
+                     </button>
+                 )}
             </div>
 
             {/* What's Next Banner */}
@@ -465,11 +503,11 @@ const InvoiceDetail = ({ id, company, navigate, onRefresh }) => {
             )}
 
             {/* Document Scrolling Area */}
-            <div className="flex-1 overflow-y-auto bg-slate-50 p-16 flex flex-col items-center no-scrollbar print:p-0 print:bg-white custom-document-container">
+            <div className="flex-1 overflow-y-auto p-4 md:p-10 flex flex-col items-center custom-scrollbar print:p-0 print:bg-white transition-all bg-slate-100">
                  {/* Main Scrollable Invoice Document */}
-                 <div className="bg-white shadow-[0_25px_60px_rgba(0,0,0,0.1)] rounded-md w-full max-w-4xl p-16 relative border border-slate-100 min-h-[1050px] animate-fade-up">
+                 <div id="printable-invoice" className="pdf-preview-paper bg-white w-full max-w-[800px] mx-auto mb-20 border border-slate-200/80 shadow-lg relative p-12 overflow-hidden flex flex-col justify-between" style={{fontFamily: 'Arial, sans-serif', fontSize: '12px', minHeight: '1050px'}} >
                     
-                    {/* Status Ribbon */}
+                    {/* Status Ribbon (no-print) */}
                     {(() => {
                         const badge = getStatusBadge(invoice);
                         const ribbonColor = badge.label.includes('OVERDUE') ? 'bg-rose-600' : 
@@ -482,158 +520,304 @@ const InvoiceDetail = ({ id, company, navigate, onRefresh }) => {
                         );
                     })()}
 
-                    {/* Header */}
-                    <div className="flex justify-between items-start mb-16">
+                    {/* Smart Payment Reminder Badge */}
+                    {invoice.lastReminderType && (
+                        <div className="absolute top-2 left-2 bg-indigo-50 border border-indigo-100 px-3 py-1.5 rounded-md flex items-center gap-2 no-print shadow-sm z-10">
+                            <Clock size={14} className="text-indigo-600" />
+                            <div className="text-[10px] font-bold text-indigo-700 uppercase tracking-widest">
+                                {invoice.lastReminderType} REMINDER SENT
+                            </div>
+                            <div className="text-[10px] font-medium text-indigo-400 border-l border-indigo-200 pl-2">
+                                Count: {invoice.reminderCount || 1}
+                            </div>
+                        </div>
+                    )}
+
+                    <div>
+                      {/* —— Top Header: Company (left) | TAX INVOICE (right) —— */}
+                      <div className="flex justify-between items-start mb-12">
+                        <div className="space-y-1 relative z-10">
+                          <h3 className="text-[18px] font-extrabold text-slate-900 tracking-tight">{company?.name || invoice.CustomerLedger?.companyName || 'Company'}</h3>
+                          {company?.street1 && <p className="text-[13px] font-semibold text-slate-500">{company.street1}</p>}
+                          <p className="text-[13px] font-semibold text-slate-500">{company?.state || 'Tamil Nadu'}, India</p>
+                          {company?.phone && <p className="text-[13px] font-semibold text-slate-500">{company.phone}</p>}
+                          <p className="text-[13px] font-semibold text-slate-500">{company?.email || ''}</p>
+                        </div>
+                        <div className="text-right">
+                          <h1 className="text-[28px] font-bold text-slate-800 uppercase tracking-wider mb-2" style={{fontFamily:'Georgia, serif'}}>TAX INVOICE</h1>
+                          <p className="text-[15px] font-bold text-slate-500"># {invoice.invoiceNumber}</p>
+                        </div>
+                      </div>
+
+{/* —— Customer Bill To / Ship To —— */}
+                    <div className="grid grid-cols-2 gap-8 mb-12">
+                      {/* Bill To */}
+                      <div className="space-y-2">
+                        <h4 className="text-[11px] font-bold text-blue-600 uppercase tracking-widest">Bill To</h4>
+                        <div className="text-[13px] text-slate-800 leading-relaxed font-semibold">
+                          <p className="font-extrabold text-slate-950 text-[14px]">{invoice.CustomerLedger?.displayName || invoice.CustomerLedger?.name}</p>
+                          <p className="font-semibold text-slate-700">
+                            {formatAddress(invoice.CustomerLedger?.billingAddress || invoice.CustomerLedger?.address) || 'No billing address provided.'}
+                          </p>
+                          {invoice.CustomerLedger?.gstNumber && <p className="text-[12px] mt-1">GSTIN: {invoice.CustomerLedger.gstNumber}</p>}
+                          {invoice.CustomerLedger?.state && <p className="text-[12px] mt-1">State: {invoice.CustomerLedger.state}</p>}
+                        </div>
+                      </div>
+
+                      {/* Ship To */}
+                      <div className="space-y-2">
+                        <h4 className="text-[11px] font-bold text-blue-600 uppercase tracking-widest">Ship To</h4>
+                        <div className="text-[13px] text-slate-800 leading-relaxed font-semibold">
+                          <p className="font-extrabold text-slate-950 text-[14px]">{invoice.CustomerLedger?.displayName || invoice.CustomerLedger?.name}</p>
+                          <p className="font-semibold text-slate-700">
+                            {formatAddress(invoice.CustomerLedger?.shippingAddress || invoice.CustomerLedger?.address) || 'No shipping address provided.'}
+                          </p>
+                          {invoice.CustomerLedger?.gstNumber && <p className="text-[12px] mt-1">GSTIN: {invoice.CustomerLedger.gstNumber}</p>}
+                          {invoice.CustomerLedger?.state && <p className="text-[12px] mt-1">State: {invoice.CustomerLedger.state}</p>}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* —— Meta Row: Date / Due Date / Order No —— */}
+                    <div className="flex items-center gap-12 border-t border-b border-slate-100 py-4 mb-10 text-[13px] font-semibold">
+                      <div>
+                        <span className="text-slate-400 block text-[10px] uppercase font-bold tracking-wider mb-0.5">Date</span>
+                        <span className="text-slate-700">{new Date(invoice.date).toLocaleDateString('en-IN', {day:'2-digit',month:'short',year:'numeric'})}</span>
+                      </div>
+                      {invoice.dueDate && (
+                        <div>
+                          <span className="text-slate-400 block text-[10px] uppercase font-bold tracking-wider mb-0.5">Due Date</span>
+                          <span className="text-slate-700">{new Date(invoice.dueDate).toLocaleDateString('en-IN', {day:'2-digit',month:'short',year:'numeric'})}</span>
+                        </div>
+                      )}
+                      {invoice.orderNumber && (
+                        <div>
+                          <span className="text-slate-400 block text-[10px] uppercase font-bold tracking-wider mb-0.5">Order No</span>
+                          <span className="text-slate-700">{invoice.orderNumber}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* —— Items Table —— */}
+                    <table className="w-full text-left mb-10">
+                      <thead>
+                        <tr className="bg-slate-800 text-white text-[11px] font-bold uppercase tracking-wider">
+                          <th className="px-4 py-3 rounded-l">#</th>
+                          <th className="px-4 py-3">Item &amp; Description</th>
+                          <th className="px-4 py-3 text-center">Qty</th>
+                          <th className="px-4 py-3 text-right">Rate</th>
+                          <th className="px-4 py-3 text-right rounded-r">Amount</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 text-[13px] font-semibold text-slate-700">
+                        {items.length > 0 ? (
+                          items.map((it, idx) => (
+                            <tr key={idx}>
+                              <td className="px-4 py-3.5 text-slate-400">{idx + 1}</td>
+                              <td className="px-4 py-3.5">
+                                <p className="font-extrabold text-slate-800">{it.Item?.name || 'Service Item'}</p>
+                                {it.description && <p className="text-[11px] text-slate-400 mt-0.5 font-medium">{it.description}</p>}
+                                {it.Item?.hsnCode && <p className="text-[11px] text-slate-400 mt-0.5 font-medium">HSN: {it.Item.hsnCode}</p>}
+                              </td>
+                              <td className="px-4 py-3.5 text-center font-mono">{parseFloat(it.quantity || 0).toFixed(2)} {it.Item?.unit || 'Nos'}</td>
+                              <td className="px-4 py-3.5 text-right font-mono">{parseFloat(it.rate || 0).toLocaleString('en-IN', {minimumFractionDigits: 2})}</td>
+                              <td className="px-4 py-3.5 text-right font-mono font-bold text-slate-900">{parseFloat(it.amount || (it.quantity * it.rate)).toLocaleString('en-IN', {minimumFractionDigits: 2})}</td>
+                            </tr>
+                          ))
+                        ) : (
+                          <tr>
+                            <td colSpan="5" className="px-4 py-8 text-center text-slate-400 italic">No items found</td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+
+                    {/* —— Totals —— */}
+                    <div className="flex justify-end mb-16">
+                      <div className="w-80 space-y-2 text-[13px] font-bold text-slate-600">
+                        <div className="flex justify-between items-center py-1">
+                          <span>Sub Total</span>
+                          <span className="font-mono text-slate-800 whitespace-nowrap">{parseFloat(invoice.subTotal || 0).toLocaleString('en-IN', {minimumFractionDigits: 2})}</span>
+                        </div>
+                        {parseFloat(invoice.gstAmount || 0) > 0 && (
+                          <div className="flex justify-between items-center py-1">
+                            <span>GST (18%)</span>
+                            <span className="font-mono text-slate-800 whitespace-nowrap">+ {parseFloat(invoice.gstAmount || 0).toLocaleString('en-IN', {minimumFractionDigits: 2})}</span>
+                          </div>
+                        )}
+                        <div className="flex justify-between items-center border-t border-slate-200 py-3 text-[15px] text-slate-900 font-extrabold">
+                          <span className="whitespace-nowrap mr-4">Grand Total</span>
+                          <span className="font-mono text-[#1e61f0] whitespace-nowrap">{getCurrencyDisplay(invoice.CustomerLedger?.currency)} {parseFloat(invoice.totalAmount || 0).toLocaleString('en-IN', {minimumFractionDigits: 2})}</span>
+                        </div>
+                      </div>
+                    </div>
+                    </div>
+
+                    {/* ——— Notes / Terms + Signature ——— */}
+                    <div className="mt-8 pt-8 border-t border-slate-100">
+                      {(invoice.customerNotes || invoice.termsConditions) && (
+                        <div className="grid grid-cols-2 gap-6 mb-10 text-[12px]">
+                          {invoice.customerNotes && (
+                            <div className="bg-slate-50/50 rounded-xl p-4 border border-slate-100/80">
+                              <span className="text-[10px] uppercase font-bold block text-slate-400 tracking-widest mb-2 flex items-center gap-1.5">
+                                <FileText size={12} className="text-slate-400"/> Customer Notes
+                              </span>
+                              <p className="text-slate-600 font-semibold leading-relaxed">{invoice.customerNotes}</p>
+                            </div>
+                          )}
+                          {invoice.termsConditions && (
+                            <div className="bg-slate-50/50 rounded-xl p-4 border border-slate-100/80">
+                              <span className="text-[10px] uppercase font-bold block text-slate-400 tracking-widest mb-2 flex items-center gap-1.5">
+                                <ShieldCheck size={12} className="text-slate-400"/> Terms &amp; Conditions
+                              </span>
+                              <p className="text-slate-600 font-semibold leading-relaxed">{invoice.termsConditions}</p>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      <div className="grid grid-cols-2 gap-12 mt-12 text-[13px] font-bold text-slate-400">
+                        {/* Receiver's Signature */}
                         <div className="space-y-4">
-                            <div className="w-14 h-14 bg-slate-900 rounded-2xl flex items-center justify-center text-white text-2xl font-bold shadow-xl">
-                                {company?.name?.[0]?.toUpperCase() || 'C'}
-                            </div>
-                            <div>
-                                <h3 className="text-xl font-bold text-slate-900 tracking-tight uppercase">{company?.name || 'Indus CAI private Ltd'}</h3>
-                                <p className="text-[12px] text-slate-400 font-bold uppercase tracking-widest mt-1">Tamil Nadu, India</p>
-                                <p className="text-[12px] text-blue-600 font-bold lowercase tracking-wide mt-0.5">{company?.email || 'support@induscai.com'}</p>
-                            </div>
+                          <p className="text-slate-500 text-[11px] uppercase tracking-widest">Receiver's Signature &amp; Stamp</p>
+                          <div className="w-56 h-20 border border-dashed border-slate-200 rounded-xl bg-slate-50/20 flex items-center justify-center text-[11px] font-medium text-slate-400 italic">
+                            Stamp &amp; Signature Space
+                          </div>
                         </div>
-                        <div className="text-right pt-6">
-                            <h1 className="text-5xl font-bold text-slate-900 tracking-tight uppercase opacity-90 italic">TAX INVOICE</h1>
-                            <div className="h-1.5 w-32 bg-blue-600 ml-auto mt-4 rounded-full"></div>
+
+                        {/* Authorized Signatory */}
+                        <div className="text-right space-y-4 flex flex-col items-end">
+                          <p className="text-slate-500 text-[11px] uppercase tracking-widest">For {invoice.salesperson || company?.name || 'Authorized Signatory'}</p>
+                          <div className="w-56 h-20 border border-dashed border-slate-200 rounded-xl bg-slate-50/20 flex items-center justify-center text-[11px] font-medium text-slate-400 italic">
+                            Authorized Signature Space
+                          </div>
+                          <p className="text-[11px] font-extrabold text-slate-800 uppercase tracking-wider">{invoice.salesperson || company?.name || 'Authorized Signatory'}</p>
                         </div>
+                      </div>
                     </div>
 
-                    {/* Metadata Grid */}
-                    <div className="grid grid-cols-12 gap-10 mb-16 border-y border-slate-100 py-10">
-                        <div className="col-span-7 space-y-6">
-                            <div className="space-y-1">
-                                <p className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">Bill To</p>
-                                <h4 className="text-[18px] font-bold text-blue-600 leading-tight">
-                                    {invoice.CustomerLedger?.displayName || invoice.CustomerLedger?.name || 'Customer Name'}
-                                </h4>
-                                <div className="text-[12px] text-slate-500 font-medium leading-relaxed max-w-[320px] whitespace-pre-wrap">
-                                    {formatAddress(invoice.CustomerLedger?.billingAddress || invoice.CustomerLedger?.address) || 'No billing address provided.'}
-                                </div>
-                            </div>
-                        </div>
-                        <div className="col-span-5 flex flex-col items-end gap-3 text-right">
-                            <div className="grid grid-cols-2 gap-x-8 gap-y-3 w-fit">
-                                <span className="text-[11px] font-bold text-slate-300 uppercase tracking-widest pt-1">Invoice Number</span>
-                                <span className="text-[14px] font-bold text-slate-900">: {invoice.invoiceNumber}</span>
-                                
-                                <span className="text-[11px] font-bold text-slate-300 uppercase tracking-widest pt-1">Invoice Date</span>
-                                <span className="text-[14px] font-bold text-slate-900">: {new Date(invoice.date).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}</span>
-                                
-                                <span className="text-[11px] font-bold text-slate-300 uppercase tracking-widest pt-1">Terms</span>
-                                <span className="text-[14px] font-bold text-slate-900">: {invoice.terms || 'Due on Receipt'}</span>
-                                
-                                <span className="text-[11px] font-bold text-slate-300 uppercase tracking-widest pt-1">Due Date</span>
-                                <span className="text-[14px] font-bold text-slate-900">: {new Date(invoice.dueDate || invoice.date).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}</span>
-                            </div>
-                        </div>
-                    </div>
+                    {/* Online Payments & Settlement Panel (no-print) */}
+                    <div className="w-full border-t border-slate-200 pt-8 mt-12 space-y-6 no-print">
+                     <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                         <h3 className="text-sm font-bold text-slate-800 uppercase tracking-widest flex items-center gap-2">
+                             <CreditCard className="text-blue-600" size={18} /> Online Payments & Portal Link
+                         </h3>
+                         <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider
+                             ${invoice.status === 'Paid' 
+                                 ? 'bg-blue-50 text-blue-700 border border-blue-100' 
+                                 : invoice.status === 'Partially Paid' 
+                                     ? 'bg-amber-50 text-amber-700 border border-amber-100' 
+                                     : 'bg-slate-50 text-slate-500 border border-slate-150'}`}>
+                             {invoice.status || 'Pending Checkout'}
+                         </span>
+                     </div>
 
-                    {/* Table */}
-                    <div className="mb-10 overflow-hidden border border-slate-200 rounded-sm">
-                        <table className="w-full border-collapse">
-                            <thead>
-                                <tr className="bg-slate-900 text-[10px] font-bold text-white uppercase tracking-widest">
-                                    <th className="py-4 px-4 w-12 text-center">#</th>
-                                    <th className="py-4 px-4 text-left">Item & Description</th>
-                                    <th className="py-4 px-4 w-24 text-center">Qty</th>
-                                    <th className="py-4 px-4 w-32 text-right">Rate ({getCurrencyDisplay(invoice.CustomerLedger?.currency)})</th>
-                                    <th className="py-4 px-4 w-32 text-right">Amount ({getCurrencyDisplay(invoice.CustomerLedger?.currency)})</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-100">
-                                {items.map((it, idx) => (
-                                    <tr key={idx} className="text-[12px] font-medium text-slate-700 hover:bg-slate-50 transition-colors">
-                                        <td className="p-4 text-center font-bold text-slate-400 border-r border-slate-50">{idx + 1}</td>
-                                        <td className="p-4 border-r border-slate-50">
-                                            <p className="font-bold text-slate-900 text-[13px]">{it.Item?.name || 'Service Component'}</p>
-                                            <p className="text-[11px] text-slate-400 mt-0.5">{it.description}</p>
-                                        </td>
-                                        <td className="p-4 text-center font-bold border-r border-slate-50">{parseFloat(it.quantity).toFixed(2)}</td>
-                                        <td className="p-4 text-right font-bold text-slate-500 border-r border-slate-50">{parseFloat(it.rate).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
-                                        <td className="p-4 text-right font-bold text-slate-900">{parseFloat(it.amount || (it.quantity * it.rate)).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
-                                    </tr>
-                                ))}
-                                {/* Fillers */}
-                                {[...Array(Math.max(0, 3 - items.length))].map((_, i) => (
-                                    <tr key={i} className="h-10">
-                                        <td colSpan={5}></td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-
-                    {/* Summary and Finals Grid */}
-                    <div className="flex justify-between gap-16">
-                        {/* Info Block */}
-                        <div className="flex-1 space-y-10 pt-4">
-                            <div className="space-y-4">
-                                <div className="flex items-center gap-3">
-                                    <div className="h-px w-6 bg-slate-200" />
-                                    <span className="text-[10px] font-bold text-slate-300 uppercase tracking-widest italic">Notes</span>
-                                </div>
-                                <p className="text-[12px] text-slate-500 italic max-w-sm pl-9">{invoice.customerNotes || 'Thanks for your business.'}</p>
-                            </div>
-
-                            <div className="space-y-4">
-                                <div className="flex items-center gap-3">
-                                    <div className="h-px w-6 bg-slate-200" />
-                                    <span className="text-[10px] font-bold text-slate-300 uppercase tracking-widest italic">Terms & Conditions</span>
-                                </div>
-                                <p className="text-[11px] text-slate-400 italic leading-relaxed pl-9">{invoice.termsConditions || 'Standard business terms apply. Please pay within the due date.'}</p>
-                            </div>
-                        </div>
-
-                        {/* Totals Block */}
-                        <div className="w-[340px] bg-slate-50/50 border border-slate-100 rounded-[2rem] overflow-hidden shadow-2xl relative">
-                            <div className="p-8 space-y-4">
-                                <div className="flex justify-between items-center text-[12px] font-bold text-slate-400 uppercase tracking-widest">
-                                    <span>Sub Total</span>
-                                    <span className="text-slate-900 font-bold">{getCurrencyDisplay(invoice.CustomerLedger?.currency)} {parseFloat(invoice.subTotal || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
-                                </div>
-                                <div className="flex justify-between items-center text-[12px] font-bold text-slate-400 uppercase tracking-widest">
-                                    <span>GST (18%)</span>
-                                    <span className="text-slate-900 font-bold">{getCurrencyDisplay(invoice.CustomerLedger?.currency)} {parseFloat(invoice.gstAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
-                                </div>
-                                
-                                <div className="pt-8 mt-4 border-t border-slate-200 flex flex-col items-end">
-                                    <div className="text-[10px] font-bold text-slate-300 uppercase tracking-[0.3em] mb-1">Grand Total</div>
-                                    <div className="text-4xl font-bold text-slate-900 italic tracking-tight">
-                                        {getCurrencyDisplay(invoice.CustomerLedger?.currency)} {parseFloat(invoice.totalAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                                    </div>
-                                    <div className="text-[9px] font-bold text-blue-500 uppercase tracking-widest mt-1">{invoice.CustomerLedger?.currency || 'INR'} ({getCurrencyDisplay(invoice.CustomerLedger?.currency)}) / Total Payable</div>
-                                </div>
-                                
-                                <div className="pt-6">
-                                    <div className="bg-white/80 p-5 rounded-2xl border border-blue-50 flex justify-between items-center">
-                                         <div className="space-y-0.5">
-                                            <p className="text-[9px] font-bold text-slate-300 uppercase tracking-widest">Balance Due</p>
-                                            <p className="text-[14px] font-bold text-blue-600 italic tracking-tight">AVAILABLE</p>
-                                         </div>
-                                         <span className="text-[20px] font-bold text-blue-600 italic">{getCurrencyDisplay(invoice.CustomerLedger?.currency)} {parseFloat(invoice.totalAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Footer Area */}
-                    <div className="mt-20 pt-10 border-t border-slate-50 flex justify-between items-end">
+                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                         {/* Secure Portal Link Sharing */}
                          <div className="space-y-3">
-                             <p className="text-[11px] font-bold text-slate-900 italic uppercase">Scan to Pay</p>
-                             <div className="w-24 h-24 bg-slate-50 border border-slate-100 rounded-lg flex items-center justify-center text-[8px] font-bold text-slate-300 p-2 text-center uppercase">
-                                UPI QR<br/>SECURE GATEWAY
+                             <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                                 Secure Client Portal Link
+                             </label>
+                             <p className="text-[11px] text-slate-500 leading-relaxed font-medium">
+                                 Share this secure, unauthenticated checkout link with the client. It expires in 30 days.
+                             </p>
+                             {invoice.shareToken ? (
+                                 <div className="flex gap-2">
+                                     <input 
+                                         type="text" 
+                                         readOnly 
+                                         value={`${window.location.origin}/shared/invoice/${invoice.shareToken}`}
+                                         className="flex-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-mono text-slate-600 outline-none select-all"
+                                     />
+                                     <button 
+                                         onClick={() => {
+                                             navigator.clipboard.writeText(`${window.location.origin}/shared/invoice/${invoice.shareToken}`);
+                                             addNotification('Copied client checkout link to clipboard!', 'success');
+                                         }}
+                                         className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-800 rounded-lg text-xs font-bold transition-all"
+                                     >
+                                         Copy Link
+                                     </button>
+                                 </div>
+                             ) : (
+                                 <div className="p-3 bg-amber-50 border border-amber-100 rounded-xl text-amber-800 text-[11px] font-medium leading-relaxed">
+                                     No secure public link generated yet. Click "Generate Payment Link" in the toolbar to create one.
+                                 </div>
+                             )}
+                         </div>
+
+                         {/* Active Gateway Link & Reconciliation details */}
+                         <div className="space-y-3">
+                             <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                                 Gateway Redirect Link
+                             </label>
+                             <p className="text-[11px] text-slate-500 leading-relaxed font-medium">
+                                 Direct checkout page on Razorpay payment gateway.
+                             </p>
+                             {invoice.paymentLink ? (
+                                 <div className="flex gap-2">
+                                     <input 
+                                         type="text" 
+                                         readOnly 
+                                         value={invoice.paymentLink}
+                                         className="flex-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-mono text-slate-600 outline-none select-all"
+                                     />
+                                     <a 
+                                         href={invoice.paymentLink} 
+                                         target="_blank" 
+                                         rel="noopener noreferrer"
+                                         className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold text-center transition-all flex items-center justify-center"
+                                     >
+                                         Open Link
+                                     </a>
+                                 </div>
+                             ) : (
+                                 <div className="p-3 bg-slate-50 border border-slate-100 rounded-xl text-slate-400 text-[11px] text-center font-medium leading-relaxed">
+                                     Payment gateway link has not been generated for this invoice.
+                                 </div>
+                             )}
+                         </div>
+                     </div>
+
+                     {/* Installment History list */}
+                     <div className="pt-4 border-t border-slate-100 space-y-3">
+                         <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                             Installment & Payment History
+                         </label>
+                         {invoice.payments && invoice.payments.length > 0 ? (
+                             <div className="border border-slate-100 rounded-xl overflow-hidden divide-y divide-slate-100">
+                                 {invoice.payments.map((p, idx) => (
+                                     <div key={p.id || idx} className="px-4 py-3 flex items-center justify-between text-xs hover:bg-slate-50 transition-colors">
+                                         <div className="flex items-center gap-3">
+                                             <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold text-[10px] uppercase tracking-wider shadow-inner">
+                                                 Rec
+                                             </div>
+                                             <div>
+                                                 <div className="font-bold text-slate-800">
+                                                     Payment Received via {p.paymentMode || 'Gateway'}
+                                                 </div>
+                                                 <div className="text-[10px] text-slate-400 font-medium">
+                                                     {p.paymentDate ? new Date(p.paymentDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'N/A'} 
+                                                     {p.reference && ` • Ref: ${p.reference}`}
+                                                 </div>
+                                             </div>
+                                         </div>
+                                         <div className="text-right">
+                                             <p className="font-extrabold text-emerald-600 font-mono">
+                                                 + {getCurrencyDisplay(invoice.CustomerLedger?.currency)} {parseFloat(p.amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                                             </p>
+                                         </div>
+                                     </div>
+                                 ))}
                              </div>
-                         </div>
-                         <div className="text-right">
-                             <div className="w-56 ml-auto h-1 border-b border-slate-200 border-dashed mb-6"></div>
-                             <p className="text-[12px] font-bold text-slate-900 uppercase tracking-widest">{company?.name || 'Authorized Signatory'}</p>
-                             <p className="text-[10px] font-bold text-slate-400 mt-0.5 uppercase tracking-widest">Authorized Signatory</p>
-                         </div>
+                         ) : (
+                             <div className="p-4 bg-slate-50 border border-slate-100 rounded-xl text-slate-400 text-xs text-center font-medium leading-relaxed">
+                                 No payment captures or installments recorded yet.
+                             </div>
+                          )}
+                      </div>
                     </div>
-                 </div>
+                  </div>
 
                  <div className="mt-8 mb-20 text-[11px] font-bold text-slate-300 uppercase tracking-[0.3em] flex items-center gap-3 no-print opacity-50">
                      Document ID: {invoice.id} <ChevronDown size={14} />
@@ -656,11 +840,26 @@ const InvoiceDetail = ({ id, company, navigate, onRefresh }) => {
 // FULL TABLE VIEW (INITIAL STATE)
 // ─────────────────────────────────────────────────────────────────────────────
 
-const InvoicesTableView = ({ invoices, loading, onSelect, navigate, fetchInvoices, filterType }) => {
+const InvoicesTableView = ({ invoices, loading, onSelect, navigate, fetchInvoices, filterType, companyId }) => {
     const [searchQuery, setSearchQuery] = useState('');
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [idToDelete, setIdToDelete] = useState(null);
+    const [isTriggering, setIsTriggering] = useState(false);
     const { addNotification } = useNotificationStore();
+
+    const handleTriggerReminders = async () => {
+        setIsTriggering(true);
+        try {
+            const res = await salesAPI.triggerReminders(companyId);
+            addNotification(`Reminders Triggered: ${res.data.sent} sent, ${res.data.skipped} skipped, ${res.data.errors} errors.`, 'success');
+            fetchInvoices();
+        } catch (err) {
+            console.error('Trigger Reminders Error:', err);
+            addNotification(err.response?.data?.error || err.message || 'Failed to trigger reminders.', 'error');
+        } finally {
+            setIsTriggering(false);
+        }
+    };
 
     const handleDelete = async () => {
         if (!idToDelete) return;
@@ -713,6 +912,14 @@ const InvoicesTableView = ({ invoices, loading, onSelect, navigate, fetchInvoice
                       className="bg-[#1e61f0] hover:bg-[#1a54d1] text-white px-4 py-2 rounded-md font-medium flex items-center gap-1.5 transition-all shadow-sm"
                    >
                       <Plus size={18} strokeWidth={2.5}/> New Invoice
+                   </button>
+                   <button 
+                      onClick={handleTriggerReminders}
+                      disabled={isTriggering}
+                      className="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white px-4 py-2 rounded-md font-medium flex items-center gap-1.5 transition-all shadow-sm"
+                      title="Manually trigger Smart Payment Reminders for all open invoices"
+                   >
+                      {isTriggering ? <Loader2 size={18} className="animate-spin" /> : <Clock size={18} />} Trigger Reminders
                    </button>
                    <div className="relative">
                       <button className="p-2 text-slate-500 hover:text-slate-800 border border-slate-200 bg-white rounded-md hover:bg-slate-50 transition-colors shadow-sm">
@@ -954,6 +1161,7 @@ const SalesInvoicesView = ({ companyId }) => {
                     navigate={navigate}
                     fetchInvoices={fetchInvoices}
                     filterType={filterType}
+                    companyId={companyId}
                 />
             </div>
         );

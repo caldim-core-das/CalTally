@@ -37,42 +37,55 @@ exports.getVendors = async (req, res, next) => {
       order: [['name', 'ASC']]
     });
 
-    // Dynamically calculate Unused Credits for each vendor in parallel
-    const vendorsWithCredits = await Promise.all(vendors.map(async (vendor) => {
-      // 1. Sum of remaining/unapplied Vendor Credit notes where status is 'Open'
-      const openCredits = await VendorCredit.findAll({
-        where: {
-          vendorLedgerId: vendor.id,
-          CompanyId: companyId,
-          status: 'Open'
-        }
-      });
+    // ── PUR-05 FIX: Batch vendor credit and advance transaction queries to avoid N+1 queries ──
+    const openCredits = await VendorCredit.findAll({
+      where: {
+        CompanyId: companyId,
+        status: 'Open'
+      }
+    });
 
-      const totalCredits = openCredits.reduce((sum, c) => {
-        // Safe check for balance/remainingAmount/totalAmount field
+    const creditsMap = {};
+    openCredits.forEach(c => {
+      const vendorId = c.vendorLedgerId;
+      if (!creditsMap[vendorId]) creditsMap[vendorId] = [];
+      creditsMap[vendorId].push(c);
+    });
+
+    const advanceTransactions = await Transaction.findAll({
+      where: {
+        CompanyId: companyId,
+        debit: { [Op.gt]: 0 }
+      },
+      include: [{
+        model: Voucher,
+        where: {
+          CompanyId: companyId,
+          voucherType: 'Payment',
+          status: 'Paid'
+        }
+      }]
+    });
+
+    const advancesMap = {};
+    advanceTransactions.forEach(t => {
+      const vendorId = t.LedgerId;
+      if (!advancesMap[vendorId]) advancesMap[vendorId] = [];
+      advancesMap[vendorId].push(t);
+    });
+
+    // Dynamically calculate Unused Credits for each vendor in parallel using local batched maps
+    const vendorsWithCredits = vendors.map((vendor) => {
+      // 1. Sum of remaining/unapplied Vendor Credit notes where status is 'Open'
+      const vendorCredits = creditsMap[vendor.id] || [];
+      const totalCredits = vendorCredits.reduce((sum, c) => {
         const amt = c.remainingAmount !== undefined ? c.remainingAmount : (c.balance !== undefined ? c.balance : c.totalAmount);
         return sum + parseFloat(amt || 0);
       }, 0);
 
       // 2. Sum of unallocated/advance payments
-      // Sum the debit amounts from ledger transaction lines belonging to Payment vouchers with status = 'Paid'
-      // where there is NO associated Bill Foreign Key (no BILL_REF: in description)
-      const advanceTransactions = await Transaction.findAll({
-        where: {
-          LedgerId: vendor.id,
-          debit: { [Op.gt]: 0 }
-        },
-        include: [{
-          model: Voucher,
-          where: {
-            CompanyId: companyId,
-            voucherType: 'Payment',
-            status: 'Paid'
-          }
-        }]
-      });
-
-      const totalAdvances = advanceTransactions
+      const vendorAdvances = advancesMap[vendor.id] || [];
+      const totalAdvances = vendorAdvances
         .filter(t => !t.description || !t.description.includes('BILL_REF:'))
         .reduce((sum, t) => sum + parseFloat(t.debit || 0), 0);
 
@@ -83,7 +96,7 @@ exports.getVendors = async (req, res, next) => {
         ...vendor.toJSON(),
         unusedCredits: parseFloat(unusedCredits.toFixed(2))
       };
-    }));
+    });
 
     res.json(vendorsWithCredits);
   } catch (err) {
@@ -248,10 +261,42 @@ exports.updateOrder = async (req, res, next) => {
         return res.status(403).json({ error: 'Access denied' });
     }
     
-    const updateData = { ...req.body };
-    if (updateData.supplierLedgerId) {
-      updateData.LedgerId = updateData.supplierLedgerId;
-    }
+    // Whitelist allowed fields to prevent mass-assignment
+    const {
+      orderNumber, date, totalAmount, status, notes, supplierLedgerId, projectId,
+      reference, deliveryDate, paymentTerms, shipmentPreference, deliveryAddress, deliveryAddressText,
+      deliveryAddressDataJson, itemsJson, discount, adjustment, taxRate, subtotal, discountAmount,
+      taxAmount, terms, tdsAmount, tdsRate, tdsName, emailContactsJson, billed_status
+    } = req.body;
+
+    const updateData = {};
+    if (orderNumber !== undefined) updateData.orderNumber = orderNumber;
+    if (date !== undefined) updateData.date = date;
+    if (totalAmount !== undefined) updateData.totalAmount = totalAmount;
+    if (status !== undefined) updateData.status = status;
+    if (notes !== undefined) updateData.notes = notes;
+    if (supplierLedgerId !== undefined) updateData.LedgerId = supplierLedgerId;
+    if (projectId !== undefined) updateData.ProjectId = projectId;
+    if (reference !== undefined) updateData.reference = reference;
+    if (deliveryDate !== undefined) updateData.deliveryDate = deliveryDate;
+    if (paymentTerms !== undefined) updateData.paymentTerms = paymentTerms;
+    if (shipmentPreference !== undefined) updateData.shipmentPreference = shipmentPreference;
+    if (deliveryAddress !== undefined) updateData.deliveryAddress = deliveryAddress;
+    if (deliveryAddressText !== undefined) updateData.deliveryAddressText = deliveryAddressText;
+    if (deliveryAddressDataJson !== undefined) updateData.deliveryAddressDataJson = deliveryAddressDataJson;
+    if (itemsJson !== undefined) updateData.itemsJson = itemsJson;
+    if (discount !== undefined) updateData.discount = discount;
+    if (adjustment !== undefined) updateData.adjustment = adjustment;
+    if (taxRate !== undefined) updateData.taxRate = taxRate;
+    if (subtotal !== undefined) updateData.subtotal = subtotal;
+    if (discountAmount !== undefined) updateData.discountAmount = discountAmount;
+    if (taxAmount !== undefined) updateData.taxAmount = taxAmount;
+    if (terms !== undefined) updateData.terms = terms;
+    if (tdsAmount !== undefined) updateData.tdsAmount = tdsAmount;
+    if (tdsRate !== undefined) updateData.tdsRate = tdsRate;
+    if (tdsName !== undefined) updateData.tdsName = tdsName;
+    if (emailContactsJson !== undefined) updateData.emailContactsJson = emailContactsJson;
+    if (billed_status !== undefined) updateData.billed_status = billed_status;
     
     await order.update(updateData);
 
@@ -304,8 +349,30 @@ exports.getBills = async (req, res, next) => {
             order: [['date', 'DESC']]
         });
 
+        // ── PUR-04 FIX: Batch payment queries to avoid N+1 queries ───────────
+        const payments = await Transaction.findAll({
+            where: {
+                CompanyId: companyId,
+                description: { [Op.like]: '%BILL_REF:%' }
+            },
+            include: [{
+                model: Voucher,
+                where: { status: 'Paid', CompanyId: companyId }
+            }]
+        });
+
+        const paymentMap = {};
+        payments.forEach(p => {
+            const match = (p.description || '').match(/BILL_REF:([\w-]+)/);
+            if (match) {
+                const billId = match[1];
+                if (!paymentMap[billId]) paymentMap[billId] = [];
+                paymentMap[billId].push(p);
+            }
+        });
+
         // Map bills to include derived fields for the frontend
-        const mappedBills = await Promise.all(bills.map(async (bill) => {
+        const mappedBills = bills.map((bill) => {
             const plainBill = bill.toJSON();
             
             // The Credit transaction is the vendor/supplier
@@ -313,17 +380,8 @@ exports.getBills = async (req, res, next) => {
             // The total amount is the credit to the vendor
             const totalAmount = crTx ? parseFloat(crTx.credit || 0) : 0;
 
-            // Calculate payments made against this bill via BILL_REF transactions
-            const payments = await Transaction.findAll({
-                where: {
-                    description: { [Op.like]: `%BILL_REF:${bill.id}%` }
-                },
-                include: [{
-                    model: Voucher,
-                    where: { status: 'Paid' }
-                }]
-            });
-            const amountPaid = payments.reduce((sum, p) => sum + parseFloat(p.debit || 0), 0);
+            const billPayments = paymentMap[bill.id] || [];
+            const amountPaid = billPayments.reduce((sum, p) => sum + parseFloat(p.debit || 0), 0);
             const balanceDue = Math.max(0, totalAmount - amountPaid);
 
             // Derive status from balance
@@ -345,7 +403,7 @@ exports.getBills = async (req, res, next) => {
                 LedgerId: crTx?.LedgerId || null,
                 status
             };
-        }));
+        });
 
         res.json(mappedBills);
     } catch (err) {
@@ -354,8 +412,9 @@ exports.getBills = async (req, res, next) => {
 };
 
 // Helper function to process GST, TDS, discounts, and adjustments for Purchase Bills
-const processBillTaxesAndAdjustments = async (companyId, { supplierLedgerId, taxAmount, tdsAmount, discountAmount, adjustment }, journalEntries) => {
+const processBillTaxesAndAdjustments = async (companyId, { supplierLedgerId, taxAmount, tdsAmount, discountAmount, adjustment }, journalEntries, transaction = null) => {
     const { Op } = require('sequelize');
+    const options = transaction ? { transaction } : {};
     
     // 1. GST Input (Debit)
     if (taxAmount && parseFloat(taxAmount) > 0) {
@@ -386,18 +445,19 @@ const processBillTaxesAndAdjustments = async (companyId, { supplierLedgerId, tax
             }
         }
 
-        const taxGroup = await Group.findOne({ where: { CompanyId: companyId, name: { [Op.like]: '%Duties%' } } });
+        const taxGroup = await Group.findOne({ where: { CompanyId: companyId, name: { [Op.like]: '%Duties%' } }, ...options });
 
         if (isUnregistered) {
             // Unregistered Vendor: Apply standard GST, no split
             let gstLedger = await Ledger.findOne({
-                where: { CompanyId: companyId, name: 'Input GST' }
+                where: { CompanyId: companyId, name: 'Input GST' },
+                ...options
             });
             if (!gstLedger) {
                 gstLedger = await Ledger.create({
                     name: 'Input GST', code: 'TAX-001', category: 'Asset', groupName: 'Duties & Taxes',
                     GroupId: taxGroup ? taxGroup.id : null, CompanyId: companyId, currentBalance: 0
-                });
+                }, options);
             }
             journalEntries.push({ ledgerId: gstLedger.id, debit: parseFloat(taxAmount), credit: 0 });
         } else if (isSameState) {
@@ -406,23 +466,25 @@ const processBillTaxesAndAdjustments = async (companyId, { supplierLedgerId, tax
             const otherHalfTax = parseFloat((parseFloat(taxAmount) - halfTax).toFixed(2));
 
             let cgstLedger = await Ledger.findOne({
-                where: { CompanyId: companyId, name: { [Op.or]: ['Input CGST', 'CGST Input'] } }
+                where: { CompanyId: companyId, name: { [Op.or]: ['Input CGST', 'CGST Input'] } },
+                ...options
             });
             if (!cgstLedger) {
                 cgstLedger = await Ledger.create({
                     name: 'Input CGST', code: 'TAX-CGST', category: 'Asset', groupName: 'Duties & Taxes',
                     GroupId: taxGroup ? taxGroup.id : null, CompanyId: companyId, currentBalance: 0
-                });
+                }, options);
             }
 
             let sgstLedger = await Ledger.findOne({
-                where: { CompanyId: companyId, name: { [Op.or]: ['Input SGST', 'SGST Input'] } }
+                where: { CompanyId: companyId, name: { [Op.or]: ['Input SGST', 'SGST Input'] } },
+                ...options
             });
             if (!sgstLedger) {
                 sgstLedger = await Ledger.create({
                     name: 'Input SGST', code: 'TAX-SGST', category: 'Asset', groupName: 'Duties & Taxes',
                     GroupId: taxGroup ? taxGroup.id : null, CompanyId: companyId, currentBalance: 0
-                });
+                }, options);
             }
 
             journalEntries.push({ ledgerId: cgstLedger.id, debit: halfTax, credit: 0 });
@@ -430,13 +492,14 @@ const processBillTaxesAndAdjustments = async (companyId, { supplierLedgerId, tax
         } else {
             // Different State: Apply IGST
             let igstLedger = await Ledger.findOne({
-                where: { CompanyId: companyId, name: { [Op.or]: ['Input IGST', 'IGST Input'] } }
+                where: { CompanyId: companyId, name: { [Op.or]: ['Input IGST', 'IGST Input'] } },
+                ...options
             });
             if (!igstLedger) {
                 igstLedger = await Ledger.create({
                     name: 'Input IGST', code: 'TAX-IGST', category: 'Asset', groupName: 'Duties & Taxes',
                     GroupId: taxGroup ? taxGroup.id : null, CompanyId: companyId, currentBalance: 0
-                });
+                }, options);
             }
             journalEntries.push({ ledgerId: igstLedger.id, debit: parseFloat(taxAmount), credit: 0 });
         }
@@ -445,14 +508,15 @@ const processBillTaxesAndAdjustments = async (companyId, { supplierLedgerId, tax
     // 2. TDS Payable (Credit)
     if (tdsAmount && parseFloat(tdsAmount) > 0) {
         let tdsLedger = await Ledger.findOne({
-            where: { CompanyId: companyId, name: { [Op.like]: '%TDS%Payable%' } }
+            where: { CompanyId: companyId, name: { [Op.like]: '%TDS%Payable%' } },
+            ...options
         });
         if (!tdsLedger) {
-            const taxGroup = await Group.findOne({ where: { CompanyId: companyId, name: { [Op.like]: '%Duties%' } } });
+            const taxGroup = await Group.findOne({ where: { CompanyId: companyId, name: { [Op.like]: '%Duties%' } }, ...options });
             tdsLedger = await Ledger.create({
                 name: 'TDS Payable', code: 'TAX-002', category: 'Liability', groupName: 'Duties & Taxes',
                 GroupId: taxGroup ? taxGroup.id : null, CompanyId: companyId, currentBalance: 0
-            });
+            }, options);
         }
         journalEntries.push({ ledgerId: tdsLedger.id, debit: 0, credit: parseFloat(tdsAmount) });
     }
@@ -460,14 +524,15 @@ const processBillTaxesAndAdjustments = async (companyId, { supplierLedgerId, tax
     // 3. Discount Received (Credit)
     if (discountAmount && parseFloat(discountAmount) > 0) {
         let discountLedger = await Ledger.findOne({
-            where: { CompanyId: companyId, name: { [Op.like]: '%Discount%Received%' } }
+            where: { CompanyId: companyId, name: { [Op.like]: '%Discount%Received%' } },
+            ...options
         });
         if (!discountLedger) {
-            const incGroup = await Group.findOne({ where: { CompanyId: companyId, name: { [Op.like]: '%Indirect%Income%' } } });
+            const incGroup = await Group.findOne({ where: { CompanyId: companyId, name: { [Op.like]: '%Indirect%Income%' } }, ...options });
             discountLedger = await Ledger.create({
                 name: 'Discount Received', code: 'INC-001', category: 'Income', groupName: 'Indirect Incomes',
                 GroupId: incGroup ? incGroup.id : null, CompanyId: companyId, currentBalance: 0
-            });
+            }, options);
         }
         journalEntries.push({ ledgerId: discountLedger.id, debit: 0, credit: parseFloat(discountAmount) });
     }
@@ -476,14 +541,15 @@ const processBillTaxesAndAdjustments = async (companyId, { supplierLedgerId, tax
     if (adjustment && parseFloat(adjustment) !== 0) {
         const adjVal = parseFloat(adjustment);
         let adjLedger = await Ledger.findOne({
-            where: { CompanyId: companyId, name: { [Op.like]: '%Rounding%' } }
+            where: { CompanyId: companyId, name: { [Op.like]: '%Rounding%' } },
+            ...options
         });
         if (!adjLedger) {
-            const expGroup = await Group.findOne({ where: { CompanyId: companyId, name: { [Op.like]: '%Indirect%Expense%' } } });
+            const expGroup = await Group.findOne({ where: { CompanyId: companyId, name: { [Op.like]: '%Indirect%Expense%' } }, ...options });
             adjLedger = await Ledger.create({
                 name: 'Rounding Adjustment', code: 'EXP-001', category: 'Expense', groupName: 'Indirect Expenses',
                 GroupId: expGroup ? expGroup.id : null, CompanyId: companyId, currentBalance: 0
-            });
+            }, options);
         }
         if (adjVal > 0) {
             journalEntries.push({ ledgerId: adjLedger.id, debit: adjVal, credit: 0 }); // Increases payable -> Expense (Debit)
@@ -494,23 +560,22 @@ const processBillTaxesAndAdjustments = async (companyId, { supplierLedgerId, tax
 };
 
 exports.createBill = async (req, res, next) => {
+    const t = await sequelize.transaction();
     try {
         const { billNumber, reference, date, totalAmount, notes, supplierLedgerId, companyId, items, projectId, taxAmount, tdsAmount, discountAmount, adjustment, taxRate, tdsRate, tdsName, discount, dueDate, paymentTerms, status } = req.body;
         
         if (!supplierLedgerId) {
+            await t.rollback();
             return res.status(400).json({ error: 'Supplier Ledger is required' });
         }
 
         if (!totalAmount || parseFloat(totalAmount) <= 0) {
+            await t.rollback();
             return res.status(400).json({ error: 'Bill total must be greater than zero' });
         }
 
         const total = parseFloat(totalAmount);
 
-        // Build journal entries using debit/credit (no 'type' field on Transaction model)
-        // For a Purchase Bill:
-        //   DEBIT  → Expense/COGS Ledger (what we bought)
-        //   CREDIT → Supplier/Vendor Ledger (what we owe)
         const journalEntries = [];
 
         // Credit the Supplier (Sundry Creditor) for the full bill amount
@@ -522,7 +587,8 @@ exports.createBill = async (req, res, next) => {
             for (const item of items) {
                 if (item.amount > 0 && item.account) {
                     let accountLedger = await Ledger.findOne({
-                        where: { name: item.account, CompanyId: companyId }
+                        where: { name: item.account, CompanyId: companyId },
+                        transaction: t
                     });
                     if (accountLedger) {
                         journalEntries.push({ ledgerId: accountLedger.id, debit: parseFloat(item.amount), credit: 0 });
@@ -533,7 +599,7 @@ exports.createBill = async (req, res, next) => {
         }
 
         // Process Taxes, Discounts, and Adjustments
-        await processBillTaxesAndAdjustments(companyId, { supplierLedgerId, taxAmount, tdsAmount, discountAmount, adjustment }, journalEntries);
+        await processBillTaxesAndAdjustments(companyId, { supplierLedgerId, taxAmount, tdsAmount, discountAmount, adjustment }, journalEntries, t);
 
         // Fallback: if no item accounts found, debit a generic Purchases ledger
         if (!itemDebitsAdded) {
@@ -542,12 +608,13 @@ exports.createBill = async (req, res, next) => {
                 where: { 
                     CompanyId: companyId,
                     name: { [Op.or]: [{ [Op.like]: '%Purchase%' }, { [Op.like]: '%Cost of Goods%' }] }
-                }
+                },
+                transaction: t
             });
             
             if (!purchaseLedger) {
                 // Auto-create Purchases ledger to prevent save failure
-                const purchaseGroup = await Group.findOne({ where: { CompanyId: companyId, name: { [Op.like]: '%Purchase%' } } });
+                const purchaseGroup = await Group.findOne({ where: { CompanyId: companyId, name: { [Op.like]: '%Purchase%' } }, transaction: t });
                 purchaseLedger = await Ledger.create({
                     name: 'Purchases',
                     code: 'PUR-001',
@@ -556,7 +623,7 @@ exports.createBill = async (req, res, next) => {
                     GroupId: purchaseGroup ? purchaseGroup.id : null,
                     CompanyId: companyId,
                     currentBalance: 0
-                });
+                }, { transaction: t });
             }
             
             let subtotal = 0;
@@ -570,10 +637,7 @@ exports.createBill = async (req, res, next) => {
 
         const AccountingService = require('../../services/AccountingService');
 
-        // Use the voucherNumber from frontend if provided, otherwise generate
-        const voucherNumber = billNumber || `BILL-${Date.now()}`;
-
-        // Post via AccountingService (with audit, balance update, and double-entry validation)
+        // Post via AccountingService (with auto-numbering fallback if billNumber is missing)
         const voucher = await AccountingService.recordJournalEntry({
             companyId,
             date: date || new Date(),
@@ -594,11 +658,12 @@ exports.createBill = async (req, res, next) => {
             }),
             entries: journalEntries,
             userId: req.user?.id,
-            projectId // Added this
-        });
+            projectId,
+            voucherNumber: billNumber || undefined
+        }, t);
 
-        // Override with user-provided bill number and status
-        await voucher.update({ voucherNumber, status: (status || 'OPEN').toUpperCase() });
+        // Override with user-provided status
+        await voucher.update({ status: (status || 'OPEN').toUpperCase() }, { transaction: t });
 
         // Link with Purchase Order and mark as billed
         try {
@@ -606,20 +671,21 @@ exports.createBill = async (req, res, next) => {
             let poToUpdate = null;
             const poId = req.body.purchase_order_id || req.body.poId;
             if (poId) {
-                poToUpdate = await PurchaseOrder.findByPk(poId);
+                poToUpdate = await PurchaseOrder.findByPk(poId, { transaction: t });
             } else if (reference) {
                 poToUpdate = await PurchaseOrder.findOne({
                     where: {
                         orderNumber: reference,
                         CompanyId: companyId
-                    }
+                    },
+                    transaction: t
                 });
             }
             if (poToUpdate && voucher.status === 'OPEN') {
                 await poToUpdate.update({ 
                     status: 'closed',
                     billed_status: 'billed' 
-                });
+                }, { transaction: t });
                 console.log(`PO ID ${poToUpdate.id} successfully updated to CLOSED & BILLED.`);
             }
         } catch (poErr) {
@@ -628,34 +694,78 @@ exports.createBill = async (req, res, next) => {
 
         // Update inventory stock quantities
         if (items && Array.isArray(items) && items.length > 0) {
+            const { StockMovement, FixedAsset } = require('../../models');
             for (const itemData of items) {
-                if (itemData.itemId && parseFloat(itemData.quantity) > 0) {
-                    const dbItem = await Item.findByPk(itemData.itemId);
-                    if (dbItem) {
-                        dbItem.currentStock = parseFloat(dbItem.currentStock || 0) + parseFloat(itemData.quantity);
-                        await dbItem.save();
+                const qty = itemData.quantity || itemData.qty;
+                if (itemData.itemId && parseFloat(qty) > 0) {
+                    await StockMovement.create({
+                        movementType: 'PURCHASE',
+                        quantity: parseFloat(qty),
+                        rate: parseFloat(itemData.rate || 0),
+                        amount: parseFloat(itemData.amount || 0),
+                        date: date || new Date(),
+                        ItemId: itemData.itemId
+                    }, { transaction: t });
+                }
+                
+                // Auto-Capitalize Fixed Asset
+                if (itemData.isFixedAsset) {
+                    let assetLedgerId = null;
+                    if (itemData.account) {
+                        const accountLedger = await Ledger.findOne({ where: { name: itemData.account, CompanyId: companyId }, transaction: t });
+                        if (accountLedger) assetLedgerId = accountLedger.id;
+                    }
+                    
+                    const existingAsset = await FixedAsset.findOne({
+                        where: {
+                            CompanyId: companyId,
+                            name: itemData.itemName || 'Auto-Generated Asset',
+                            purchaseValue: parseFloat(itemData.amount || 0)
+                        },
+                        transaction: t
+                    });
+                    
+                    if (!existingAsset) {
+                        await FixedAsset.create({
+                            CompanyId: companyId,
+                            name: itemData.itemName || 'Auto-Generated Asset',
+                            assetLedgerId: assetLedgerId,
+                            purchaseDate: date || new Date(),
+                            purchaseValue: parseFloat(itemData.amount || 0),
+                            scrapValue: parseFloat(itemData.scrapValue || 0),
+                            usefulLife: parseInt(itemData.usefulLife || 10),
+                            depreciationMethod: itemData.depMethod || 'WDV',
+                            depreciationRate: parseFloat(itemData.depRate || 10),
+                            currentBookValue: parseFloat(itemData.amount || 0),
+                            status: 'Active'
+                        }, { transaction: t });
                     }
                 }
             }
         }
 
+        await t.commit();
         res.status(201).json(voucher);
     } catch (err) {
+        await t.rollback();
         console.error('Error creating bill:', err);
         next(err);
     }
 };
 
 exports.updateBill = async (req, res, next) => {
+    const t = await sequelize.transaction();
     try {
         const { id } = req.params;
         const { billNumber, reference, date, totalAmount, notes, supplierLedgerId, companyId, items, projectId, taxAmount, tdsAmount, discountAmount, adjustment, taxRate, tdsRate, tdsName, discount, dueDate, paymentTerms, status } = req.body;
         
         if (!supplierLedgerId) {
+            await t.rollback();
             return res.status(400).json({ error: 'Supplier Ledger is required' });
         }
 
         if (!totalAmount || parseFloat(totalAmount) <= 0) {
+            await t.rollback();
             return res.status(400).json({ error: 'Bill total must be greater than zero' });
         }
 
@@ -672,7 +782,8 @@ exports.updateBill = async (req, res, next) => {
             for (const item of items) {
                 if (item.amount > 0 && item.account) {
                     let accountLedger = await Ledger.findOne({
-                        where: { name: item.account, CompanyId: companyId }
+                        where: { name: item.account, CompanyId: companyId },
+                        transaction: t
                     });
                     if (accountLedger) {
                         journalEntries.push({ ledgerId: accountLedger.id, debit: parseFloat(item.amount), credit: 0 });
@@ -683,7 +794,7 @@ exports.updateBill = async (req, res, next) => {
         }
 
         // Process Taxes, Discounts, and Adjustments
-        await processBillTaxesAndAdjustments(companyId, { supplierLedgerId, taxAmount, tdsAmount, discountAmount, adjustment }, journalEntries);
+        await processBillTaxesAndAdjustments(companyId, { supplierLedgerId, taxAmount, tdsAmount, discountAmount, adjustment }, journalEntries, t);
 
         // Fallback: if no item accounts found, debit a generic Purchases ledger
         if (!itemDebitsAdded) {
@@ -692,12 +803,13 @@ exports.updateBill = async (req, res, next) => {
                 where: { 
                     CompanyId: companyId,
                     name: { [Op.or]: [{ [Op.like]: '%Purchase%' }, { [Op.like]: '%Cost of Goods%' }] }
-                }
+                },
+                transaction: t
             });
             
             if (!purchaseLedger) {
                 // Auto-create Purchases ledger to prevent save failure
-                const purchaseGroup = await Group.findOne({ where: { CompanyId: companyId, name: { [Op.like]: '%Purchase%' } } });
+                const purchaseGroup = await Group.findOne({ where: { CompanyId: companyId, name: { [Op.like]: '%Purchase%' } }, transaction: t });
                 purchaseLedger = await Ledger.create({
                     name: 'Purchases',
                     code: 'PUR-001',
@@ -706,7 +818,7 @@ exports.updateBill = async (req, res, next) => {
                     GroupId: purchaseGroup ? purchaseGroup.id : null,
                     CompanyId: companyId,
                     currentBalance: 0
-                });
+                }, { transaction: t });
             }
             
             let subtotal = 0;
@@ -719,29 +831,39 @@ exports.updateBill = async (req, res, next) => {
         }
 
         const AccountingService = require('../../services/AccountingService');
-        const voucherNumber = billNumber || `BILL-${Date.now()}`;
 
         // 1. Reverse old stock quantities from current stock
-        const oldVoucher = await Voucher.findByPk(id);
-        if (!oldVoucher) return res.status(404).json({ error: 'Bill not found' });
+        const oldVoucher = await Voucher.findByPk(id, { transaction: t });
+        if (!oldVoucher) {
+            await t.rollback();
+            return res.status(404).json({ error: 'Bill not found' });
+        }
+
+        const voucherNumber = billNumber || oldVoucher.voucherNumber;
 
         // BOLA guard
         const requestingCompanyId = companyId || req.user?.CompanyId;
         if (requestingCompanyId && String(oldVoucher.CompanyId) !== String(requestingCompanyId)) {
+            await t.rollback();
             return res.status(403).json({ error: 'Access denied' });
         }
         
         if (oldVoucher && oldVoucher.narration) {
             try {
+                const { StockMovement } = require('../../models');
                 const parsed = JSON.parse(oldVoucher.narration);
                 if (parsed && Array.isArray(parsed.items)) {
                     for (const oldItem of parsed.items) {
-                        if (oldItem.itemId && parseFloat(oldItem.quantity) > 0) {
-                            const dbItem = await Item.findByPk(oldItem.itemId);
-                            if (dbItem) {
-                                dbItem.currentStock = parseFloat(dbItem.currentStock || 0) - parseFloat(oldItem.quantity);
-                                await dbItem.save();
-                            }
+                        const oldQty = oldItem.quantity || oldItem.qty;
+                        if (oldItem.itemId && parseFloat(oldQty) > 0) {
+                            await StockMovement.create({
+                                movementType: 'PURCHASE',
+                                quantity: -parseFloat(oldQty),
+                                rate: parseFloat(oldItem.rate || 0),
+                                amount: -parseFloat(oldItem.amount || 0),
+                                date: date || new Date(),
+                                ItemId: oldItem.itemId
+                            }, { transaction: t });
                         }
                     }
                 }
@@ -771,19 +893,58 @@ exports.updateBill = async (req, res, next) => {
             userId: req.user?.id,
             voucherNumber,
             projectId
-        });
+        }, t);
 
         // 3. Update status in database
-        await voucher.update({ status: (status || 'OPEN').toUpperCase() });
+        await voucher.update({ status: (status || 'OPEN').toUpperCase() }, { transaction: t });
 
         // 3. Increment stock with new quantities
         if (items && Array.isArray(items) && items.length > 0) {
+            const { StockMovement, FixedAsset } = require('../../models');
             for (const itemData of items) {
-                if (itemData.itemId && parseFloat(itemData.quantity) > 0) {
-                    const dbItem = await Item.findByPk(itemData.itemId);
-                    if (dbItem) {
-                        dbItem.currentStock = parseFloat(dbItem.currentStock || 0) + parseFloat(itemData.quantity);
-                        await dbItem.save();
+                const qty = itemData.quantity || itemData.qty;
+                if (itemData.itemId && parseFloat(qty) > 0) {
+                    await StockMovement.create({
+                        movementType: 'PURCHASE',
+                        quantity: parseFloat(qty),
+                        rate: parseFloat(itemData.rate || 0),
+                        amount: parseFloat(itemData.amount || 0),
+                        date: date || new Date(),
+                        ItemId: itemData.itemId
+                    }, { transaction: t });
+                }
+                
+                // Auto-Capitalize Fixed Asset
+                if (itemData.isFixedAsset) {
+                    let assetLedgerId = null;
+                    if (itemData.account) {
+                        const accountLedger = await Ledger.findOne({ where: { name: itemData.account, CompanyId: companyId }, transaction: t });
+                        if (accountLedger) assetLedgerId = accountLedger.id;
+                    }
+                    
+                    const existingAsset = await FixedAsset.findOne({
+                        where: {
+                            CompanyId: companyId,
+                            name: itemData.itemName || 'Auto-Generated Asset',
+                            purchaseValue: parseFloat(itemData.amount || 0)
+                        },
+                        transaction: t
+                    });
+                    
+                    if (!existingAsset) {
+                        await FixedAsset.create({
+                            CompanyId: companyId,
+                            name: itemData.itemName || 'Auto-Generated Asset',
+                            assetLedgerId: assetLedgerId,
+                            purchaseDate: date || new Date(),
+                            purchaseValue: parseFloat(itemData.amount || 0),
+                            scrapValue: parseFloat(itemData.scrapValue || 0),
+                            usefulLife: parseInt(itemData.usefulLife || 10),
+                            depreciationMethod: itemData.depMethod || 'WDV',
+                            depreciationRate: parseFloat(itemData.depRate || 10),
+                            currentBookValue: parseFloat(itemData.amount || 0),
+                            status: 'Active'
+                        }, { transaction: t });
                     }
                 }
             }
@@ -795,28 +956,31 @@ exports.updateBill = async (req, res, next) => {
             let poToUpdate = null;
             const poId = req.body.purchase_order_id || req.body.poId;
             if (poId) {
-                poToUpdate = await PurchaseOrder.findByPk(poId);
+                poToUpdate = await PurchaseOrder.findByPk(poId, { transaction: t });
             } else if (reference) {
                 poToUpdate = await PurchaseOrder.findOne({
                     where: {
                         orderNumber: reference,
                         CompanyId: companyId
-                    }
+                    },
+                    transaction: t
                 });
             }
             if (poToUpdate && voucher.status === 'OPEN') {
                 await poToUpdate.update({ 
                     status: 'closed',
                     billed_status: 'billed' 
-                });
+                }, { transaction: t });
                 console.log(`PO ID ${poToUpdate.id} successfully updated to CLOSED & BILLED.`);
             }
         } catch (poErr) {
             console.error('Failed to update parent purchase order status:', poErr);
         }
 
+        await t.commit();
         res.json(voucher);
     } catch (err) {
+        await t.rollback();
         console.error('Error updating bill:', err);
         next(err);
     }
@@ -876,6 +1040,140 @@ exports.getExpenses = async (req, res, next) => {
         });
 
         res.json(mappedExpenses);
+    } catch (err) {
+        console.error(err);
+        next(err);
+    }
+};
+
+exports.batchRestock = async (req, res, next) => {
+    try {
+        const companyId = req.companyId || req.body.companyId;
+        const { itemIds } = req.body;
+
+        if (!companyId || !itemIds || !Array.isArray(itemIds) || itemIds.length === 0) {
+            return res.status(400).json({ error: 'companyId and itemIds array are required.' });
+        }
+
+        const items = await Item.findAll({
+            where: {
+                id: { [Op.in]: itemIds },
+                CompanyId: companyId
+            }
+        });
+
+        // Group by preferredVendor
+        const groupedItems = {};
+        const skippedItems = [];
+
+        items.forEach(item => {
+            const vendorName = item.preferredVendor;
+            if (!vendorName) {
+                skippedItems.push(item);
+                return;
+            }
+            if (!groupedItems[vendorName]) {
+                groupedItems[vendorName] = [];
+            }
+            groupedItems[vendorName].push(item);
+        });
+
+        const createdOrders = [];
+        const missingVendors = [];
+
+        // Determine base PO number safely
+        const existingOrders = await PurchaseOrder.findAll({
+            where: { CompanyId: companyId },
+            attributes: ['orderNumber']
+        });
+        
+        let maxNum = 0;
+        existingOrders.forEach(o => {
+            if (!o.orderNumber) return;
+            const match = o.orderNumber.match(/(\d+)(?!.*\d)/);
+            if (match) {
+                const num = parseInt(match[1], 10);
+                if (!isNaN(num) && num > maxNum) {
+                    maxNum = num;
+                }
+            }
+        });
+
+        for (const [vendorName, vendorItems] of Object.entries(groupedItems)) {
+            // Resolve Ledger ID for vendor
+            const ledger = await Ledger.findOne({
+                where: { name: vendorName, CompanyId: companyId }
+            });
+
+            if (!ledger) {
+                missingVendors.push(vendorName);
+                vendorItems.forEach(i => skippedItems.push(i));
+                continue;
+            }
+
+            maxNum++;
+            const nextOrderNumber = `PO-${String(maxNum).padStart(5, '0')}`;
+
+            let totalAmount = 0;
+            const poItems = vendorItems.map(item => {
+                const currentStock = parseFloat(item.currentStock) || 0;
+                const reorderLevel = parseFloat(item.reorderLevel) || 0;
+                
+                // Option C math: Order the difference to reach reorder level, minimum 1
+                let qtyToOrder = Math.ceil(reorderLevel - currentStock);
+                if (qtyToOrder <= 0) qtyToOrder = 1;
+
+                const rate = parseFloat(item.costPrice) || 0;
+                const taxRate = parseFloat(item.gstRate) || 0;
+                const itemTotal = qtyToOrder * rate;
+                
+                totalAmount += itemTotal;
+
+                return {
+                    id: Math.random().toString(36).substr(2, 9),
+                    itemId: item.id,
+                    itemName: item.name,
+                    qty: qtyToOrder,
+                    rate: rate,
+                    taxRate: taxRate,
+                    amount: itemTotal,
+                    taxAmount: itemTotal * (taxRate / 100)
+                };
+            });
+
+            // Note: Simplistic subtotal logic (assumes tax is added after or inclusive, adjust as needed)
+            const subtotal = totalAmount;
+            const totalTax = poItems.reduce((sum, item) => sum + item.taxAmount, 0);
+            const finalTotal = subtotal + totalTax;
+
+            const newOrder = await PurchaseOrder.create({
+                orderNumber: nextOrderNumber,
+                date: new Date(),
+                totalAmount: finalTotal,
+                status: 'draft',
+                billed_status: 'yet_to_be_billed',
+                LedgerId: ledger.id,
+                CompanyId: companyId,
+                itemsJson: JSON.stringify(poItems),
+                subtotal: subtotal,
+                taxAmount: totalTax,
+                discount: 0,
+                discountAmount: 0,
+                adjustment: 0,
+                notes: 'Auto-generated by Smart Restocking feature.'
+            });
+
+            createdOrders.push(newOrder);
+        }
+
+        res.json({
+            message: 'Batch restock completed.',
+            createdOrdersCount: createdOrders.length,
+            skippedItemsCount: skippedItems.length,
+            skippedItems: skippedItems.map(i => i.name),
+            missingVendors
+        });
+
     } catch (err) {
         console.error(err);
         next(err);

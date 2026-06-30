@@ -1,5 +1,6 @@
-const { Ledger, Group, Transaction, Voucher, Project, SalesInvoice, Item, sequelize } = require('../../models');
+const { Ledger, Group, Transaction, Voucher, Project, SalesInvoice, SalesInvoiceItem, Item, sequelize } = require('../../models');
 const { Op } = require('sequelize');
+const cacheService = require('../../services/cacheService');
 
 /**
  * TRIAL BALANCE
@@ -9,15 +10,63 @@ const { Op } = require('sequelize');
 exports.getTrialBalance = async (req, res, next) => {
   try {
     const { companyId } = req.params;
+    const { from, to, costCenterId } = req.query;
+
+    const cacheKey = `reports:${companyId}:trial-balance:${from || 'all'}:${to || 'all'}:${costCenterId || 'all'}`;
+    const cachedData = await cacheService.get(cacheKey);
+    if (cachedData) {
+      return res.json(cachedData);
+    }
+
+    const transactionInclude = {
+      model: Transaction,
+      attributes: [],
+      required: false
+    };
+
+    // ── CostCenter filter ───────────────────────────────────────────────
+    if (costCenterId) {
+      const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      transactionInclude.where = { CostCenterId: uuidPattern.test(costCenterId) ? costCenterId : '00000000-0000-0000-0000-000000000000' };
+    }
+
+    // ── DATE FILTER FIX ───────────────────────────────────────────────
+    // Previously, from/to were parsed but NEVER applied to the transaction
+    // query, so every Trial Balance showed all-time figures regardless of
+    // the date range the user selected.
+    //
+    // Fix: pre-fetch VoucherIds whose date falls within [from, to], then
+    // restrict the transaction aggregation to those IDs only. This runs as
+    // two small indexed queries instead of a cross-join scan.
+    if (from && to) {
+      const tbStart = new Date(from);
+      const tbEnd   = new Date(to);
+      tbEnd.setHours(23, 59, 59, 999);
+
+      const vouchersInRange = await Voucher.findAll({
+        where: {
+          CompanyId: companyId,
+          date: { [Op.between]: [tbStart, tbEnd] },
+          ...(Voucher.rawAttributes.deletedAt ? {} : {}) // paranoid respected automatically
+        },
+        attributes: ['id'],
+        raw: true
+      });
+
+      const voucherIds = vouchersInRange.map(v => v.id);
+      // Merge with any existing CostCenter where clause
+      transactionInclude.where = {
+        ...(transactionInclude.where || {}),
+        // If no vouchers in range, use a sentinel UUID that matches nothing
+        VoucherId: { [Op.in]: voucherIds.length > 0 ? voucherIds : ['00000000-0000-0000-0000-000000000000'] }
+      };
+    }
 
     const ledgers = await Ledger.findAll({
       where: { CompanyId: companyId },
       include: [
         { model: Group, attributes: ['name', 'nature'] },
-        {
-          model: Transaction,
-          attributes: []
-        }
+        transactionInclude
       ],
       attributes: {
         include: [
@@ -99,14 +148,16 @@ exports.getTrialBalance = async (req, res, next) => {
     const totalDebitBal = trialBalance.reduce((s, r) => s + r.debitBalance, 0);
     const totalCreditBal = trialBalance.reduce((s, r) => s + r.creditBalance, 0);
 
-    res.json({
+    const result = {
       trialBalance,
       summary: {
         totalDebit: totalDebitBal,
         totalCredit: totalCreditBal,
         isBalanced: Math.abs(totalDebitBal - totalCreditBal) < 0.01
       }
-    });
+    };
+    await cacheService.set(cacheKey, result);
+    res.json(result);
   } catch (err) {
     next(err);
   }
@@ -119,7 +170,13 @@ exports.getTrialBalance = async (req, res, next) => {
 exports.getProfitAndLoss = async (req, res, next) => {
   try {
     const { companyId } = req.params;
-    const { from, to } = req.query;
+    const { from, to, costCenterId } = req.query;
+
+    const cacheKey = `reports:${companyId}:profit-loss:${from || 'all'}:${to || 'all'}:${costCenterId || 'all'}`;
+    const cachedData = await cacheService.get(cacheKey);
+    if (cachedData) {
+      return res.json(cachedData);
+    }
 
     let startDate, endDate;
     if (from && to) {
@@ -165,7 +222,13 @@ exports.getProfitAndLoss = async (req, res, next) => {
     });
 
     // 3. Fetch all transactions for this company within the date range
+    const txWhere = {};
+    if (costCenterId) {
+      const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      txWhere.CostCenterId = uuidPattern.test(costCenterId) ? costCenterId : '00000000-0000-0000-0000-000000000000';
+    }
     const txs = await Transaction.findAll({
+      where: txWhere,
       include: [
         {
           model: Voucher,
@@ -215,7 +278,7 @@ exports.getProfitAndLoss = async (req, res, next) => {
             ledgerId: l.id,
             name: l.name,
             group: primaryGroup,
-            amount: Math.abs(netCredit)
+            amount: netCredit
           };
           income.push(entry);
           totalIncome += entry.amount;
@@ -227,7 +290,7 @@ exports.getProfitAndLoss = async (req, res, next) => {
             ledgerId: l.id,
             name: l.name,
             group: primaryGroup,
-            amount: Math.abs(netDebit)
+            amount: netDebit
           };
           expenses.push(entry);
           totalExpenses += entry.amount;
@@ -235,13 +298,15 @@ exports.getProfitAndLoss = async (req, res, next) => {
       }
     });
 
-    res.json({
+    const result = {
       income,
       expenses,
       totalIncome,
       totalExpenses,
       netProfit: totalIncome - totalExpenses
-    });
+    };
+    await cacheService.set(cacheKey, result);
+    res.json(result);
   } catch (err) {
     next(err);
   }
@@ -254,12 +319,20 @@ exports.getProfitAndLoss = async (req, res, next) => {
 exports.getBalanceSheet = async (req, res, next) => {
   try {
     const { companyId } = req.params;
+    const { from, to } = req.query;
+
+    const cacheKey = `reports:${companyId}:balance-sheet:${from || 'all'}:${to || 'all'}`;
+    const cachedData = await cacheService.get(cacheKey);
+    if (cachedData) {
+      return res.json(cachedData);
+    }
 
     // Default to current financial year for P&L calculation
     const now = new Date();
     const currentYear = now.getMonth() >= 3 ? now.getFullYear() : now.getFullYear() - 1;
-    const startDate = new Date(currentYear, 3, 1);
-    const endDate = new Date(currentYear + 1, 2, 31, 23, 59, 59, 999);
+    const startDate = from ? new Date(from) : new Date(currentYear, 3, 1);
+    const endDate = to ? new Date(to) : new Date(currentYear + 1, 2, 31, 23, 59, 59, 999);
+    if (to) endDate.setHours(23, 59, 59, 999);
 
     // 1. Fetch all groups
     const groups = await Group.findAll({ where: { CompanyId: companyId } });
@@ -291,15 +364,28 @@ exports.getBalanceSheet = async (req, res, next) => {
       include: [Group]
     });
 
-    // 3. Fetch all transactions
+    // 3. DATE-SCOPED TRANSACTION QUERY ───────────────────────────────────────
+    //
+    // Balance Sheet is CUMULATIVE up to a specific date (endDate).
+    // Previously this fetched ALL transactions from all time, causing:
+    //   a) Full table scan for every request (performance)
+    //   b) Future transactions incorrectly inflating current balances
+    //
+    // Fix: scope transactions to vouchers dated <= endDate.
+    // This is correct accounting: a Balance Sheet as of date X shows the
+    // position INCLUDING all history up to X, not just the selected period.
+    const bsVoucherWhere = {
+      CompanyId: companyId,
+      date: { [Op.lte]: endDate }   // Cumulative up to endDate
+    };
+
     const txs = await Transaction.findAll({
-      include: [
-        {
-          model: Voucher,
-          where: { CompanyId: companyId },
-          attributes: ['date']
-        }
-      ]
+      include: [{
+        model: Voucher,
+        where: bsVoucherWhere,
+        attributes: ['date'],
+        required: true   // INNER JOIN: exclude orphan transactions without a voucher
+      }]
     });
 
     const ledgerTotals = {};
@@ -371,44 +457,42 @@ exports.getBalanceSheet = async (req, res, next) => {
     const assets = [];
     const liabilities = [];
 
-    // Push asset side groups
-    assets.push({ ledgerName: 'Fixed Assets', balance: Math.max(0, groupBalances['Fixed Assets']) });
-    assets.push({ ledgerName: 'Current Assets', balance: Math.max(0, groupBalances['Current Assets']) });
-    assets.push({ ledgerName: 'Investments', balance: Math.max(0, groupBalances['Investments']) });
+    // ── NEGATIVE BALANCE FIX ────────────────────────────────────────────────
+    // Previously Math.max(0, balance) was used, which hid negative balances
+    // (e.g., overdraft accounts, fully depreciated assets). Tally and all
+    // standard ERPs show negative values as-is; the balance sheet must
+    // reconcile Assets = Liabilities + Capital regardless of sign.
+    assets.push({ ledgerName: 'Fixed Assets',    balance: groupBalances['Fixed Assets'] });
+    assets.push({ ledgerName: 'Current Assets',  balance: groupBalances['Current Assets'] });
+    assets.push({ ledgerName: 'Investments',     balance: groupBalances['Investments'] });
 
-    // Push liabilities side groups
-    liabilities.push({ ledgerName: 'Capital Account', balance: Math.max(0, groupBalances['Capital Account']) });
-    
+    liabilities.push({ ledgerName: 'Capital Account',      balance: groupBalances['Capital Account'] });
+
     // Add Net Profit/Loss
     if (netProfit > 0) {
       liabilities.push({ ledgerName: 'Profit & Loss A/c (Net Profit)', balance: netProfit });
     } else if (netProfit < 0) {
-      liabilities.push({ ledgerName: 'Profit & Loss A/c (Net Loss)', balance: -netProfit });
+      liabilities.push({ ledgerName: 'Profit & Loss A/c (Net Loss)', balance: netProfit }); // negative shown as-is
     } else {
       liabilities.push({ ledgerName: 'Profit & Loss A/c', balance: 0 });
     }
 
-    liabilities.push({ ledgerName: 'Current Liabilities', balance: Math.max(0, groupBalances['Current Liabilities']) });
-    liabilities.push({ ledgerName: 'Loans (Liability)', balance: Math.max(0, groupBalances['Loans (Liability)']) });
+    liabilities.push({ ledgerName: 'Current Liabilities', balance: groupBalances['Current Liabilities'] });
+    liabilities.push({ ledgerName: 'Loans (Liability)',   balance: groupBalances['Loans (Liability)'] });
 
-    const totalAssets = assets.reduce((s, a) => s + a.balance, 0);
-    
-    // Liabilities total = Capital + Profit/Loss + Current Liabilities + Loans
-    let totalLiabilities = liabilities.reduce((s, l) => {
-      if (l.ledgerName.includes('Net Loss')) {
-        return s - l.balance; // Subtract Net Loss
-      }
-      return s + l.balance;
-    }, 0);
+    const totalAssets      = assets.reduce((s, a) => s + a.balance, 0);
+    const totalLiabilities = liabilities.reduce((s, l) => s + l.balance, 0);
 
-    res.json({
+    const result = {
       assets,
       liabilities,
       totalAssets,
       totalLiabilities,
       netProfit,
       isBalanced: Math.abs(totalAssets - totalLiabilities) < 0.01
-    });
+    };
+    await cacheService.set(cacheKey, result);
+    res.json(result);
   } catch (err) {
     next(err);
   }
@@ -445,11 +529,31 @@ exports.getDaybook = async (req, res, next) => {
 exports.getAuditLogs = async (req, res, next) => {
   try {
     const { AuditLog, User } = require('../../models');
+    const { Op } = require('sequelize');
+    const { from, to } = req.query;
+
+    const whereClause = { CompanyId: req.params.companyId };
+
+    if (from && to) {
+      const startDate = new Date(from);
+      startDate.setHours(0, 0, 0, 0);
+      const endDate = new Date(to);
+      endDate.setHours(23, 59, 59, 999);
+      whereClause.createdAt = { [Op.between]: [startDate, endDate] };
+    } else if (from) {
+      const startDate = new Date(from);
+      startDate.setHours(0, 0, 0, 0);
+      whereClause.createdAt = { [Op.gte]: startDate };
+    } else if (to) {
+      const endDate = new Date(to);
+      endDate.setHours(23, 59, 59, 999);
+      whereClause.createdAt = { [Op.lte]: endDate };
+    }
+
     const logs = await AuditLog.findAll({
-      where: { CompanyId: req.params.companyId },
+      where: whereClause,
       include: [{ model: User, attributes: ['id', 'name', 'email'] }],
       order: [['createdAt', 'DESC']],
-      limit: 100 // Last 100 activities
     });
     res.json(logs);
   } catch (err) {
@@ -727,12 +831,14 @@ exports.getDashboardStats = async (req, res, next) => {
       const credit = parseFloat(l.totalCredit || 0);
       const closing = opening + debit - credit;
 
-      if (name.includes('output gst') || name.includes('gst output') || name.includes('gst payable') || name.includes('cgst') || name.includes('sgst') || name.includes('igst')) {
+      if (name.includes('output gst') || name.includes('gst output') || name.includes('gst payable')) {
         if (closing < 0) gstPayable += Math.abs(closing);
         else gstReceivable += closing;
-      }
-      if (name.includes('input gst') || name.includes('gst input') || name.includes('gst receivable') || name.includes('itc')) {
+      } else if (name.includes('input gst') || name.includes('gst input') || name.includes('gst receivable') || name.includes('itc')) {
         gstReceivable += Math.max(0, closing);
+      } else if (name.includes('cgst') || name.includes('sgst') || name.includes('igst')) {
+        if (closing < 0) gstPayable += Math.abs(closing);
+        else gstReceivable += closing;
       }
     });
 
@@ -1077,81 +1183,321 @@ exports.getCashFlow = async (req, res, next) => {
     const { companyId } = req.params;
     const { from, to } = req.query;
 
-    const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-    const monthlyMap = {};
+    const cacheKey = `reports:${companyId}:cash-flow:${from || 'all'}:${to || 'all'}`;
+    const cachedData = await cacheService.get(cacheKey);
+    if (cachedData) {
+      return res.json(cachedData);
+    }
 
-    // Build last-12-month skeleton (or date-range if provided)
-    let start, end;
+    let startDate, endDate;
     if (from && to) {
-      start = new Date(from);
-      end   = new Date(to);
+      startDate = new Date(from);
+      endDate = new Date(to);
+      endDate.setHours(23, 59, 59, 999);
     } else {
-      end   = new Date();
-      start = new Date();
-      start.setMonth(start.getMonth() - 11);
-      start.setDate(1);
-      start.setHours(0, 0, 0, 0);
+      // Default to current financial year (April to March)
+      const now = new Date();
+      const currentYear = now.getMonth() >= 3 ? now.getFullYear() : now.getFullYear() - 1;
+      startDate = new Date(currentYear, 3, 1);
+      endDate = new Date(currentYear + 1, 2, 31, 23, 59, 59, 999);
     }
 
-    // Walk month-by-month between start and end
-    const cursor = new Date(start.getFullYear(), start.getMonth(), 1);
-    while (cursor <= end) {
-      const key = `${cursor.getFullYear()}-${String(cursor.getMonth() + 1).padStart(2, '0')}`;
-      monthlyMap[key] = { month: MONTHS[cursor.getMonth()], year: cursor.getFullYear(), inflow: 0, outflow: 0 };
-      cursor.setMonth(cursor.getMonth() + 1);
-    }
+    // 1. Fetch all groups to resolve hierarchies
+    const groups = await Group.findAll({ where: { CompanyId: companyId } });
+    const groupMap = {};
+    groups.forEach(g => {
+      groupMap[g.id] = g;
+    });
 
-    const vouchers = await Voucher.findAll({
+    const getPrimaryGroup = (groupId) => {
+      let current = groupMap[groupId];
+      for (let i = 0; i < 10; i++) {
+        if (!current) break;
+        const name = (current.name || '').trim().toLowerCase();
+        if ([
+          'sales accounts', 'direct incomes', 'indirect incomes',
+          'purchase accounts', 'direct expenses', 'indirect expenses'
+        ].includes(name)) {
+          return current.name;
+        }
+        if (!current.parent_id) break;
+        current = groupMap[current.parent_id];
+      }
+      return current ? current.name : null;
+    };
+
+    const getPrimaryBSGroup = (groupId) => {
+      let current = groupMap[groupId];
+      for (let i = 0; i < 10; i++) {
+        if (!current) break;
+        const name = (current.name || '').trim().toLowerCase();
+        if ([
+          'fixed assets', 'current assets', 'investments',
+          'capital account', 'loans (liability)', 'current liabilities',
+          'bank accounts', 'cash-in-hand'
+        ].includes(name)) {
+          return current.name;
+        }
+        if (!current.parent_id) break;
+        current = groupMap[current.parent_id];
+      }
+      return current ? current.name : null;
+    };
+
+    // 2. Fetch all ledgers
+    const ledgers = await Ledger.findAll({
+      where: { CompanyId: companyId },
+      include: [{ model: Group, attributes: ['id', 'name', 'nature', 'parent_id'] }]
+    });
+
+    // 3. Fetch P&L transactions
+    const plTxs = await Transaction.findAll({
+      include: [
+        {
+          model: Voucher,
+          where: {
+            CompanyId: companyId,
+            date: { [Op.between]: [startDate, endDate] }
+          },
+          attributes: ['date']
+        }
+      ]
+    });
+
+    const plTotals = {};
+    ledgers.forEach(l => {
+      plTotals[l.id] = { debit: 0, credit: 0 };
+    });
+    plTxs.forEach(t => {
+      if (plTotals[t.LedgerId]) {
+        plTotals[t.LedgerId].debit += parseFloat(t.debit || 0);
+        plTotals[t.LedgerId].credit += parseFloat(t.credit || 0);
+      }
+    });
+
+    let totalIncome = 0;
+    let totalExpenses = 0;
+    ledgers.forEach(l => {
+      const primaryGroup = getPrimaryGroup(l.GroupId);
+      if (!primaryGroup) return;
+      
+      const nature = l.Group?.nature;
+      const t = plTotals[l.id];
+      const netDr = t.debit - t.credit;
+      const netCr = t.credit - t.debit;
+
+      if (nature === 'Income') {
+        totalIncome += netCr;
+      } else if (nature === 'Expenses') {
+        totalExpenses += netDr;
+      }
+    });
+
+    const netIncome = totalIncome - totalExpenses;
+
+    // 4. Fetch non-cash adjustments (Depreciation)
+    const { DepreciationLog } = require('../../models');
+    const depreciationAmount = await DepreciationLog.sum('amount', {
       where: {
         CompanyId: companyId,
-        date: { [Op.between]: [start, end] },
-        voucherType: { [Op.in]: ['Receipt', 'Payment'] }
-      },
-      include: [{ model: Transaction, attributes: ['debit', 'credit'] }],
-      attributes: ['id', 'voucherType', 'date']
+        date: { [Op.between]: [startDate, endDate] }
+      }
+    }) || 0;
+
+    // 5. Fetch prior and current transactions to calculate opening/closing balances
+    const priorTxs = await Transaction.findAll({
+      attributes: [
+        'LedgerId',
+        [sequelize.fn('SUM', sequelize.col('debit')), 'debitSum'],
+        [sequelize.fn('SUM', sequelize.col('credit')), 'creditSum']
+      ],
+      include: [{
+        model: Voucher,
+        where: {
+          CompanyId: companyId,
+          date: { [Op.lt]: startDate }
+        },
+        attributes: []
+      }],
+      group: ['LedgerId']
     });
 
-    vouchers.forEach(v => {
-      if (!v.date) return;
-      const d = new Date(v.date);
-      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-      if (!monthlyMap[key]) return;
+    const currentTxs = await Transaction.findAll({
+      attributes: [
+        'LedgerId',
+        [sequelize.fn('SUM', sequelize.col('debit')), 'debitSum'],
+        [sequelize.fn('SUM', sequelize.col('credit')), 'creditSum']
+      ],
+      include: [{
+        model: Voucher,
+        where: {
+          CompanyId: companyId,
+          date: { [Op.lte]: endDate }
+        },
+        attributes: []
+      }],
+      group: ['LedgerId']
+    });
 
-      const totalDebit  = (v.Transactions || []).reduce((s, t) => s + parseFloat(t.debit  || 0), 0);
-      const totalCredit = (v.Transactions || []).reduce((s, t) => s + parseFloat(t.credit || 0), 0);
-      const amount      = Math.max(totalDebit, totalCredit);
+    const priorMap = {};
+    priorTxs.forEach(t => {
+      priorMap[t.LedgerId] = {
+        debit: parseFloat(t.getDataValue('debitSum') || 0),
+        credit: parseFloat(t.getDataValue('creditSum') || 0)
+      };
+    });
 
-      if (v.voucherType === 'Receipt') {
-        monthlyMap[key].inflow  += amount;
-      } else if (v.voucherType === 'Payment') {
-        monthlyMap[key].outflow += amount;
+    const currentMap = {};
+    currentTxs.forEach(t => {
+      currentMap[t.LedgerId] = {
+        debit: parseFloat(t.getDataValue('debitSum') || 0),
+        credit: parseFloat(t.getDataValue('creditSum') || 0)
+      };
+    });
+
+    const ledgersWithBalances = ledgers.map(l => {
+      const opening = parseFloat(l.openingBalance || 0);
+      const opType = (l.openingBalanceType || 'Dr').trim().toUpperCase();
+      const opSigned = opType === 'CR' ? -opening : opening;
+
+      const prior = priorMap[l.id] || { debit: 0, credit: 0 };
+      const current = currentMap[l.id] || { debit: 0, credit: 0 };
+
+      const balanceAtStart = opSigned + prior.debit - prior.credit;
+      const balanceAtEnd = opSigned + current.debit - current.credit;
+      const delta = balanceAtEnd - balanceAtStart;
+
+      return {
+        ledger: l,
+        balanceAtStart,
+        balanceAtEnd,
+        delta
+      };
+    });
+
+    let cashAtStart = 0;
+    let cashAtEnd = 0;
+
+    const operatingItems = [];
+    const investingItems = [];
+    const financingItems = [];
+
+    ledgersWithBalances.forEach(({ ledger, balanceAtStart, balanceAtEnd, delta }) => {
+      const primaryBSGroup = getPrimaryBSGroup(ledger.GroupId);
+      if (!primaryBSGroup) return;
+
+      const groupName = (ledger.Group?.name || '').toLowerCase();
+      const ledgerName = (ledger.name || '').toLowerCase();
+      const bsName = primaryBSGroup.toLowerCase();
+
+      // Cash equivalents
+      if (bsName === 'bank accounts' || bsName === 'cash-in-hand') {
+        cashAtStart += balanceAtStart;
+        cashAtEnd += balanceAtEnd;
+        return;
+      }
+
+      // Operating (Working Capital) Adjustments
+      if (groupName.includes('debtors') || groupName.includes('customer')) {
+        operatingItems.push({
+          name: `Decrease / (Increase) in Accounts Receivable - ${ledger.name}`,
+          amount: parseFloat((-delta).toFixed(2))
+        });
+      } else if (groupName.includes('creditors') || groupName.includes('vendor')) {
+        operatingItems.push({
+          name: `Increase / (Decrease) in Accounts Payable - ${ledger.name}`,
+          amount: parseFloat(delta.toFixed(2))
+        });
+      } else if (groupName.includes('stock') || groupName.includes('inventory') || ledgerName.includes('inventory')) {
+        operatingItems.push({
+          name: `Decrease / (Increase) in Inventory - ${ledger.name}`,
+          amount: parseFloat((-delta).toFixed(2))
+        });
+      } else if (bsName === 'current assets') {
+        operatingItems.push({
+          name: `Decrease / (Increase) in Current Assets - ${ledger.name}`,
+          amount: parseFloat((-delta).toFixed(2))
+        });
+      } else if (bsName === 'current liabilities') {
+        operatingItems.push({
+          name: `Increase / (Decrease) in Current Liabilities - ${ledger.name}`,
+          amount: parseFloat(delta.toFixed(2))
+        });
+      }
+
+      // Investing
+      else if (bsName === 'fixed assets') {
+        investingItems.push({
+          name: `Outflow on Fixed Assets - ${ledger.name}`,
+          amount: parseFloat((-delta).toFixed(2))
+        });
+      } else if (bsName === 'investments') {
+        investingItems.push({
+          name: `Outflow on Investments - ${ledger.name}`,
+          amount: parseFloat((-delta).toFixed(2))
+        });
+      }
+
+      // Financing
+      else if (bsName === 'loans (liability)') {
+        financingItems.push({
+          name: `Net proceeds / (repayments) of Loans - ${ledger.name}`,
+          amount: parseFloat(delta.toFixed(2))
+        });
+      } else if (bsName === 'capital account') {
+        financingItems.push({
+          name: `Net additions / (drawings) of Capital - ${ledger.name}`,
+          amount: parseFloat(delta.toFixed(2))
+        });
       }
     });
 
-    const cashFlow = Object.entries(monthlyMap).map(([key, m]) => ({
-      key,
-      month:   m.month,
-      year:    m.year,
-      label:   `${m.month} ${m.year}`,
-      inflow:  parseFloat(m.inflow.toFixed(2)),
-      outflow: parseFloat(m.outflow.toFixed(2)),
-      net:     parseFloat((m.inflow - m.outflow).toFixed(2)),
-    }));
+    const netIncomeVal = parseFloat(netIncome.toFixed(2));
+    const depreciationVal = parseFloat(depreciationAmount.toFixed(2));
+    
+    // Sum operating working capital changes
+    const workingCapitalChanges = operatingItems.reduce((s, i) => s + i.amount, 0);
+    const cashFromOperations = netIncomeVal + depreciationVal + workingCapitalChanges;
 
-    const totalInflow  = cashFlow.reduce((s, m) => s + m.inflow,  0);
-    const totalOutflow = cashFlow.reduce((s, m) => s + m.outflow, 0);
+    const cashFromInvesting = investingItems.reduce((s, i) => s + i.amount, 0);
+    const cashFromFinancing = financingItems.reduce((s, i) => s + i.amount, 0);
 
-    res.json({
-      cashFlow,
+    const netCashFlow = cashFromOperations + cashFromInvesting + cashFromFinancing;
+
+    const result = {
       summary: {
-        totalInflow:  parseFloat(totalInflow.toFixed(2)),
-        totalOutflow: parseFloat(totalOutflow.toFixed(2)),
-        netCashFlow:  parseFloat((totalInflow - totalOutflow).toFixed(2)),
-        period: { from: start.toISOString().split('T')[0], to: end.toISOString().split('T')[0] }
-      }
-    });
+        netIncome: netIncomeVal,
+        depreciation: depreciationVal,
+        workingCapitalChanges: parseFloat(workingCapitalChanges.toFixed(2)),
+        cashFromOperations: parseFloat(cashFromOperations.toFixed(2)),
+        cashFromInvesting: parseFloat(cashFromInvesting.toFixed(2)),
+        cashFromFinancing: parseFloat(cashFromFinancing.toFixed(2)),
+        netCashFlow: parseFloat(netCashFlow.toFixed(2)),
+        reconciliation: {
+          cashAtStart: parseFloat(cashAtStart.toFixed(2)),
+          cashAtEnd: parseFloat(cashAtEnd.toFixed(2)),
+          netIncreaseInCash: parseFloat((cashAtEnd - cashAtStart).toFixed(2))
+        },
+        period: {
+          from: startDate.toISOString().split('T')[0],
+          to: endDate.toISOString().split('T')[0]
+        }
+      },
+      operatingActivities: {
+        netIncome: netIncomeVal,
+        adjustments: [
+          { name: 'Depreciation and Amortization Expense', amount: depreciationVal }
+        ],
+        workingCapitalChanges: operatingItems
+      },
+      investingActivities: investingItems,
+      financingActivities: financingItems
+    };
+
+    await cacheService.set(cacheKey, result);
+    res.json(result);
   } catch (err) {
-    console.error('Cash flow error:', err);
+    console.error('Indirect Cash flow report error:', err);
     next(err);
   }
 };
@@ -1230,6 +1576,13 @@ exports.getReceivablesReport = async (req, res, next) => {
 
     const invoices = await SalesInvoice.findAll({
       where: invoiceWhere,
+      include: [
+        {
+          model: SalesInvoiceItem,
+          as: 'items',
+          include: [{ model: Item }]
+        }
+      ],
       order: [['dueDate', 'ASC'], ['date', 'DESC']]
     });
 
@@ -1275,7 +1628,13 @@ exports.getReceivablesReport = async (req, res, next) => {
         status:        inv.status,
         daysOverdue:   Math.max(0, daysOverdue),
         agingBucket,
-        isPseudo:      false
+        isPseudo:      false,
+        items:         inv.items ? inv.items.map((it, idx) => ({
+          seq: idx + 1,
+          description: it.description || it.Item?.name || '—',
+          amount: parseFloat(it.amount || 0),
+          glAccount: it.Item?.salesAccount || 'Sales'
+        })) : []
       });
     });
 
@@ -1538,54 +1897,36 @@ exports.getInventoryReport = async (req, res, next) => {
       order: [['name', 'ASC']]
     });
 
-    const salesTx = await Transaction.findAll({
-      where: { ItemId: { [Op.ne]: null } },
-      include: [{
-        model: Voucher,
-        where: { CompanyId: companyId }
-      }]
+    const { StockMovement } = require('../../models');
+
+    // Fetch all stock movements for these items
+    const stockMovements = await StockMovement.findAll({
+      where: { ItemId: { [Op.in]: items.map(i => i.id) } },
+      attributes: ['ItemId', 'movementType', [sequelize.fn('SUM', sequelize.col('quantity')), 'totalQty']],
+      group: ['ItemId', 'movementType'],
+      raw: true
     });
 
-    const salesQtyMap = {};
-    salesTx.forEach(t => {
-      const itemId = t.ItemId;
-      const qty = parseFloat(t.quantity || 0);
-      salesQtyMap[itemId] = (salesQtyMap[itemId] || 0) + qty;
-    });
-
-    const purchaseVouchers = await Voucher.findAll({
-      where: { CompanyId: companyId, voucherType: 'Purchase' }
-    });
-
-    const purchaseQtyMap = {};
-    purchaseVouchers.forEach(v => {
-      try {
-        const parsed = JSON.parse(v.narration || '{}');
-        const vItems = parsed.items || [];
-        vItems.forEach(it => {
-          const qty = parseFloat(it.quantity || it.qty || 0);
-          if (qty > 0) {
-            if (it.itemId) {
-              purchaseQtyMap[it.itemId] = (purchaseQtyMap[it.itemId] || 0) + qty;
-            } else if (it.itemName) {
-              const nameKey = it.itemName.trim().toLowerCase();
-              purchaseQtyMap[nameKey] = (purchaseQtyMap[nameKey] || 0) + qty;
-            }
-          }
-        });
-      } catch (e) {}
+    const movementMap = {};
+    stockMovements.forEach(sm => {
+      if (!movementMap[sm.ItemId]) movementMap[sm.ItemId] = { purchases: 0, sales: 0 };
+      if (sm.movementType === 'PURCHASE') {
+        movementMap[sm.ItemId].purchases += parseFloat(sm.totalQty || 0);
+      } else if (sm.movementType === 'SALE') {
+        // Sales movements might have negative quantity, we need absolute
+        movementMap[sm.ItemId].sales += Math.abs(parseFloat(sm.totalQty || 0));
+      }
     });
 
     let totalValue = 0, lowStockCount = 0, outOfStockCount = 0;
 
     const report = items.map(item => {
       const opening = parseFloat(item.openingStock || 0);
-      const sales = salesQtyMap[item.id] || 0;
-      const purchaseById = purchaseQtyMap[item.id] || 0;
-      const purchaseByName = purchaseQtyMap[item.name.trim().toLowerCase()] || 0;
-      const purchases = purchaseById + (purchaseById > 0 ? 0 : purchaseByName);
+      const purchases = movementMap[item.id]?.purchases || 0;
+      const sales = movementMap[item.id]?.sales || 0;
 
-      const stock = opening + purchases - sales;
+      // Use the accurately maintained currentStock from DB
+      const stock = parseFloat(item.currentStock || 0);
 
       const costPrice = parseFloat(item.costPrice || item.purchasePrice || 0);
       const sellPrice = parseFloat(item.sellingPrice || item.salesPrice || 0);

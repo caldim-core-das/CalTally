@@ -1,4 +1,5 @@
 const { Voucher, Transaction, Ledger, sequelize } = require('../models');
+const cacheService = require('./cacheService');
 
 class AccountingService {
   /**
@@ -17,6 +18,42 @@ class AccountingService {
       throw new Error('SECURITY ERROR: companyId is strictly required to record a journal entry.');
     }
 
+    // Period Locking Validation
+    const { PeriodLock, FinancialPeriod } = require('../models');
+    const entryDate = new Date(date || new Date());
+    const entryDateZero = new Date(entryDate.getFullYear(), entryDate.getMonth(), entryDate.getDate());
+
+    if (PeriodLock) {
+      const lock = await PeriodLock.findOne({
+        where: { CompanyId: companyId },
+        order: [['lockDate', 'DESC']],
+        transaction: dbTransaction
+      });
+      if (lock) {
+        const lockLimitDate = new Date(lock.lockDate);
+        const lockLimitDateZero = new Date(lockLimitDate.getFullYear(), lockLimitDate.getMonth(), lockLimitDate.getDate());
+        if (entryDateZero <= lockLimitDateZero) {
+          throw new Error(`PERIOD LOCKED: Transaction date (${entryDateZero.toLocaleDateString()}) is within a locked period (on or before ${lockLimitDateZero.toLocaleDateString()}).`);
+        }
+      }
+    }
+
+    if (FinancialPeriod) {
+      const { Op } = require('sequelize');
+      const lockedPeriod = await FinancialPeriod.findOne({
+        where: {
+          CompanyId: companyId,
+          isLocked: true,
+          startDate: { [Op.lte]: entryDateZero },
+          endDate: { [Op.gte]: entryDateZero }
+        },
+        transaction: dbTransaction
+      });
+      if (lockedPeriod) {
+        throw new Error(`PERIOD LOCKED: Transaction date (${entryDateZero.toLocaleDateString()}) falls within locked Financial Period: "${lockedPeriod.periodName}".`);
+      }
+    }
+
     // 1. Validate Balance (Dr = Cr)
     const totalDebit = entries.reduce((sum, e) => sum + (parseFloat(e.debit) || 0), 0);
     const totalCredit = entries.reduce((sum, e) => sum + (parseFloat(e.credit) || 0), 0);
@@ -30,13 +67,35 @@ class AccountingService {
     }
 
     // 2. Create Voucher Header with Auto-Numbering
+    // ----------------------------------------------------------------------------------
+    // RACE CONDITION FIX: The old COUNT()+1 approach is not atomic.
+    // Two concurrent requests both reading count=5 would both generate VOU-6.
+    //
+    // Fix: read the LAST voucher's number (by createdAt DESC), parse the
+    // trailing integer, and increment by 1. This runs inside the caller's
+    // DB transaction, so SQLite's serialized writes ensure atomicity.
+    //
+    // Numbers are zero-padded to 5 digits (00001) for correct lexical sort order.
     let voucherNumber = customVoucherNumber;
     if (!voucherNumber) {
       const prefix = voucherType.substring(0, 3).toUpperCase();
-      const count = await Voucher.count({ where: { CompanyId: companyId, voucherType }, ...options });
-      voucherNumber = `${prefix}-${count + 1}`;
+
+      const lastVoucher = await Voucher.findOne({
+        where: { CompanyId: companyId, voucherType },
+        order: [['createdAt', 'DESC']],
+        attributes: ['voucherNumber'],
+        ...options
+      });
+
+      let nextSeq = 1;
+      if (lastVoucher?.voucherNumber) {
+        // Parse the trailing number from formats like "JOU-00007" or "PAY-3"
+        const match = lastVoucher.voucherNumber.match(/(\d+)$/);
+        if (match) nextSeq = parseInt(match[1], 10) + 1;
+      }
+      voucherNumber = `${prefix}-${String(nextSeq).padStart(5, '0')}`;
     } else {
-      // If it's a numeric string with padding, remove the padding
+      // If the caller supplies a plain integer string, preserve it as-is
       if (/^\d+$/.test(voucherNumber)) {
         voucherNumber = String(parseInt(voucherNumber, 10));
       }
@@ -129,6 +188,11 @@ class AccountingService {
       }, options);
     }
 
+    // Invalidate reports cache
+    cacheService.publishCacheInvalidation(companyId).catch(err => {
+      console.warn('Failed to publish cache invalidation on recordJournalEntry:', err.message);
+    });
+
     return voucher;
   }
 
@@ -141,6 +205,42 @@ class AccountingService {
     // 0. Validate CompanyId explicitly
     if (!companyId) {
       throw new Error('SECURITY ERROR: companyId is strictly required to update a journal entry.');
+    }
+
+    // Period Locking Validation
+    const { PeriodLock, FinancialPeriod } = require('../models');
+    const entryDate = new Date(date || new Date());
+    const entryDateZero = new Date(entryDate.getFullYear(), entryDate.getMonth(), entryDate.getDate());
+
+    if (PeriodLock) {
+      const lock = await PeriodLock.findOne({
+        where: { CompanyId: companyId },
+        order: [['lockDate', 'DESC']],
+        transaction: dbTransaction
+      });
+      if (lock) {
+        const lockLimitDate = new Date(lock.lockDate);
+        const lockLimitDateZero = new Date(lockLimitDate.getFullYear(), lockLimitDate.getMonth(), lockLimitDate.getDate());
+        if (entryDateZero <= lockLimitDateZero) {
+          throw new Error(`PERIOD LOCKED: Transaction date (${entryDateZero.toLocaleDateString()}) is within a locked period (on or before ${lockLimitDateZero.toLocaleDateString()}).`);
+        }
+      }
+    }
+
+    if (FinancialPeriod) {
+      const { Op } = require('sequelize');
+      const lockedPeriod = await FinancialPeriod.findOne({
+        where: {
+          CompanyId: companyId,
+          isLocked: true,
+          startDate: { [Op.lte]: entryDateZero },
+          endDate: { [Op.gte]: entryDateZero }
+        },
+        transaction: dbTransaction
+      });
+      if (lockedPeriod) {
+        throw new Error(`PERIOD LOCKED: Transaction date (${entryDateZero.toLocaleDateString()}) falls within locked Financial Period: "${lockedPeriod.periodName}".`);
+      }
     }
 
     // 1. Validate Balance (Dr = Cr)
@@ -270,6 +370,11 @@ class AccountingService {
       }, options);
     }
 
+    // Invalidate reports cache
+    cacheService.publishCacheInvalidation(companyId).catch(err => {
+      console.warn('Failed to publish cache invalidation on updateJournalEntry:', err.message);
+    });
+
     return voucher;
   }
 
@@ -284,6 +389,42 @@ class AccountingService {
 
     if (!voucher) throw new Error('Voucher not found');
     if (voucher.CompanyId !== companyId) throw new Error('Unauthorized');
+
+    // Period Lock Check for Deletion
+    const { PeriodLock, FinancialPeriod } = require('../models');
+    const entryDate = new Date(voucher.date);
+    const entryDateZero = new Date(entryDate.getFullYear(), entryDate.getMonth(), entryDate.getDate());
+
+    if (PeriodLock) {
+      const lock = await PeriodLock.findOne({
+        where: { CompanyId: companyId },
+        order: [['lockDate', 'DESC']],
+        transaction: dbTransaction
+      });
+      if (lock) {
+        const lockLimitDate = new Date(lock.lockDate);
+        const lockLimitDateZero = new Date(lockLimitDate.getFullYear(), lockLimitDate.getMonth(), lockLimitDate.getDate());
+        if (entryDateZero <= lockLimitDateZero) {
+          throw new Error(`PERIOD LOCKED: Cannot delete transaction. Date (${entryDateZero.toLocaleDateString()}) is within a locked period.`);
+        }
+      }
+    }
+
+    if (FinancialPeriod) {
+      const { Op } = require('sequelize');
+      const lockedPeriod = await FinancialPeriod.findOne({
+        where: {
+          CompanyId: companyId,
+          isLocked: true,
+          startDate: { [Op.lte]: entryDateZero },
+          endDate: { [Op.gte]: entryDateZero }
+        },
+        transaction: dbTransaction
+      });
+      if (lockedPeriod) {
+        throw new Error(`PERIOD LOCKED: Cannot delete transaction. Date falls within locked Financial Period: "${lockedPeriod.periodName}".`);
+      }
+    }
 
     let totalDebit = 0;
     // 1. Reverse old transactions
@@ -325,6 +466,11 @@ class AccountingService {
       }, options);
     }
 
+    // Invalidate reports cache
+    cacheService.publishCacheInvalidation(companyId).catch(err => {
+      console.warn('Failed to publish cache invalidation on deleteJournalEntry:', err.message);
+    });
+
     return true;
   }
 
@@ -333,9 +479,9 @@ class AccountingService {
    * Enhanced with: Negative Stock Protection, Integrated Inventory, and Audit Trails.
    */
   static async recordTaxInvoice({
-    companyId, customerLedgerId, date, narration, items, type = 'Sales', userId, projectId
+    companyId, customerLedgerId, date, narration, items, type = 'Sales', userId, projectId, tcsAmount = 0
   }, dbTransaction = null) {
-    const { Item } = require('../models');
+    const { Item, StockMovement } = require('../models');
     const options = dbTransaction ? { transaction: dbTransaction } : {};
 
     let totalTaxableValue = 0;
@@ -366,7 +512,8 @@ class AccountingService {
       processedItems.push({ ...itemData, item, taxable, tax });
     }
 
-    const grandTotal = totalTaxableValue + totalGstAmount;
+    const tcsAmt = parseFloat(tcsAmount || 0);
+    const grandTotal = totalTaxableValue + totalGstAmount + tcsAmt;
 
     // 2. Identify States for GST Automation
     const { Company, Group } = require('../models');
@@ -453,6 +600,14 @@ class AccountingService {
       }
     }
 
+    if (tcsAmt > 0) {
+      const taxGroup = await Group.findOne({ where: { CompanyId: companyId, name: { [Op.like]: '%Duties%' } }, ...options });
+      let tcsLedger = await Ledger.findOne({ where: { CompanyId: companyId, name: { [Op.like]: '%TCS Payable%' } }, ...options });
+      if (!tcsLedger) {
+        tcsLedger = await Ledger.create({ name: 'TCS Payable', category: 'Liability', groupName: 'Duties & Taxes', GroupId: taxGroup?.id, CompanyId: companyId, currentBalance: 0 }, options);
+      }
+      journalEntries.push({ ledgerId: tcsLedger.id, debit: 0, credit: tcsAmt });
+    }
 
     // 4. Post to Universal Journal Engine (which handles Audit)
     const voucher = await this.recordJournalEntry({
@@ -468,8 +623,16 @@ class AccountingService {
     // 5. Update Inventory & Metadata Linkage
     for (const pItem of processedItems) {
       const item = pItem.item;
-      item.currentStock = parseFloat(item.currentStock) - parseFloat(pItem.quantity);
-      await item.save(options);
+      
+      // Automatic stock calculation handled by StockMovement hook
+      await StockMovement.create({
+        movementType: type === 'Sales' ? 'SALE' : 'PURCHASE',
+        quantity: type === 'Sales' ? -pItem.quantity : pItem.quantity,
+        rate: pItem.rate,
+        amount: pItem.taxable,
+        date: date || new Date(),
+        ItemId: item.id
+      }, options);
 
       // Link Item metadata to the Sales Transaction line
       await Transaction.update({
@@ -557,6 +720,11 @@ class AccountingService {
       }
 
       return { updatedCount, targetAccount: targetLedger.name };
+    });
+
+    // Invalidate reports cache
+    cacheService.publishCacheInvalidation(companyId).catch(err => {
+      console.warn('Failed to publish cache invalidation on bulkUpdateTransactions:', err.message);
     });
 
     return result;

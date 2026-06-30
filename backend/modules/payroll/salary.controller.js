@@ -17,7 +17,7 @@ exports.getComponents = async (req, res) => {
     if (!companyId) return res.status(400).json({ error: 'Company ID is required' });
 
     const components = await SalaryComponent.findAll({
-      where: { CompanyId: companyId, isActive: true },
+      where: { CompanyId: companyId },
       order: [['displayOrder', 'ASC'], ['code', 'ASC']]
     });
 
@@ -31,7 +31,7 @@ exports.createComponent = async (req, res) => {
   try {
     const companyId = req.companyId;
     const { 
-      name, code, type, calculationType, calculationBase, 
+      name, code, type, componentNature, calculationType, calculationBase, 
       calculationValue, isStatutory, isTaxable, displayOrder, description 
     } = req.body;
 
@@ -52,6 +52,7 @@ exports.createComponent = async (req, res) => {
       name,
       code: code.toUpperCase(),
       type,
+      componentNature: componentNature || 'Fixed',
       calculationType,
       calculationBase: calculationType === 'Percentage' ? calculationBase : null,
       calculationValue: calculationValue || 0,
@@ -74,7 +75,7 @@ exports.updateComponent = async (req, res) => {
     const companyId = req.companyId;
     const { id } = req.params;
     const { 
-      name, code, type, calculationType, calculationBase, 
+      name, code, type, componentNature, calculationType, calculationBase, 
       calculationValue, isStatutory, isTaxable, displayOrder, description 
     } = req.body;
 
@@ -96,6 +97,7 @@ exports.updateComponent = async (req, res) => {
       ...(name && { name }),
       ...(code && { code: code.toUpperCase() }),
       ...(type && { type }),
+      ...(componentNature && { componentNature }),
       ...(calculationType && { calculationType }),
       calculationBase: calculationType === 'Percentage' ? calculationBase : (calculationType ? null : component.calculationBase),
       ...(calculationValue !== undefined && { calculationValue }),
@@ -311,8 +313,16 @@ exports.updateStructure = async (req, res) => {
         { where: { SalaryStructureId: id }, transaction }
       );
 
+      // Deduplicate components by SalaryComponentId before creating to avoid UI bugs
+      const uniqueComponents = [];
+      const seenCompIds = new Set();
       for (const item of components) {
-        if (!item.SalaryComponentId) continue;
+        if (!item.SalaryComponentId || seenCompIds.has(item.SalaryComponentId)) continue;
+        seenCompIds.add(item.SalaryComponentId);
+        uniqueComponents.push(item);
+      }
+
+      for (const item of uniqueComponents) {
         
         // Upsert or re-create
         await SalaryStructureComponent.create({
@@ -538,10 +548,11 @@ exports.calculatePreview = async (req, res) => {
       }));
     }
 
-    const result = SalaryService.calculateSalaryBreakdown(
+    const result = await SalaryService.calculateSalaryBreakdown(
       Number(ctcAmount),
       targetComponents,
-      basicAmount ? Number(basicAmount) : null
+      basicAmount ? Number(basicAmount) : null,
+      companyId
     );
 
     res.json({ success: true, data: result });

@@ -1,4 +1,4 @@
-const { Voucher, Transaction, Ledger, CostCenterAllocation, CostCenter, sequelize } = require('../../models');
+const { Voucher, Transaction, Ledger, CostCenterAllocation, CostCenter, Group, sequelize } = require('../../models');
 const { Op } = require('sequelize');
 const AccountingService = require('../../services/AccountingService');
 const AuditService = require('../../services/AuditService');
@@ -119,7 +119,8 @@ exports.getVouchers = async (req, res, next) => {
             attributes: [
               'id', 'name', 'currency', 'billingAddress', 'shippingAddress', 
               'address', 'gstNumber', 'pan', 'email', 'phone', 'mobile', 'workPhone'
-            ] 
+            ],
+            include: [{ model: Group, attributes: ['id', 'name'] }]
           },
           {
             model: CostCenterAllocation,
@@ -149,7 +150,8 @@ exports.getVoucherById = async (req, res, next) => {
             attributes: [
               'id', 'name', 'currency', 'billingAddress', 'shippingAddress', 
               'address', 'gstNumber', 'pan', 'email', 'phone', 'mobile', 'workPhone'
-            ] 
+            ],
+            include: [{ model: Group, attributes: ['id', 'name'] }]
           },
           {
             model: CostCenterAllocation,
@@ -292,16 +294,63 @@ exports.approveVoucher = async (req, res, next) => {
 };
 
 exports.cancelVoucher = async (req, res, next) => {
+  const t = await sequelize.transaction();
   try {
-    const voucher = await Voucher.findByPk(req.params.id);
-    if (!voucher) return res.status(404).json({ error: 'Voucher not found' });
-    
+    const voucher = await Voucher.findByPk(req.params.id, {
+      include: [{ model: Transaction }],
+      transaction: t
+    });
+    if (!voucher) {
+      await t.rollback();
+      return res.status(404).json({ error: 'Voucher not found' });
+    }
+
+    if (voucher.status === 'Cancelled') {
+      await t.rollback();
+      return res.status(400).json({ error: 'Voucher is already cancelled.' });
+    }
+
+    // ──── Reverse each transaction line's effect on its ledger balance ────────────
+    // This mirrors the inverse of AccountingService.recordJournalEntry delta logic.
+    // Without this step, a cancelled Payment/Receipt would still reduce/increase
+    // the bank balance, making every financial report incorrect.
+    if (voucher.Transactions && voucher.Transactions.length > 0) {
+      for (const tx of voucher.Transactions) {
+        const ledger = await Ledger.findByPk(tx.LedgerId, { transaction: t });
+        if (ledger) {
+          const debit  = parseFloat(tx.debit  || 0);
+          const credit = parseFloat(tx.credit || 0);
+          // Exact inverse of the delta applied during journal entry creation
+          const delta = ledger.openingBalanceType === 'Cr'
+            ? credit - debit
+            : debit  - credit;
+          ledger.currentBalance = parseFloat(ledger.currentBalance || 0) - delta;
+          await ledger.save({ transaction: t });
+        }
+      }
+    }
+
     voucher.status = 'Cancelled';
-    if (req.user && req.user.id) voucher.ModifiedBy = req.user.id;
-    await voucher.save();
-    
-    res.json({ message: 'Voucher cancelled successfully.', voucher });
+    if (req.user?.id) voucher.ModifiedBy = req.user.id;
+    await voucher.save({ transaction: t });
+
+    await t.commit();
+
+    // Audit log (outside transaction — non-critical if this fails)
+    await AuditService.log({
+      action: 'CANCEL_VOUCHER',
+      tableName: 'Vouchers',
+      recordId: voucher.id,
+      oldData: { status: 'Active' },
+      newData: { status: 'Cancelled', cancelledBy: req.user?.id },
+      companyId: voucher.CompanyId,
+      userId: req.user?.id,
+      req
+    });
+
+    res.json({ message: 'Voucher cancelled and all ledger balances reversed successfully.', voucher });
   } catch (err) {
+    if (t) await t.rollback();
     next(err);
   }
 };

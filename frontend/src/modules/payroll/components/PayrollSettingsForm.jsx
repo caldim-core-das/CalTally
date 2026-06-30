@@ -1,16 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  Building2, Percent, Calculator, Briefcase, FileText, Calendar, Wallet, Check, AlertCircle, Loader2, Info, RefreshCcw
+  Building2, Percent, Calculator, Briefcase, FileText, Calendar, Wallet, Check, AlertCircle, Loader2, Info, RefreshCcw, Sparkles
 } from 'lucide-react';
 import api from '../../../services/api'; // using global api instance
+import SalaryComponentsTab from './salary/SalaryComponentsTab';
 
 export default function PayrollSettingsForm({ companyId, initialSettings, onSaveSuccess }) {
-  const [activeSection, setActiveSection] = useState('pf');
+  const [activeSection, setActiveSection] = useState('components');
   
   const [formData, setFormData] = useState({
     pfApplicable: true,
     pfEmployeeRate: 12.00,
     pfEmployerRate: 12.00,
+    pfCap: 1800,
     pfRegistrationNumber: '',
     esiApplicable: false,
     esiEmployeeRate: 0.75,
@@ -78,6 +80,7 @@ export default function PayrollSettingsForm({ companyId, initialSettings, onSave
   };
 
   const sections = [
+    { id: 'components', label: 'Custom Allowances', icon: Sparkles },
     { id: 'pf', label: 'Provident Fund (PF)', icon: Briefcase },
     { id: 'esi', label: 'Employee State Insurance (ESI)', icon: Building2 },
     { id: 'pt', label: 'Professional Tax (PT)', icon: Wallet },
@@ -118,6 +121,13 @@ export default function PayrollSettingsForm({ companyId, initialSettings, onSave
             </div>
           )}
 
+          {/* Section: Custom Components (Allowances) */}
+          {activeSection === 'components' && (
+            <div className="animate-in slide-in-from-right-4 duration-300">
+              <SalaryComponentsTab />
+            </div>
+          )}
+
           {/* Section: PF */}
           {activeSection === 'pf' && (
             <div className="space-y-6 animate-in slide-in-from-right-4 duration-300">
@@ -137,18 +147,60 @@ export default function PayrollSettingsForm({ companyId, initialSettings, onSave
               </div>
 
               {formData.pfApplicable && (
-                <div className="grid grid-cols-2 gap-6 bg-slate-50/50 p-6 rounded-2xl border border-slate-100">
-                  <div>
-                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Employee Contribution (%)</label>
-                    <input type="number" step="0.01" value={formData.pfEmployeeRate} onChange={e => setFormData({...formData, pfEmployeeRate: parseFloat(e.target.value)})}
-                      className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold outline-none focus:border-blue-400" />
-                    <p className="text-xs text-slate-400 mt-2 font-medium">Standard is 12.00%</p>
+                <div className="space-y-6 bg-slate-50/50 p-6 rounded-2xl border border-slate-100">
+                  <div className="grid grid-cols-2 gap-6">
+                    <div>
+                      <label className="block text-sm text-slate-700 mb-2">EPF Number</label>
+                      <input 
+                        type="text" 
+                        placeholder="AA/AAA/0000000/XXX" 
+                        value={formData.pfRegistrationNumber} 
+                        onChange={e => setFormData({...formData, pfRegistrationNumber: e.target.value})}
+                        className="w-full bg-white border border-slate-200 rounded-lg px-4 py-2.5 text-sm outline-none focus:border-blue-500 transition-all" 
+                      />
+                    </div>
+                    <div>
+                      <label className="flex items-center gap-1.5 text-sm text-slate-700 mb-2">
+                        Deduction Cycle <Info size={14} className="text-slate-400" />
+                      </label>
+                      <input 
+                        type="text" 
+                        value={formData.payrollFrequency} 
+                        disabled
+                        className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 text-sm text-slate-600 outline-none cursor-not-allowed" 
+                      />
+                    </div>
                   </div>
-                  <div>
-                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Employer Contribution (%)</label>
-                    <input type="number" step="0.01" value={formData.pfEmployerRate} onChange={e => setFormData({...formData, pfEmployerRate: parseFloat(e.target.value)})}
-                      className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold outline-none focus:border-blue-400" />
-                    <p className="text-xs text-slate-400 mt-2 font-medium">Standard is 12.00%</p>
+
+                  <div className="grid grid-cols-2 gap-6 pt-4 border-t border-slate-200">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Employee Contribution (%)</label>
+                      <input type="number" step="0.01" value={formData.pfEmployeeRate} onChange={e => setFormData({...formData, pfEmployeeRate: parseFloat(e.target.value)})}
+                        className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold outline-none focus:border-blue-500 transition-all" />
+                      <p className="text-xs text-slate-400 mt-2 font-medium">Standard is 12.00%</p>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Employer Contribution (%)</label>
+                      <input type="number" step="0.01" value={formData.pfEmployerRate} onChange={e => setFormData({...formData, pfEmployerRate: parseFloat(e.target.value)})}
+                        className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold outline-none focus:border-blue-500 transition-all" />
+                      <p className="text-xs text-slate-400 mt-2 font-medium">Standard is 12.00%</p>
+                    </div>
+                  </div>
+
+                  <div className="pt-4 border-t border-slate-200">
+                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">PF Wage Calculation Rule</label>
+                    <select
+                      value={parseFloat(formData.pfCap) === 1800 ? 'capped' : 'uncapped'}
+                      onChange={(e) => setFormData({ ...formData, pfCap: e.target.value === 'capped' ? 1800 : 9999999 })}
+                      className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:border-blue-500 transition-all shadow-sm"
+                    >
+                      <option value="capped">Restrict PF Wage to ₹15,000 (Max ₹1,800/month)</option>
+                      <option value="uncapped">Calculate exactly 12% on Actual Basic Wage (Uncapped)</option>
+                    </select>
+                    <p className="text-xs text-slate-500 mt-2">
+                      <span className="font-bold text-slate-700">Capped (Default):</span> Recommended. The maximum PF deducted will be exactly ₹1,800. <br/>
+                      <span className="font-bold text-slate-700">Uncapped:</span> Voluntary PF. Deducts exactly 12% of the employee's full Basic Salary, regardless of how high it is.
+                    </p>
                   </div>
                 </div>
               )}
@@ -289,7 +341,7 @@ export default function PayrollSettingsForm({ companyId, initialSettings, onSave
       </div>
 
       {/* Right Column: Test Calculation Tool */}
-      <div className="lg:w-80 space-y-6">
+      <div className="w-full lg:w-96 shrink-0 space-y-6">
         <div className="bg-gradient-to-b from-blue-900 to-slate-900 rounded-3xl p-6 shadow-xl text-white relative overflow-hidden">
           <div className="absolute top-0 right-0 -mr-8 -mt-8 text-white/5">
             <Calculator size={120} />

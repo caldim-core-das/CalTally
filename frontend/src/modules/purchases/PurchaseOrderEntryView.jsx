@@ -119,12 +119,13 @@ const PurchaseOrderEntryView = ({ companyId }) => {
   const [currentCompany, setCurrentCompany] = useState(null);
 
   const tdsOptions = [
-    { name: 'Commission or Brokerage', rate: 2 },
-    { name: 'Dividend', rate: 10 },
-    { name: 'Other Interest than securities', rate: 10 },
-    { name: 'Payment of contractors for Others', rate: 2 },
-    { name: 'Payment of contractors HUF/Indiv', rate: 1 },
-    { name: 'Technical Fees (2%)', rate: 2 },
+    { section: '194H', name: 'Commission or Brokerage', rate: 2 },
+    { section: '194',  name: 'Dividend', rate: 10 },
+    { section: '194A', name: 'Other Interest than securities', rate: 10 },
+    { section: '194C', name: 'Payment of contractors for Others', rate: 2 },
+    { section: '194C', name: 'Payment of contractors HUF/Indiv', rate: 1 },
+    { section: '194J', name: 'Technical Fees (2%)', rate: 2 },
+    { section: '194J', name: 'Professional Fees', rate: 10 },
   ];
 
   const filteredTdsOptions = tdsOptions.filter(opt => 
@@ -413,6 +414,16 @@ const PurchaseOrderEntryView = ({ companyId }) => {
     return contacts;
   }, [selectedVendor]);
 
+  const previousVendorIdRef = useRef('');
+  useEffect(() => {
+     if (formData.vendorId && formData.vendorId !== previousVendorIdRef.current) {
+        if (!id && emailContacts.length > 0) {
+           setSelectedEmailContacts(emailContacts.map(c => c.id));
+        }
+        previousVendorIdRef.current = formData.vendorId;
+     }
+  }, [formData.vendorId, emailContacts, id]);
+
   const handleSelectAllEmails = () => {
      if (selectedEmailContacts.length === emailContacts.length) {
         setSelectedEmailContacts([]);
@@ -542,8 +553,9 @@ const PurchaseOrderEntryView = ({ companyId }) => {
                           <input 
                             type="text"
                             placeholder="Select a Vendor"
-                            value={formData.vendorName || vendorSearch}
+                            value={formData.vendorName}
                             onChange={(e) => {
+                               setFormData({ ...formData, vendorName: e.target.value, vendorId: '' });
                                setVendorSearch(e.target.value);
                                setIsVendorDropdownOpen(true);
                             }}
@@ -579,11 +591,32 @@ const PurchaseOrderEntryView = ({ companyId }) => {
                                   <div 
                                      key={vendor.id}
                                      onClick={() => {
+                                        let newTdsName = formData.tdsName;
+                                        let newTdsRate = formData.tdsRate;
+                                        
+                                        if (vendor.tdsApplicable && vendor.tds_section) {
+                                           const matched = tdsOptions.find(o => o.section === vendor.tds_section && o.rate === Number(vendor.tds_rate));
+                                           if (matched) {
+                                              newTdsName = matched.name;
+                                              newTdsRate = matched.rate;
+                                           } else {
+                                              // Fallback if the option isn't explicitly in the hardcoded list
+                                              newTdsName = `TDS - ${vendor.tds_section}`;
+                                              newTdsRate = Number(vendor.tds_rate) || 0;
+                                           }
+                                        } else {
+                                           // Clear if vendor has no TDS or missing section
+                                           newTdsName = '';
+                                           newTdsRate = 0;
+                                        }
+
                                         setFormData({ 
                                           ...formData, 
                                           vendorId: vendor.id, 
                                           vendorName: vendor.name,
-                                          paymentTerms: vendor.paymentTerms || formData.paymentTerms
+                                          paymentTerms: vendor.paymentTerms || formData.paymentTerms,
+                                          tdsName: newTdsName,
+                                          tdsRate: newTdsRate
                                         });
                                         setVendorSearch('');
                                         setIsVendorDropdownOpen(false);
@@ -797,7 +830,8 @@ const PurchaseOrderEntryView = ({ companyId }) => {
                                   className="w-full px-2 py-1.5 border border-slate-300 rounded text-[13px] text-slate-800 focus:outline-none focus:border-blue-500 bg-slate-50 focus:bg-white"
                                 />
                              </div>
-                             <div className="col-span-2 flex justify-end mt-2">
+                             <div className="col-span-2 flex justify-end gap-2 mt-2">
+                                <button type="button" onClick={() => setIsEditingDeliveryAddress(false)} className="px-4 py-1.5 bg-slate-100 text-slate-600 rounded text-[12px] font-bold hover:bg-slate-200 border border-slate-200">Cancel</button>
                                 <button type="button" onClick={() => setIsEditingDeliveryAddress(false)} className="px-4 py-1.5 bg-blue-600 text-white rounded text-[12px] font-bold hover:bg-blue-700">Save Address</button>
                              </div>
                           </div>
@@ -1219,10 +1253,25 @@ const PurchaseOrderEntryView = ({ companyId }) => {
                                  }}
                                  className={`w-full h-9 px-3 flex items-center justify-between border rounded bg-white cursor-pointer group transition-all ${isTDSDropdownOpen ? 'border-blue-500 ring-1 ring-blue-500' : 'border-slate-300 hover:border-slate-400'}`}
                                >
-                                  <span className={`text-[13px] truncate ${formData.tdsName ? 'text-slate-700 font-medium' : 'text-slate-400'}`}>
-                                     {formData.tdsName ? `${formData.tdsName} [${formData.tdsRate}%]` : 'Select a Tax'}
-                                  </span>
-                                  <ChevronDown size={14} className={`text-slate-400 transition-transform ${isTDSDropdownOpen ? 'rotate-180 text-blue-500' : ''}`} />
+                                  <div className="flex items-center flex-1 min-w-0 overflow-hidden pr-2">
+                                     <span className={`text-[13px] truncate ${formData.tdsName ? 'text-slate-700 font-medium' : 'text-slate-400'}`}>
+                                        {formData.tdsName ? `${formData.tdsName} [${formData.tdsRate}%]` : 'Select a Tax'}
+                                     </span>
+                                  </div>
+                                  <div className="flex items-center gap-1.5 flex-shrink-0">
+                                     {formData.tdsName && (
+                                        <X 
+                                          size={14} 
+                                          className="text-red-400 hover:text-red-600 transition-colors" 
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setFormData({ ...formData, tdsName: '', tdsRate: 0 });
+                                          }}
+                                        />
+                                     )}
+                                     {formData.tdsName && <div className="w-px h-4 bg-slate-200"></div>}
+                                     <ChevronDown size={14} className={`text-slate-400 transition-transform ${isTDSDropdownOpen ? 'rotate-180 text-blue-500' : ''}`} />
+                                  </div>
                                </div>
 
                                {isTDSDropdownOpen && (
@@ -1402,7 +1451,7 @@ const PurchaseOrderEntryView = ({ companyId }) => {
        </div>
 
        {/* ─── Bottom Actions ────────────────────────────────────── */}
-       <div className="fixed bottom-0 left-0 right-0 h-16 bg-white border-t border-slate-200 shadow-[0_-4px_10px_rgba(0,0,0,0.02)] flex items-center justify-between px-8 z-50">
+       <div className="fixed bottom-0 right-0 h-16 bg-white border-t border-slate-200 shadow-[0_-4px_10px_rgba(0,0,0,0.02)] flex items-center justify-between px-8 z-50" style={{ left: 'var(--sidebar-width)' }}>
           <div className="flex items-center gap-3">
              <button 
                onClick={() => handleSaveOrder(false)}

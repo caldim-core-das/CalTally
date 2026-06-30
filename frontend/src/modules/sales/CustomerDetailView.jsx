@@ -9,7 +9,7 @@ import {
   Camera, Image as ImageIcon, X, LayoutDashboard, Share2,
   Sparkles, DollarSign, Printer, Download, Filter, Save, Loader2,
   ChevronRight, Calendar, User, Users, Briefcase, Bold, Italic, Underline,
-  CheckCircle2, AlertCircle, PlusCircle, Trash
+  CheckCircle2, AlertCircle, PlusCircle, Trash, ArrowDown
 } from 'lucide-react';
 import { 
   ledgerAPI, salesAPI, quoteAPI, retainerInvoiceAPI, 
@@ -20,6 +20,8 @@ import ConfirmModal from '../../components/ConfirmModal';
 import ComposeMailModal from '../../components/ComposeMailModal';
 import { getCurrencyDisplay, CURRENCIES } from '../../utils/currencies';
 import CustomerOverviewSidebar from './CustomerOverviewSidebar';
+import { INDIAN_STATES } from '../../utils/indianStates';
+import { COUNTRY_CODES } from '../../utils/countryCodes';
 
 const CustomerDetailView = ({ companyId }) => {
   const { id } = useParams();
@@ -71,6 +73,7 @@ const CustomerDetailView = ({ companyId }) => {
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
   const [isSideListCollapsed, setIsSideListCollapsed] = useState(false);
   const [exchangeRate, setExchangeRate] = useState(1);
+  const [exchangeRateLoading, setExchangeRateLoading] = useState(false);
   const [quickAddForm, setQuickAddForm] = useState({ name: '', email: '', mobile: '', salutation: 'Mr.' });
   const [addressForm, setAddressForm] = useState({
     attention: '',
@@ -198,22 +201,33 @@ const CustomerDetailView = ({ companyId }) => {
 
   // 2.5 Fetch Live Exchange Rate for Receivables
   useEffect(() => {
-    if (!customer || !customer.currency || customer.currency.startsWith('INR')) {
+    if (!customer || !customer.currency) {
       setExchangeRate(1);
       return;
     }
-    
+    const currCode = customer.currency.split(/[ -]/)[0].trim();
+    if (currCode === 'INR') {
+      setExchangeRate(1);
+      return;
+    }
+
     const fetchRate = async () => {
+      setExchangeRateLoading(true);
       try {
-        const code = customer.currency.split(/[ -]/)[0].trim();
         const res = await fetch(`https://open.er-api.com/v6/latest/INR`);
         const data = await res.json();
-        if (data && data.rates && data.rates[code]) {
-          // 1 ForeignCurrency = (1/rateToInr) INR
-          setExchangeRate(1 / data.rates[code]);
+        if (data && data.rates && data.rates[currCode]) {
+          // data.rates[currCode] = units of currCode per 1 INR
+          // So 1 currCode = (1 / data.rates[currCode]) INR
+          setExchangeRate(1 / data.rates[currCode]);
+        } else {
+          setExchangeRate(null); // Rate not found for this currency
         }
       } catch (e) {
         console.error("Fetch rate failed in DetailView", e);
+        setExchangeRate(null);
+      } finally {
+        setExchangeRateLoading(false);
       }
     };
     fetchRate();
@@ -281,7 +295,18 @@ const CustomerDetailView = ({ companyId }) => {
     const existing = type === 'billing' ? customer.billingAddress : customer.shippingAddress;
     if (existing) {
       try {
-        setAddressForm(JSON.parse(existing));
+        const parsed = typeof existing === 'object' ? existing : JSON.parse(existing);
+        setAddressForm({
+          attention: parsed.attention || '',
+          country: parsed.country || 'India',
+          address1: parsed.address1 || parsed.street1 || '',
+          address2: parsed.address2 || parsed.street2 || '',
+          city: parsed.city || '',
+          state: parsed.state || '',
+          zip: parsed.zip || parsed.pinCode || '',
+          phone: parsed.phone || '',
+          fax: parsed.fax || ''
+        });
       } catch (e) {
         setAddressForm({ attention: '', country: 'India', address1: '', address2: '', city: '', state: '', zip: '', phone: '', fax: '' });
       }
@@ -557,17 +582,7 @@ const CustomerDetailView = ({ companyId }) => {
                </div>
                <div className="flex items-center gap-3">
                   <button onClick={() => navigate(`/customers/${customer.id}`)} className="px-4 py-1.5 border border-slate-200 rounded text-[13px] font-bold text-slate-700 hover:bg-slate-50 transition-all shadow-sm">Edit</button>
-                  <button className="p-2 border border-slate-200 rounded text-slate-400 hover:text-slate-600 transition-colors"><Paperclip size={18}/></button>
-                  
-                  <div className="bg-[#1e61f0] text-white rounded-lg flex items-center shadow-lg shadow-blue-100 overflow-hidden transition-all hover:bg-blue-700">
-                     <button className="px-5 py-2.5 text-[13px] font-bold border-r border-blue-500/30">New Transaction</button>
-                     <button className="px-3 py-2.5"><ChevronDown size={16}/></button>
-                  </div>
 
-                  <button className="px-4 py-2 border border-slate-200 rounded-lg text-[13px] font-bold text-slate-700 flex items-center gap-2 hover:bg-slate-50 shadow-sm transition-all">
-                     More <ChevronDown size={16} className="text-slate-400"/>
-                  </button>
-                  <div className="w-px h-6 bg-slate-200 mx-1"></div>
                   <button className="p-1.5 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-full transition-colors duration-150" onClick={() => navigate('/customers')}><X size={20}/></button>
                </div>
             </header>
@@ -966,7 +981,7 @@ const CustomerDetailView = ({ companyId }) => {
                   <div className="w-[420px] shrink-0 space-y-6 relative animate-fade-in">
                      <CustomerOverviewSidebar 
                         customer={customer}
-                        onEditAddress={(type) => navigate(`/customers/${customer.id}`)}
+                        onEditAddress={(type) => openAddressDrawer(type)}
                         onInvitePortal={() => addNotification("Portal invitation sent successfully!", "success")}
                         onAddContact={() => navigate(`/customers/${customer.id}`)}
                         onSettingsClick={() => setIsSettingsOpen(!isSettingsOpen)}
@@ -1087,10 +1102,10 @@ const CustomerDetailView = ({ companyId }) => {
                      <div className="space-y-2 group cursor-pointer max-w-fit" onClick={() => setIsEditingPaymentTerms(true)}>
                         <p className="text-[11px] font-bold text-slate-300 uppercase tracking-[0.3em]">Payment due period</p>
                         {!isEditingPaymentTerms ? <p className="text-[18px] text-slate-900 font-bold tracking-tight flex items-center gap-3">{customer.paymentTerms || 'Due on Receipt'} <Edit size={14} className="text-blue-400 transition-opacity"/></p> : (
-                          <div className="flex items-center gap-2 pt-1 animate-fade-in">
+                          <div className="flex items-center gap-2 pt-1 animate-fade-in" onClick={e => e.stopPropagation()}>
                             <input autoFocus type="text" value={paymentTerms} onChange={e => setPaymentTerms(e.target.value)} className="px-4 py-2 border-2 border-blue-100 rounded-lg outline-none focus:border-blue-500 shadow-sm font-bold" />
-                            <button onClick={() => handleUpdateField('paymentTerms', paymentTerms)} className="p-2.5 bg-blue-600 text-white rounded-lg shadow-lg shadow-blue-100 hover:bg-blue-700"><Save size={18}/></button>
-                            <button onClick={() => setIsEditingPaymentTerms(false)} className="p-2.5 bg-slate-100 text-slate-400 rounded-lg hover:bg-slate-200"><X size={18}/></button>
+                            <button onClick={(e) => { e.stopPropagation(); handleUpdateField('paymentTerms', paymentTerms); }} className="p-2.5 bg-blue-600 text-white rounded-lg shadow-lg shadow-blue-100 hover:bg-blue-700"><Save size={18}/></button>
+                            <button onClick={(e) => { e.stopPropagation(); setIsEditingPaymentTerms(false); }} className="p-2.5 bg-slate-100 text-slate-400 rounded-lg hover:bg-slate-200"><X size={18}/></button>
                           </div>
                         )}
                      </div>
@@ -1107,32 +1122,61 @@ const CustomerDetailView = ({ companyId }) => {
                                 </tr>
                               </thead>
                               <tbody>
+                                {/* ── Primary currency row ── */}
                                 <tr className="border-b border-slate-50 hover:bg-slate-50 transition-colors">
                                   <td className="px-8 py-6 font-bold text-slate-700">
                                     {(() => {
                                       const code = (customer.currency || 'INR').split(/[ -]/)[0].trim();
                                       const found = CURRENCIES.find(c => c.code === code);
-                                      return found ? found.display : (customer.currency || 'INR');
+                                      return found ? found.display : (customer.currency || 'INR - Indian Rupee');
                                     })()}
                                   </td>
                                   <td className="px-8 py-6 text-right font-bold text-[18px] text-slate-900 tabular-nums">
-                                    {getCurrencyDisplay(customer.currency)} {parseFloat(customer.currentBalance || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                    {getCurrencyDisplay(customer.currency)}{' '}
+                                    {parseFloat(customer.currentBalance || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                                   </td>
                                   <td className="px-8 py-6 text-right text-slate-400 font-bold tabular-nums">
                                     {getCurrencyDisplay(customer.currency)} 0.00
                                   </td>
                                 </tr>
-                                {customer.currency && !customer.currency.startsWith('INR') && (
-                                  <tr className="bg-blue-50/30 hover:bg-blue-50/50 transition-colors border-b border-slate-50">
-                                    <td className="px-8 py-6 font-black text-slate-900 text-[13px] tracking-tight">TOTAL (INR)</td>
-                                    <td className="px-8 py-6 text-right font-black text-[18px] text-blue-600 tabular-nums">
-                                      ₹ {(parseFloat(customer.currentBalance || 0) * exchangeRate).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                                    </td>
-                                    <td className="px-8 py-6 text-right text-blue-400 font-bold tabular-nums">
-                                      ₹ 0.00
-                                    </td>
-                                  </tr>
-                                )}
+
+                                {/* ── INR conversion row (only for non-INR customers) ── */}
+                                {(() => {
+                                  const currCode = (customer.currency || 'INR').split(/[ -]/)[0].trim();
+                                  if (currCode === 'INR') return null;
+                                  const balance = parseFloat(customer.currentBalance || 0);
+                                  return (
+                                    <tr className="bg-gradient-to-r from-blue-50/60 to-indigo-50/40 hover:from-blue-50 hover:to-indigo-50/70 transition-colors">
+                                      <td className="px-8 py-5">
+                                        <div className="flex flex-col gap-0.5">
+                                          <span className="font-black text-slate-800 text-[13px] tracking-tight">TOTAL (INR)</span>
+                                          {exchangeRateLoading ? (
+                                            <span className="text-[10px] text-blue-400 font-semibold flex items-center gap-1.5">
+                                              <span className="inline-block w-2.5 h-2.5 rounded-full border-2 border-blue-400 border-t-transparent animate-spin"></span>
+                                              Fetching live rate…
+                                            </span>
+                                          ) : exchangeRate && exchangeRate !== 1 ? (
+                                            <span className="text-[10px] text-slate-400 font-semibold">
+                                              1 {currCode} = ₹{exchangeRate.toLocaleString(undefined, { maximumFractionDigits: 4 })} &nbsp;(live rate)
+                                            </span>
+                                          ) : null}
+                                        </div>
+                                      </td>
+                                      <td className="px-8 py-5 text-right tabular-nums">
+                                        {exchangeRateLoading ? (
+                                          <span className="inline-block w-5 h-5 rounded-full border-2 border-blue-400 border-t-transparent animate-spin align-middle"></span>
+                                        ) : exchangeRate != null ? (
+                                          <span className="font-black text-[18px] text-blue-600">
+                                            ₹{(balance * exchangeRate).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                          </span>
+                                        ) : (
+                                          <span className="text-[13px] text-slate-400 font-semibold italic">Rate unavailable</span>
+                                        )}
+                                      </td>
+                                      <td className="px-8 py-5 text-right text-blue-400 font-bold tabular-nums">₹ 0.00</td>
+                                    </tr>
+                                  );
+                                })()}
                               </tbody>
                            </table>
                         </div>
@@ -1160,82 +1204,174 @@ const CustomerDetailView = ({ companyId }) => {
          )}
       </div>
 
-      {/* ─── ADDRESS DRAWER ───────────────────────────────── */}
+      {/* ─── ADDRESS DRAWER / POPUP MODAL ─── */}
       {isAddressDrawerOpen && (
-        <div className="fixed inset-0 z-[100] flex justify-end">
-          <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm animate-fade-in" onClick={() => setIsAddressDrawerOpen(false)} />
-          <div className="relative w-[500px] bg-white h-full shadow-2xl animate-slide-left flex flex-col">
-            <header className="p-8 border-b border-slate-100 flex items-center justify-between bg-slate-50/20">
-              <div>
-                <h3 className="text-2xl font-bold text-slate-900 tracking-tight uppercase italic">{addressType} Address</h3>
-                <p className="text-[13px] text-slate-400 font-bold uppercase tracking-widest mt-1">FOR {customer.name}</p>
+        <div className="fixed inset-0 z-[400] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm animate-fade-in" onClick={() => setIsAddressDrawerOpen(false)} />
+          <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-[480px] overflow-hidden flex flex-col max-h-[90vh] animate-scale-up">
+              <div className="px-5 py-3 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                <h2 className="text-[14px] font-bold text-slate-800 tracking-tight">
+                  {addressType === 'billing' ? 'Billing Address' : 'Shipping Address'}
+                </h2>
+                <button onClick={() => setIsAddressDrawerOpen(false)} className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-md transition-colors">
+                  <X size={16} strokeWidth={2.5}/>
+                </button>
               </div>
-              <button onClick={() => setIsAddressDrawerOpen(false)} className="p-2 hover:bg-white rounded-full transition-colors text-slate-400 hover:text-slate-900 shadow-sm"><X size={24}/></button>
-            </header>
-            
-            <div className="flex-1 overflow-y-auto p-10 space-y-8 no-scrollbar">
-               <div className="space-y-3">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Attention</label>
-                  <input type="text" value={addressForm.attention} onChange={e => setAddressForm({...addressForm, attention: e.target.value})} className="w-full p-4 bg-slate-50 border-none rounded-xl font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-600 transition-all" />
-               </div>
+              
+              {addressType === 'shipping' && (
+                <div className="px-5 pt-3 pb-1 border-b border-slate-50 bg-white">
+                  <button 
+                    onClick={() => {
+                      const billingStr = customer.billingAddress;
+                      const initialAddr = billingStr ? JSON.parse(billingStr) : {};
+                      setAddressForm({
+                        ...addressForm,
+                        attention: initialAddr.attention || '',
+                        country: initialAddr.country || '',
+                        address1: initialAddr.address1 || initialAddr.street1 || '',
+                        address2: initialAddr.address2 || initialAddr.street2 || '',
+                        city: initialAddr.city || '',
+                        state: initialAddr.state || '',
+                        zip: initialAddr.zip || initialAddr.pinCode || '',
+                        phone: initialAddr.phone || '',
+                        fax: initialAddr.fax || ''
+                      });
+                    }}
+                    className="flex items-center gap-1.5 text-[12.5px] font-medium text-blue-600 hover:text-blue-700 transition-colors"
+                  >
+                    <ArrowDown size={14} className="stroke-[2.5]" />
+                    Copy billing address
+                  </button>
+                </div>
+              )}
 
-               <div className="space-y-3">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Street Address 1</label>
-                  <input type="text" value={addressForm.address1} onChange={e => setAddressForm({...addressForm, address1: e.target.value})} className="w-full p-4 bg-slate-50 border-none rounded-xl font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-600 transition-all" />
-               </div>
-
-               <div className="space-y-3">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Street Address 2</label>
-                  <input type="text" value={addressForm.address2} onChange={e => setAddressForm({...addressForm, address2: e.target.value})} className="w-full p-4 bg-slate-50 border-none rounded-xl font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-600 transition-all" />
-               </div>
-
-               <div className="grid grid-cols-2 gap-6">
-                  <div className="space-y-3">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">City</label>
-                    <input type="text" value={addressForm.city} onChange={e => setAddressForm({...addressForm, city: e.target.value})} className="w-full p-4 bg-slate-50 border-none rounded-xl font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-600 transition-all" />
-                  </div>
-                  <div className="space-y-3">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">State</label>
-                    <input type="text" value={addressForm.state} onChange={e => setAddressForm({...addressForm, state: e.target.value})} className="w-full p-4 bg-slate-50 border-none rounded-xl font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-600 transition-all" />
-                  </div>
-               </div>
-
-               <div className="grid grid-cols-2 gap-6">
-                  <div className="space-y-3">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Zip Code</label>
-                    <input type="text" value={addressForm.zip} onChange={e => setAddressForm({...addressForm, zip: e.target.value})} className="w-full p-4 bg-slate-50 border-none rounded-xl font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-600 transition-all" />
-                  </div>
-                  <div className="space-y-3">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Phone</label>
+              <div className="p-5 space-y-4 overflow-y-auto">
+                {addressType === 'billing' && (
+                  <div className="space-y-1">
+                    <label className="text-[12px] font-medium text-slate-600">Attention</label>
                     <input 
+                      type="text" 
+                      value={addressForm.attention} 
+                      onChange={e => setAddressForm({...addressForm, attention: e.target.value})}
+                      className="w-full h-[34px] px-3 border border-slate-200 rounded text-[13px] outline-none focus:border-blue-500"
+                    />
+                  </div>
+                )}
+
+                <div className="space-y-1">
+                  <label className="text-[12px] font-medium text-slate-600">Country/Region</label>
+                  <select 
+                    value={addressForm.country} 
+                    onChange={e => setAddressForm({...addressForm, country: e.target.value})}
+                    className="w-full h-[34px] px-2 border border-slate-200 rounded text-[13px] outline-none focus:border-blue-500 bg-white"
+                  >
+                    <option value="">Select Country</option>
+                    {COUNTRY_CODES.map(c => <option key={c.code} value={c.country}>{c.country}</option>)}
+                  </select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[12px] font-medium text-slate-600">Address</label>
+                  <textarea 
+                    value={addressForm.address1} 
+                    onChange={e => setAddressForm({...addressForm, address1: e.target.value})}
+                    className="w-full p-3 border border-slate-200 rounded text-[13px] outline-none focus:border-blue-500 resize-none min-h-[60px]"
+                    placeholder="Street 1"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <textarea 
+                    value={addressForm.address2} 
+                    onChange={e => setAddressForm({...addressForm, address2: e.target.value})}
+                    className="w-full p-3 border border-slate-200 rounded text-[13px] outline-none focus:border-blue-500 resize-none min-h-[60px]"
+                    placeholder="Street 2"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[12px] font-medium text-slate-600">City</label>
+                  <input 
+                    type="text" 
+                    value={addressForm.city} 
+                    onChange={e => setAddressForm({...addressForm, city: e.target.value})}
+                    className="w-full h-[34px] px-3 border border-slate-200 rounded text-[13px] outline-none focus:border-blue-500"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-[12px] font-medium text-slate-600">State</label>
+                    <select 
+                      value={addressForm.state} 
+                      onChange={e => setAddressForm({...addressForm, state: e.target.value})}
+                      className="w-full h-[34px] px-2 border border-slate-200 rounded text-[13px] outline-none focus:border-blue-500 bg-white"
+                    >
+                      <option value="">Select State</option>
+                      {INDIAN_STATES.map(s => <option key={s} value={s}>{s}</option>)}
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[12px] font-medium text-slate-600">Pin Code</label>
+                    <input 
+                      type="text" 
+                      value={addressForm.zip} 
+                      onChange={e => setAddressForm({...addressForm, zip: e.target.value})}
+                      className="w-full h-[34px] px-3 border border-slate-200 rounded text-[13px] outline-none focus:border-blue-500"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-[12px] font-medium text-slate-600">Phone</label>
+                    <div className="flex">
+                      <select className="w-[70px] h-[34px] px-1 border border-r-0 border-slate-200 rounded-l text-[13px] outline-none focus:border-blue-500 bg-slate-50">
+                        <option>+91</option>
+                        <option>+1</option>
+                        <option>+44</option>
+                      </select>
+                      <input 
                         type="text" 
                         value={addressForm.phone} 
-                        onChange={e => {
-                          const val = e.target.value.replace(/\D/g, '').slice(0, 10);
-                          setAddressForm({...addressForm, phone: val});
-                        }} 
-                        maxLength={10}
-                        placeholder="10-digit phone number"
-                        className="w-full p-4 bg-slate-50 border-none rounded-xl font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-600 transition-all" 
-                     />
+                        onChange={e => setAddressForm({...addressForm, phone: e.target.value})}
+                        className="flex-1 h-[34px] px-3 border border-slate-200 rounded-r text-[13px] outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                      />
+                    </div>
                   </div>
-               </div>
-            </div>
+                  <div className="space-y-1">
+                    <label className="text-[12px] font-medium text-slate-600">Fax Number</label>
+                    <input 
+                      type="text" 
+                      value={addressForm.fax} 
+                      onChange={e => setAddressForm({...addressForm, fax: e.target.value})}
+                      className="w-full h-[34px] px-3 border border-slate-200 rounded text-[13px] outline-none focus:border-blue-500"
+                    />
+                  </div>
+                </div>
+              </div>
 
-            <footer className="p-8 border-t border-slate-100 flex items-center gap-4 bg-slate-50/30">
-               <button onClick={() => setIsAddressDrawerOpen(false)} className="px-8 py-3 bg-white border border-slate-200 text-slate-600 rounded-xl text-[13px] font-bold hover:bg-slate-100 transition-all uppercase tracking-widest">Discard</button>
-               <button 
+              <div className="px-5 py-4 border-t border-slate-100 flex items-center gap-3 bg-white">
+                <button 
+                  type="button"
                   onClick={() => {
                     handleUpdateField(addressType === 'billing' ? 'billingAddress' : 'shippingAddress', JSON.stringify(addressForm));
                     setIsAddressDrawerOpen(false);
                   }}
-                  className="flex-1 py-3 bg-blue-600 text-white rounded-xl text-[13px] font-bold hover:bg-blue-700 shadow-xl shadow-blue-100 transition-all uppercase tracking-widest"
-               >
-                 Save Address
-               </button>
-            </footer>
+                  className="px-5 py-1.5 bg-[#3b82f6] hover:bg-[#2563eb] text-white rounded text-[13px] font-medium transition-colors"
+                >
+                  Save
+                </button>
+                <button 
+                  type="button"
+                  onClick={() => setIsAddressDrawerOpen(false)}
+                  className="px-4 py-1.5 border border-slate-200 hover:bg-slate-50 text-slate-700 rounded text-[13px] font-medium transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
           </div>
-        </div>
       )}
       {/* ─── QUICK ADD DRAWER ──────────────────────────────── */}
       {isQuickAddOpen && (
@@ -1321,6 +1457,8 @@ const CustomerDetailView = ({ companyId }) => {
           addNotification({ message: 'Email sent successfully', type: 'success' });
         }}
       />
+
+
 
       <ConfirmModal 
         isOpen={isDeleteModalOpen}

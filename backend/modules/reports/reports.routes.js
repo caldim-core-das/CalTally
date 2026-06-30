@@ -3,7 +3,7 @@ const router = express.Router();
 const reportsController = require('./reports.controller');
 const { verifyToken, authorizeRoles, tenantAccess } = require('../../middleware/auth.middleware');
 
-const ALL_ROLES = ['SUPER_ADMIN', 'ADMIN', 'ACCOUNTANT', 'MANAGER', 'AUDITOR', 'VIEWER'];
+const ALL_ROLES = ['SUPER_ADMIN', 'ADMIN', 'ACCOUNTANT', 'MANAGER', 'AUDITOR', 'VIEWER', 'EMPLOYEE'];
 const AUDIT_ROLES = ['SUPER_ADMIN', 'ADMIN', 'AUDITOR'];
 
 // All roles can view reports (tenant scoped)
@@ -16,6 +16,7 @@ router.get('/daybook/:companyId', authorizeRoles(...ALL_ROLES), reportsControlle
 router.get('/dashboard/:companyId', authorizeRoles(...ALL_ROLES), reportsController.getDashboardStats);
 router.get('/ledger-statement/:ledgerId', authorizeRoles(...ALL_ROLES), reportsController.getLedgerStatement);
 router.get('/cash-flow/:companyId', authorizeRoles(...ALL_ROLES), reportsController.getCashFlow);
+router.get('/:companyId/cash-flow', authorizeRoles(...ALL_ROLES), reportsController.getCashFlow);
 router.get('/receivables-report/:companyId', authorizeRoles(...ALL_ROLES), reportsController.getReceivablesReport);
 router.get('/payables-report/:companyId', authorizeRoles(...ALL_ROLES), reportsController.getPayablesReport);
 router.get('/inventory-report/:companyId', authorizeRoles(...ALL_ROLES), reportsController.getInventoryReport);

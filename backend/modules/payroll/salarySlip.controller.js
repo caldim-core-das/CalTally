@@ -1,5 +1,6 @@
 const { sequelize, Employee, SalarySlip, PayrollSettings, EmployeeSalaryAssignment, SalaryStructure, SalaryStructureComponent, SalaryComponent, Ledger, JournalEntry, JournalEntryItem } = require('../../models');
 const { Op } = require('sequelize');
+const SalaryService = require('./salary.service');
 
 exports.getEmployeesForSelection = async (req, res) => {
   try {
@@ -23,10 +24,14 @@ exports.getEmployeesForSelection = async (req, res) => {
 
     const formatted = employees.map(emp => {
       let gross = 0;
+      let hasStructure = false;
       if (emp.EmployeeSalaryAssignments && emp.EmployeeSalaryAssignments.length > 0) {
-        const struct = emp.EmployeeSalaryAssignments[0].structure;
-        if (struct) {
-          gross = parseFloat(struct.grossSalary || 0);
+        const assignment = emp.EmployeeSalaryAssignments[0];
+        hasStructure = true;
+        if (assignment.ctcAmount) {
+           // Provide a rough estimate of gross salary for the UI (CTC / 12)
+           // Actual calculation happens in the next step
+           gross = parseFloat(assignment.ctcAmount) / 12;
         }
       }
       return {
@@ -39,7 +44,7 @@ exports.getEmployeesForSelection = async (req, res) => {
         department: emp.department,
         designation: emp.designation,
         hasBankAccount: !!emp.bankAccountNumber,
-        hasSalaryStructure: gross > 0,
+        hasSalaryStructure: hasStructure,
         gross_salary_estimated: gross
       };
     });
@@ -78,84 +83,50 @@ exports.calculateSingleSalary = async (req, res) => {
 
     if (!emp) return res.status(404).json({ error: 'Employee or active salary structure not found' });
 
-    let settings = await PayrollSettings.findOne({ where: { CompanyId: companyId } });
-    if (!settings) {
-      settings = {
-        pfApplicable: true, pfEmployeeRate: 12, pfEmployerRate: 12,
-        esiApplicable: false, esiEmployeeRate: 0.75, esiEmployerRate: 3.25,
-        ptMonthlyAmount: 200, standardDeduction: 50000,
-        incomeTaxSlabs: [
-          { min: 0, max: 250000, rate: 0 },
-          { min: 250000, max: 500000, rate: 5 },
-          { min: 500000, max: 1000000, rate: 20 },
-          { min: 1000000, max: null, rate: 30 }
-        ]
-      };
-    }
-
-    const structure = emp.EmployeeSalaryAssignments[0].structure;
+    const assignment = emp.EmployeeSalaryAssignments[0];
     
-    let basic = 0;
-    let hra = 0;
-    let da = 0;
-    let special = 0;
-    let other = 0;
-
-    structure.components.forEach(c => {
-      const type = c.component?.name?.toLowerCase() || '';
-      const amt = parseFloat(c.amount || 0);
-      if (type.includes('basic')) basic += amt;
-      else if (type.includes('hra') || type.includes('house')) hra += amt;
-      else if (type.includes('da') || type.includes('dearness')) da += amt;
-      else if (type.includes('special')) special += amt;
-      else other += amt;
+    // Fetch structure components separately to avoid Sequelize deeply nested alias truncation bug
+    const structureComponents = await SalaryStructureComponent.findAll({
+      where: { SalaryStructureId: assignment.SalaryStructureId, isActive: true },
+      include: [{ model: SalaryComponent, as: 'component' }]
     });
 
-    const grossAmount = parseFloat(structure.grossSalary) || (basic + hra + da + special + other);
+    const breakdown = await SalaryService.calculateSalaryBreakdown(
+      Number(assignment.ctcAmount || 0),
+      structureComponents,
+      assignment.basicAmount ? Number(assignment.basicAmount) : null,
+      companyId
+    );
 
-    // Calculations
-    let pfEmployee = 0;
-    let pfEmployer = 0;
-    if (settings.pfApplicable) {
-      pfEmployee = Math.round(basic * (parseFloat(settings.pfEmployeeRate) / 100));
-      pfEmployer = Math.round(basic * (parseFloat(settings.pfEmployerRate) / 100));
-    }
-    
-    let esiEmployee = 0;
-    let esiEmployer = 0;
-    if (settings.esiApplicable) {
-      esiEmployee = Math.round(grossAmount * (parseFloat(settings.esiEmployeeRate) / 100));
-      esiEmployer = Math.round(grossAmount * (parseFloat(settings.esiEmployerRate) / 100));
-    }
-    
-    const ptDeduction = parseFloat(settings.ptMonthlyAmount) || 0;
-    
-    const standardDed = parseFloat(settings.standardDeduction) || 50000;
-    const annualGross = grossAmount * 12;
-    const taxableIncome = Math.max(0, annualGross - standardDed);
-    
-    let annualTax = 0;
-    const slabs = settings.incomeTaxSlabs || [];
-    for (const slab of slabs) {
-      const min = parseFloat(slab.min);
-      const max = slab.max ? parseFloat(slab.max) : Infinity;
-      const rate = parseFloat(slab.rate) / 100;
-      if (taxableIncome > min) {
-        const taxableAtThisSlab = Math.min(taxableIncome - min, max - min);
-        annualTax += taxableAtThisSlab * rate;
+    const basic = breakdown.breakdown['BASIC'] || 0;
+    const hra = breakdown.breakdown['HRA'] || 0;
+    const da = breakdown.breakdown['DA'] || 0;
+    const special = breakdown.breakdown['SPECIAL_ALLOWANCE'] || 0;
+
+    let other = 0;
+    breakdown.components.forEach(c => {
+      if (c.type === 'Earning' && !['BASIC', 'HRA', 'DA', 'SPECIAL_ALLOWANCE'].includes(c.code)) {
+        other += (breakdown.breakdown[c.code] || 0);
       }
-    }
-    const monthlyTax = Math.round(annualTax / 12);
+    });
+
+    const pfEmployee = breakdown.breakdown['PF_EMP'] || breakdown.breakdown['PF'] || 0;
+    const pfEmployer = breakdown.breakdown['PF_EMPLOYER'] || pfEmployee; 
+    const esiEmployee = breakdown.breakdown['ESI_EMP'] || breakdown.breakdown['ESI'] || 0;
+    const esiEmployer = esiEmployee > 0 ? Number((breakdown.grossEarnings * 3.25 / 100).toFixed(2)) : 0;
+    const ptDeduction = breakdown.breakdown['PT'] || 0;
+    const monthlyTax = breakdown.breakdown['TDS'] || breakdown.breakdown['INCOME_TAX'] || 0;
     
-    const totalDeductions = pfEmployee + esiEmployee + ptDeduction + monthlyTax;
-    const netSalary = grossAmount - totalDeductions;
-    const employerCost = grossAmount + pfEmployer + esiEmployer;
+    // total_deductions from breakdown
+    const totalDeductions = breakdown.totalDeductions;
+    const netSalary = breakdown.netPay;
+    const employerCost = breakdown.grossEarnings + pfEmployer + esiEmployer;
 
     res.json({
       employee_id: emp.id,
       name: emp.name,
       components: { basic, hra, da, special, other },
-      gross_salary: grossAmount,
+      gross_salary: breakdown.grossEarnings,
       pf_employee: pfEmployee,
       pf_employer: pfEmployer,
       esi_employee: esiEmployee,
@@ -184,6 +155,32 @@ exports.processMonth = async (req, res) => {
     const year = dateObj.getFullYear();
     const slipPrefix = `${dateObj.toLocaleString('default', { month: 'short' }).toUpperCase()}-${year}-`;
 
+    // Delete existing DRAFT slips for the selected employees in this month
+    await SalarySlip.destroy({
+      where: {
+        companyId,
+        salaryMonth: salary_month,
+        employeeId: employees,
+        slipStatus: 'DRAFT'
+      },
+      transaction: t
+    });
+
+    // Find the max slip number to continue sequence
+    const maxSlip = await SalarySlip.findOne({
+      where: { companyId, salaryMonth: salary_month },
+      order: [['slipNumber', 'DESC']],
+      transaction: t
+    });
+
+    let counter = 1;
+    if (maxSlip && maxSlip.slipNumber) {
+      const match = maxSlip.slipNumber.match(/-(\d+)$/);
+      if (match) {
+        counter = parseInt(match[1], 10) + 1;
+      }
+    }
+
     const createdSlips = [];
     let summary = {
       total_gross: 0,
@@ -193,7 +190,6 @@ exports.processMonth = async (req, res) => {
       slip_numbers: []
     };
 
-    let counter = 1;
     for (const calc of calculations) {
       const slipNumber = `${slipPrefix}${String(counter).padStart(3, '0')}`;
       
@@ -266,12 +262,34 @@ exports.getAllSlipsForMonth = async (req, res) => {
 
     const slips = await SalarySlip.findAll({
       where: { companyId, salaryMonth: month },
-      include: [{ model: Employee, attributes: ['name', 'employeeId'] }],
-      order: [['slipNumber', 'ASC']]
+      include: [{ model: Employee, attributes: ['name', 'employeeId', 'department'] }]
     });
-    
-    res.json({ slips });
+    res.json({ salary_slips: slips });
   } catch (err) {
     res.status(500).json({ error: err.message });
+  }
+};
+
+const PDFService = require('../../services/PDFService');
+exports.exportPayslipPDF = async (req, res) => {
+  try {
+    const { slipId } = req.params;
+    const slip = await SalarySlip.findByPk(slipId, {
+      include: [
+        { model: Employee },
+        { model: sequelize.models.Company }
+      ]
+    });
+
+    if (!slip) return res.status(404).json({ error: 'Salary slip not found' });
+
+    const pdfBuffer = await PDFService.generatePayslipPDF(slip, slip.Company || {}, slip.Employee || {});
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename=payslip_${slip.slipNumber}.pdf`);
+    res.send(pdfBuffer);
+  } catch (err) {
+    console.error('PDF Export Error:', err);
+    res.status(500).json({ error: 'Failed to generate Payslip PDF' });
   }
 };

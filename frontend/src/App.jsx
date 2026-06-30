@@ -1,12 +1,20 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 
 // ── Components ───────────────────────────────────────────────────
 import Notification from './components/Notification';
+import NotificationBell from './components/NotificationBell';
 import { setUser, getUser } from './stores/authStore';
 import AuthPage from './modules/auth/AuthPage';
 import LandingPage from './modules/landing/LandingPage';
+import UpgradeScreen from './modules/billing/UpgradeScreen';
+import VerifyEmailPage from './pages/VerifyEmailPage';
 import DashboardView from './modules/dashboard/DashboardView';
+import SupportHelpButton from './components/SupportHelpButton';
+import SupportCenter from './modules/settings/SupportCenter';
+import { useAuth } from './store/AuthContext';
+import usePermissions from './hooks/usePermissions';
+import { WriteProtectedRoute, ReadProtectedRoute } from './components/ProtectedRoute';
 import LedgersView from './modules/accounting/LedgersView';
 import LedgerStatementView from './modules/accounting/LedgerStatementView';
 import VoucherListView from './modules/accounting/VoucherListView';
@@ -61,8 +69,6 @@ import RecurringExpenseEntryView from './modules/purchases/RecurringExpenseEntry
 import PurchaseOrderEntryView from './modules/purchases/PurchaseOrderEntryView';
 import PurchaseOrderEmailView from './modules/purchases/PurchaseOrderEmailView';
 import BillEntryView from './modules/purchases/BillEntryView';
-import RecurringBillEntryView from './modules/purchases/RecurringBillEntryView';
-import RecurringBillsView from './modules/purchases/RecurringBillsView';
 import PaymentsMadeListView from './modules/purchases/PaymentsMadeListView';
 import PaymentsMadeEntryView from './modules/purchases/PaymentsMadeEntryView';
 import BudgetsView from './modules/accountant/BudgetsView';
@@ -71,6 +77,10 @@ import ChartOfAccountsView from './modules/accounting/ChartOfAccountsView';
 import JournalEntriesView from './modules/accounting/JournalEntriesView';
 import FixedAssetsView from './modules/fixed_assets/FixedAssetsView';
 import ProjectsView from './modules/time_tracking/ProjectsView';
+import PaymentGatewaysSettings from './modules/settings/PaymentGatewaysSettings';
+import SettingsDashboard from './modules/settings/SettingsDashboard';
+import SharedInvoiceView from './modules/sales/SharedInvoiceView';
+import GatewaySettlementView from './modules/banking/GatewaySettlementView';
 
 import BulkUpdateView from './modules/accountant/BulkUpdateView';
 import CurrencyAdjustmentsView from './modules/accountant/CurrencyAdjustmentsView';
@@ -78,7 +88,7 @@ import ManualJournalEntryView from './modules/accountant/ManualJournalEntryView'
 import ManualJournalsListView from './modules/accountant/ManualJournalsListView';
 
 // ── APIs ─────────────────────────────────────────────────────────
-import { companyAPI, reportsAPI, voucherAPI, exchangeOAuthToken, getCurrentUser } from './services/api';
+import { companyAPI, reportsAPI, voucherAPI, exchangeOAuthToken, getCurrentUser, authAPI } from './services/api';
 
 // ── Icons ─────────────────────────────────────────────────────────
 import {
@@ -88,7 +98,7 @@ import {
   Bell, ChevronRight, ChevronDown, ChevronsLeft, ChevronsRight,
   Building2, Activity, ShoppingCart, UserCheck, FileBarChart2,
   PieChart, Landmark, Target, Clock, Undo2, Truck, Repeat, ClipboardList, FileStack, Plus,
-  RefreshCw, PanelLeftClose, PanelLeftOpen, MessageSquare, Sliders
+  RefreshCw, PanelLeftClose, PanelLeftOpen, MessageSquare, Sliders, CreditCard, LifeBuoy
 } from 'lucide-react';
 
 // ═══════════════════════════════════════════════════════════════════
@@ -102,11 +112,12 @@ const NAV = [
       { label: 'Dashboard',        path: '/dashboard', icon: LayoutDashboard },
     ]
   },
+
   {
     group: 'Setup',
     icon: Settings,
     items: [
-      { label: 'Company Settings', path: '/settings/company', icon: Building2 }
+      { label: 'Company Settings', path: '/company-hub', icon: Building2 }
     ]
   },
   {
@@ -121,10 +132,8 @@ const NAV = [
     icon: ShoppingCart,
     items: [
       { icon: Users,           label: 'Customers',           path: '/customers', showPlus: true, plusPath: '/customers/new' },
-      { icon: FileText,        label: 'Quotations',          path: '/quotes', showPlus: true, plusPath: '/quotes/new' },
       { icon: ShoppingBag,     label: 'Sales Orders',        path: '/sales-orders', showPlus: true, plusPath: '/sales-orders/new' },
       { icon: Receipt,         label: 'Invoices',            path: '/sales-invoices', showPlus: true, plusPath: '/sales-invoices/new' },
-      { icon: Repeat,          label: 'Recurring Invoices',  path: '/recurring-invoices', showPlus: true, plusPath: '/recurring-invoices/new' },
       { icon: Wallet,          label: 'Customer Payments',   path: '/payments', showPlus: true, plusPath: '/payments/new' },
     ]
   },
@@ -135,7 +144,6 @@ const NAV = [
       { label: 'Vendors',            path: '/vendors', icon: Users, showPlus: true, plusPath: '/vendors/new' },
       { label: 'Purchase Orders',    path: '/purchase-orders', icon: ShoppingBag, showPlus: true, plusPath: '/purchase-orders/new' },
       { label: 'Bills',              path: '/bills', icon: FileStack, showPlus: true, plusPath: '/bills/new' },
-      { label: 'Recurring Bills',    path: '/recurring-bills', icon: Repeat, showPlus: true, plusPath: '/recurring-bills/new' },
       { label: 'Vendor Payments',    path: '/payments-made', icon: Wallet, showPlus: true, plusPath: '/payments-made/new' },
     ]
   },
@@ -181,6 +189,7 @@ const NAV = [
       { label: 'Trial Balance',      path: '/reports/trial-balance', icon: BarChart2 },
       { label: 'Cash Flow',          path: '/reports/cash-flow', icon: TrendingUp },
       { label: 'Inventory Report',   path: '/reports/inventory-report', icon: Package },
+      { label: 'Audit Trails',       path: '/reports/audit', icon: Shield },
     ]
   },
   {
@@ -188,6 +197,13 @@ const NAV = [
     icon: MessageSquare,
     items: [
       { label: 'AI Assistant',     path: '/ai-assistant', icon: MessageSquare }
+    ]
+  },
+  {
+    group: 'Help & Support',
+    icon: Shield,
+    items: [
+      { label: 'Support Tickets',  path: '/support', icon: LifeBuoy }
     ]
   }
 ];
@@ -231,6 +247,7 @@ const isPathActive = (itemPath, pathname, location) => {
 // SIDEBAR GROUP
 // ═══════════════════════════════════════════════════════════════════
 const NavGroup = ({ group, icon: Icon, items, collapsed, pathname, location, navigate }) => {
+  const { canCreate } = usePermissions();
   const [expanded, setExpanded] = useState(
     pathname.includes(group.toLowerCase().replace(' ', '-')) ||
     items.some(it => isPathActive(it.path, pathname, location))
@@ -288,7 +305,7 @@ const NavGroup = ({ group, icon: Icon, items, collapsed, pathname, location, nav
                         {item.label}
                       </span>
                     </div>
-                    {item.showPlus && (
+                    {item.showPlus && canCreate && (
                        <button 
                          onClick={(e) => { e.stopPropagation(); navigate(item.plusPath); setIsHovered(false); }}
                          className="flex items-center justify-center w-6 h-6 rounded-full bg-slate-200 text-slate-600 shrink-0 shadow-sm transition-all hover:bg-blue-600 hover:text-white"
@@ -307,7 +324,7 @@ const NavGroup = ({ group, icon: Icon, items, collapsed, pathname, location, nav
   }
 
   // EXPANDED VIEW
-  if (items.length <= 1) {
+  if (items.length <= 1 && group !== 'Setup') {
     return items.map(item => (
       <NavItem
         key={item.path}
@@ -333,7 +350,7 @@ const NavGroup = ({ group, icon: Icon, items, collapsed, pathname, location, nav
             <div className={`transition-transform duration-300 ${expanded ? 'rotate-0' : '-rotate-90'}`}>
               <ChevronDown size={14} className="text-slate-400" />
             </div>
-            <span className={`text-[11px] font-bold text-slate-800 uppercase tracking-[0.2em]`}>{group}</span>
+            <span className={`text-[11px] font-bold text-slate-800 dark:text-slate-300 uppercase tracking-[0.2em]`}>{group}</span>
           </div>
         </button>
       )}
@@ -346,20 +363,20 @@ const NavGroup = ({ group, icon: Icon, items, collapsed, pathname, location, nav
             return (
               <div 
                 key={item.path} 
-                className={`group/item flex items-center justify-between px-4 py-1.5 rounded-l-full transition-all duration-200 
-                  ${active ? 'bg-blue-50/70 text-blue-600 border-r-4 border-blue-600 font-bold' : 'hover:bg-slate-50/60 text-slate-800 hover:text-slate-900'}`}
+                className={`group/item flex items-center justify-between px-4 py-1.5 transition-all duration-200 
+                  ${active ? 'bg-blue-50/70 text-blue-600 border-l-4 border-blue-600 font-bold' : 'hover:bg-slate-50/60 text-slate-800 hover:text-slate-900'}`}
               >
                 <div className="flex items-center gap-2.5 flex-1 min-w-0" onClick={() => navigate(item.path)}>
                   {SubIcon && <SubIcon size={14} className={`shrink-0 ${active ? 'text-blue-600' : 'text-slate-400 group-hover/item:text-slate-700'}`} />}
                   <button
                     title={item.label}
                     className={`text-left text-[12px] font-medium tracking-tight truncate
-                      ${active ? 'text-blue-600 font-bold' : 'text-slate-800 group-hover/item:text-slate-900'}`}
+                      ${active ? 'text-blue-600 font-bold' : 'text-slate-600 dark:text-slate-400 group-hover/item:text-slate-900 dark:group-hover/item:text-slate-200'}`}
                   >
                     {item.label}
                   </button>
                 </div>
-                {(item.showPlus) && (
+                {item.showPlus && canCreate && (
                    <button 
                      onClick={(e) => { e.stopPropagation(); navigate(item.plusPath); }}
                      title={`Add New ${item.label}`}
@@ -389,14 +406,14 @@ const NavItem = ({ icon: Icon, label, active, onClick, onPlusClick, collapsed, s
       ${collapsed 
         ? `flex-col items-center justify-center h-[72px] w-full gap-1.5 border-b border-slate-50/50
            ${active ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/10' : 'text-slate-500 hover:bg-slate-50/60 hover:text-slate-900'}`
-        : `items-center gap-3 w-full px-6 py-2.5
-           ${active ? 'bg-blue-50/70 text-blue-600 border-l-4 border-blue-600 font-bold shadow-sm shadow-blue-500/5' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50/60'}`}`}
+         : `items-center gap-3 w-full px-6 py-2.5
+            ${active ? 'bg-blue-50/70 text-blue-600 border-l-4 border-blue-600 font-bold shadow-sm shadow-blue-500/5' : 'text-slate-800 hover:text-slate-900 hover:bg-slate-50/60'}`}`}
   >
     {Icon && <Icon size={collapsed ? 22 : 18} strokeWidth={active ? 2.5 : 2} className={`transition-transform duration-300 ${active ? (collapsed ? 'text-white' : 'text-blue-600') : 'text-slate-400 group-hover:text-slate-900'}`} />}
     
     {collapsed ? (
       <>
-        <span className={`text-[10px] font-bold leading-none text-center truncate w-full px-1 uppercase tracking-tighter ${active ? 'text-white' : 'text-slate-800'}`}>
+        <span className={`text-[10px] font-bold leading-none text-center truncate w-full px-1 uppercase tracking-tighter ${active ? 'text-white' : 'text-slate-800 dark:text-slate-300'}`}>
           {label.length > 8 ? label.substring(0, 7) + '..' : label}
         </span>
         {hasChildren && (
@@ -404,7 +421,7 @@ const NavItem = ({ icon: Icon, label, active, onClick, onPlusClick, collapsed, s
         )}
       </>
     ) : (
-      <span className={`text-[13px] font-bold tracking-tight ${active ? 'text-blue-600' : 'text-slate-900 group-hover:text-slate-900'}`}>{label}</span>
+       <span className={`text-[12px] font-medium tracking-tight ${active ? 'text-blue-600 font-bold' : 'text-slate-800 dark:text-slate-300 group-hover:text-slate-900 dark:group-hover:text-white'}`}>{label}</span>
     )}
 
     {showPlus && !collapsed && (
@@ -429,7 +446,10 @@ const AppShell = ({ children, onLogout, companies = [], currentCompanyId, onComp
   const location   = useLocation();
   const { pathname } = location;
   const [collapsed, setCollapsed] = useState(false);
-  const user = useMemo(() => getUser(), []);
+  const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
+  const profileDropdownRef = useRef(null);
+  const user = getUser();
+  const company = companies.find(c => c.id === currentCompanyId);
 
   const sidebarW = collapsed ? 84 : 230;
 
@@ -443,6 +463,17 @@ const AppShell = ({ children, onLogout, companies = [], currentCompanyId, onComp
       mainEl.style.overflowX = 'auto';
     }
   }, [pathname]);
+
+  // Close profile dropdown when clicking outside
+  useEffect(() => {
+    const handleOutsideClick = (e) => {
+      if (profileDropdownRef.current && !profileDropdownRef.current.contains(e.target)) {
+        setProfileDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleOutsideClick);
+    return () => document.removeEventListener('mousedown', handleOutsideClick);
+  }, []);
 
   // Breadcrumb
   const breadcrumbs = useMemo(() => {
@@ -463,6 +494,7 @@ const AppShell = ({ children, onLogout, companies = [], currentCompanyId, onComp
 
   return (
     <div 
+      className="caltally-app"
       style={{ 
         display: 'flex', 
         height: '100vh', 
@@ -473,7 +505,7 @@ const AppShell = ({ children, onLogout, companies = [], currentCompanyId, onComp
     >
 
       {/* ─── SIDEBAR ─────────────────────────────────────────── */}
-      <aside className="no-print bg-white/85 backdrop-blur-md border-r border-slate-100" style={{
+      <aside className="no-print bg-white/85 dark:bg-slate-900/90 backdrop-blur-md border-r border-slate-100 dark:border-slate-800" style={{
         width: sidebarW,
         minWidth: sidebarW,
         display: 'flex',
@@ -483,13 +515,13 @@ const AppShell = ({ children, onLogout, companies = [], currentCompanyId, onComp
         zIndex: 60,
       }}>
 
-        <div className={`flex items-center h-20 border-b border-slate-50 overflow-hidden transition-all duration-300 ${collapsed ? 'justify-center' : 'px-8 gap-3'}`}>
+        <div className={`flex items-center h-20 border-b border-slate-50 dark:border-slate-800/50 overflow-hidden transition-all duration-300 ${collapsed ? 'justify-center' : 'px-8 gap-3'}`}>
           <div className="w-10 h-10 rounded-2xl bg-slate-900 flex items-center justify-center shrink-0 shadow-lg shadow-slate-900/10 border-2 border-slate-50">
             <Building2 size={22} color="#fff" strokeWidth={2.5} />
           </div>
           {!collapsed && (
             <div className="flex flex-col items-start leading-[1.1] animate-fade-in">
-              <div className="text-[15px] font-black text-slate-900 tracking-tight uppercase">CalTally</div>
+              <div className="text-[15px] font-black text-slate-900 dark:text-white tracking-tight uppercase">CalTally</div>
             </div>
           )}
         </div>
@@ -497,88 +529,163 @@ const AppShell = ({ children, onLogout, companies = [], currentCompanyId, onComp
         {/* Nav */}
         <nav className={`flex-1 space-y-0 ${collapsed ? 'px-0 overflow-y-visible py-0' : 'px-0 overflow-y-auto py-6'}`}>
           {NAV.filter(section => {
+            if (!user) return false;
+
+            // FEATURE GATING LOGIC (SaaS Plan)
+            const features = company?.SubscriptionPlan?.features || [];
+            // if (section.group === 'Items' && !features.includes('INVENTORY')) return false;
+            
             // RBAC FILTERING LOGIC
-            const role = user.role || 'VIEWER';
-            if (role === 'VIEWER') return ['Home', 'Reports'].includes(section.group);
-            if (role === 'AUDITOR') return ['Home', 'Reports', 'Setup'].includes(section.group);
-            if (role === 'DATA_ENTRY') return ['Home', 'Items', 'Banking', 'Sales', 'Purchases', 'Accounting', 'Operations', 'Payroll'].includes(section.group);
-            if (role === 'EMPLOYEE') return ['Home', 'Items', 'Sales', 'Purchases', 'Banking', 'Accounting', 'Reports'].includes(section.group);
-            return true; // ADMIN, SUPER_ADMIN, ACCOUNTANT, MANAGER see all
-          }).map(section => (
-            <NavGroup
-              key={section.group}
-              group={section.group}
-              icon={section.icon}
-              items={section.items}
-              collapsed={collapsed}
-              pathname={pathname}
-              location={location}
-              navigate={navigate}
-            />
-          ))}
+            const role = (user.Role?.name || user.role || 'VIEWER').toUpperCase();
+            
+            // 1. SUPER_ADMIN sees everything
+            if (role === 'SUPER_ADMIN') return true;
+
+            // Platform Admin is exclusive to SUPER_ADMIN
+            if (section.group === 'Platform Admin') return false;
+
+            // 2. ADMIN/COMPANY_ADMIN sees all operational modules
+            if (role === 'ADMIN' || role === 'COMPANY_ADMIN') return true;
+
+            // 3. AUDITOR sees only Home, Setup, Reports, and AI Assistant
+            if (role === 'AUDITOR') {
+              return ['Home', 'Setup', 'Reports', 'AI Assistant'].includes(section.group);
+            }
+
+            // 4. VIEWER sees only Home, Reports, and AI Assistant
+            if (role === 'VIEWER') {
+              return ['Home', 'Reports', 'AI Assistant'].includes(section.group);
+            }
+
+            // 5. EMPLOYEE sees Home, Items, Sales, Purchases, Banking, Accounting, Reports, and AI Assistant
+            if (role === 'EMPLOYEE') {
+              return ['Home', 'Items', 'Sales', 'Purchases', 'Banking', 'Accounting', 'Reports', 'AI Assistant'].includes(section.group);
+            }
+
+            // 6. ACCOUNTANT and MANAGER see all operational modules except Setup
+            if (role === 'ACCOUNTANT' || role === 'MANAGER') {
+              return section.group !== 'Setup';
+            }
+
+            // Fallback: default to VIEWER logic
+            return ['Home', 'Reports', 'AI Assistant'].includes(section.group);
+          }).map(section => {
+            // Further item-level feature gating
+            const features = company?.SubscriptionPlan?.features || [];
+            let filteredItems = section.items;
+            
+            // if (section.group === 'Accountant Tools') {
+            //   if (!features.includes('COST_CENTERS')) {
+            //     filteredItems = filteredItems.filter(item => item.path !== '/cost-centers');
+            //   }
+            // }
+
+            if (filteredItems.length === 0) return null;
+
+            return (
+              <NavGroup
+                key={section.group}
+                group={section.group}
+                icon={section.icon}
+                items={filteredItems}
+                collapsed={collapsed}
+                pathname={pathname}
+                location={location}
+                navigate={navigate}
+              />
+            );
+          })}
         </nav>
 
         {/* Collapse toggle - Floating Transparent version */}
         <button 
           onClick={() => setCollapsed(!collapsed)}
           title={collapsed ? "Expand Sidebar" : "Collapse Sidebar"}
-          className={`absolute -right-3 bottom-24 w-6 h-10 bg-white border border-slate-200 rounded-full flex items-center justify-center text-slate-400 hover:text-blue-600 hover:border-blue-300 transition-all shadow-sm z-[60] cursor-pointer
+          className={`absolute -right-3 bottom-24 w-6 h-10 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-full flex items-center justify-center text-slate-400 dark:text-slate-500 hover:text-blue-600 dark:hover:text-blue-400 hover:border-blue-300 dark:hover:border-blue-500 transition-all shadow-sm z-[60] cursor-pointer
             ${collapsed ? 'rotate-180' : ''}`}
         >
           <PanelLeftClose size={14} strokeWidth={3} />
         </button>
 
-        {/* User card */}
-        <div className="p-4 border-t border-slate-50">
-          <button
-            onClick={onLogout}
-            className={`flex items-center gap-3 w-full p-2.5 rounded-2xl border border-slate-50 hover:border-red-100 hover:bg-red-50 transition-all group ${collapsed ? 'justify-center' : ''}`}
-          >
-            <div className="w-9 h-9 rounded-xl bg-slate-900 flex items-center justify-center text-white text-[11px] font-bold shrink-0 shadow-lg shadow-slate-900/10">
-               {user.email?.substring(0, 1).toUpperCase() || 'A'}
-            </div>
-            {!collapsed && (
-                <div className="flex-1 min-w-0 text-left">
-                  <div className="text-[13px] font-bold text-slate-900 truncate tracking-tight">{user.email || 'Administrator'}</div>
-                  <div className="text-[9px] font-bold text-red-500 uppercase tracking-[0.2em] group-hover:text-red-700">Sign Out</div>
-                </div>
-            )}
-          </button>
-        </div>
+
       </aside>
 
       {/* ─── MAIN CONTENT ────────────────────────────────────── */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
 
         {/* Top Header */}
-        <header className="h-20 bg-white/80 backdrop-blur-md border-b border-slate-100 flex items-center justify-between px-10 relative z-[60] shrink-0 no-print">
+        <header className="h-20 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-100 dark:border-slate-800 flex items-center justify-between px-10 relative z-[60] shrink-0 no-print">
           <div className="flex items-center gap-4">
           </div>
 
           {/* Right side */}
           <div className="flex items-center gap-6">
-            <div className="text-[11px] font-bold text-gray-500 uppercase tracking-widest border-r border-gray-100 pr-6 mr-1">
+            <div className="text-[11px] font-bold text-gray-500 dark:text-slate-400 uppercase tracking-widest border-r border-gray-100 dark:border-slate-700 pr-6 mr-1">
                {new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
             </div>
-            <div className="flex items-center gap-2">
-               <div className="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 cursor-pointer hover:bg-gray-100">
-                  <Bell size={16} />
-               </div>
-               <div className="w-8 h-8 rounded-lg bg-slate-900 flex items-center justify-center text-white text-[10px] font-bold cursor-pointer">
-                  {user.email?.substring(0, 1).toUpperCase() || 'A'}
-               </div>
-            </div>
+             <div className="flex items-center gap-3 relative" ref={profileDropdownRef}>
+                <button 
+                  onClick={() => navigate('/settings/company')}
+                  className="w-8 h-8 rounded-full hover:bg-slate-100 flex items-center justify-center text-slate-500 hover:text-slate-700 transition-colors"
+                  title="Workspace Settings"
+                >
+                  <Settings size={18} strokeWidth={2} />
+                </button>
+                <NotificationBell />
+                <div 
+                  onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
+                  className="w-8 h-8 rounded-lg bg-slate-900 hover:bg-slate-800 transition-colors flex items-center justify-center text-white text-[10px] font-bold cursor-pointer relative"
+                >
+                    {(user.name || user.username || user.email || 'A').substring(0, 1).toUpperCase()}
+                </div>
+
+                {/* Profile Dropdown */}
+                {profileDropdownOpen && (
+                  <div className="absolute right-0 top-full mt-2 w-56 bg-white border border-slate-100 rounded-xl shadow-xl z-[70] py-2 animate-zoom-in">
+                    <div className="px-4 py-2 border-b border-slate-50">
+                      <p className="text-[12px] font-bold text-slate-700 dark:text-slate-200 truncate">{user.name || user.username || (user.email ? user.email.split('@')[0] : 'Administrator')}</p>
+                      <p className="text-[10px] text-slate-400 dark:text-slate-500 capitalize mt-0.5">{user.role || 'User'}</p>
+                    </div>
+
+                    <button
+                      onClick={() => {
+                        setProfileDropdownOpen(false);
+                        onLogout();
+                      }}
+                      className="w-full text-left px-4 py-2.5 text-[12.5px] font-bold text-red-650 hover:bg-red-50 hover:text-red-700 transition-colors flex items-center gap-2"
+                    >
+                      <LogOut size={13} className="text-red-400" />
+                      Sign Out
+                    </button>
+                  </div>
+                )}
+             </div>
           </div>
         </header>
 
         {/* Page content */}
-        <main className="bg-[#f8fafc]" style={{ flex: 1, overflowY: 'auto', overflowX: 'auto' }}>
+        <main className="bg-[#f8fafc] dark:bg-slate-950" style={{ flex: 1, overflowY: 'auto', overflowX: 'auto' }}>
           <div className="animate-in fade-in duration-500">
             {children}
           </div>
         </main>
       </div>
+
     </div>
+  );
+};
+
+const ProtectedShell = ({ Component, props, onLogout, companies, companyId, handleCompanyChange, stats }) => {
+  const location = useLocation();
+  const isWrite = location.pathname.includes('/new') || location.pathname.includes('/edit');
+  const Wrapper = isWrite ? WriteProtectedRoute : ReadProtectedRoute;
+  
+  return (
+    <Wrapper>
+      <AppShell onLogout={onLogout} companies={companies} currentCompanyId={companyId} onCompanyChange={handleCompanyChange} stats={stats}>
+        <Component companyId={companyId} {...props} />
+      </AppShell>
+    </Wrapper>
   );
 };
 
@@ -592,7 +699,12 @@ function AuthenticatedApp() {
   const [companies, setCompanies] = useState([]);
   const [companyId, setCompanyId] = useState(sessionStorage.getItem('companyId'));
 
-  const handleLogout = useCallback(() => {
+  const handleLogout = useCallback(async () => {
+    try {
+      await authAPI.logout();
+    } catch (e) {
+      console.error('Logout API failed', e);
+    }
     ['token', 'companyId', 'companyName', 'user'].forEach(k => sessionStorage.removeItem(k));
     window.location.reload();
   }, []);
@@ -658,15 +770,25 @@ function AuthenticatedApp() {
     fetchContext();
   }, [companyId]);
 
+
+
   const shell = (Component, props = {}) => (
-    <AppShell onLogout={handleLogout} companies={companies} currentCompanyId={companyId} onCompanyChange={handleCompanyChange} stats={stats}>
-      <Component companyId={companyId} {...props} />
-    </AppShell>
+    <ProtectedShell 
+       Component={Component} 
+       props={props} 
+       onLogout={handleLogout} 
+       companies={companies} 
+       companyId={companyId} 
+       handleCompanyChange={handleCompanyChange} 
+       stats={stats} 
+    />
   );
 
   return (
     <Routes>
       <Route path="/" element={<Navigate to="/dashboard" replace />} />
+      <Route path="/upgrade" element={<UpgradeScreen />} />
+      <Route path="/verify-email" element={<VerifyEmailPage />} />
 
       <Route path="/setup-company" element={
         <CompanyInfoView firstTime={true} onCompanyCreated={(id, name) => {
@@ -678,11 +800,25 @@ function AuthenticatedApp() {
         }} />
       } />
 
+      <Route path="/company-hub" element={
+        shell(CompanyInfoView, { 
+          firstTime: false, 
+          onCompanyCreated: (id, name) => {
+            sessionStorage.setItem('companyId', id);
+            sessionStorage.setItem('companyName', name);
+            window.location.reload();
+          }
+        })
+      } />
+
       <Route path="/dashboard" element={
         <AppShell onLogout={handleLogout} companies={companies} currentCompanyId={companyId} onCompanyChange={handleCompanyChange} stats={stats}>
           <DashboardView companyId={companyId} stats={stats} vouchers={vouchers} />
         </AppShell>
       } />
+
+      {/* Admin Support Dashboard */}
+      <Route path="/support" element={shell(SupportCenter)} />
 
       {/* Accounting */}
       <Route path="/vouchers" element={
@@ -758,8 +894,6 @@ function AuthenticatedApp() {
       <Route path="/bills"               element={shell(BillsView)} />
       <Route path="/bills/new"           element={shell(BillEntryView)} />
       <Route path="/bills/edit/:id"      element={shell(BillEntryView)} />
-      <Route path="/recurring-bills"     element={shell(RecurringBillsView)} />
-      <Route path="/recurring-bills/new" element={shell(RecurringBillEntryView)} />
       <Route path="/purchase-orders"     element={shell(PurchaseOrdersView)} />
       <Route path="/purchase-orders/view/:id" element={shell(PurchaseOrdersView)} />
       <Route path="/purchase-orders/:id/email" element={shell(PurchaseOrderEmailView)} />
@@ -780,7 +914,7 @@ function AuthenticatedApp() {
       <Route path="/quotes/edit/:id"    element={shell(QuotesView)} />
       <Route path="/quotes/view/:id"    element={shell(QuotesView)} />
       <Route path="/sales-orders"       element={shell(SalesOrdersView)} />
-            <Route path="/sales-orders/new"   element={shell(SalesOrdersView)} />
+      <Route path="/sales-orders/new"   element={shell(SalesOrdersView)} />
       <Route path="/sales-invoices"     element={shell(SalesInvoicesView)} />
       <Route path="/sales-invoices/:id" element={shell(SalesInvoicesView)} />
       <Route path="/sales-invoices/new"  element={shell(ProfessionalInvoiceView)} />
@@ -844,7 +978,10 @@ function AuthenticatedApp() {
       <Route path="/ai-assistant"          element={shell(AIAssistantView)} />
 
       {/* Settings */}
-      <Route path="/settings/company"   element={shell(CompanyInfoView, { setActiveTab: () => {} })} />
+      <Route path="/settings/company"   element={shell(SettingsDashboard)} />
+      <Route path="/settings/payment-gateways" element={shell(PaymentGatewaysSettings)} />
+      <Route path="/banking/gateways" element={shell(GatewaySettlementView)} />
+      <Route path="/shared/invoice/:share_token" element={<SharedInvoiceView />} />
 
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>
@@ -900,6 +1037,7 @@ export default function App() {
         } />
         {/* OAuth redirect landing page — exchanges httpOnly cookie for session */}
         <Route path="/auth-callback" element={<OAuthCallbackPage onSuccess={() => setAuthed(true)} />} />
+        <Route path="/shared/invoice/:share_token" element={<SharedInvoiceView />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     );

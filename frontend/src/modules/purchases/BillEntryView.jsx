@@ -9,7 +9,7 @@ import {
   Save, Send as SendIcon, UploadCloud, GripVertical, Paperclip,
   Image as ImageIcon, LayoutGrid, X, Settings, HelpCircle, MessageSquare, History, Package
 } from 'lucide-react';
-import { purchaseAPI, inventoryAPI, companyAPI, projectAPI, voucherAPI } from '../../services/api';
+import { purchaseAPI, inventoryAPI, companyAPI, projectAPI, voucherAPI, ledgerAPI } from '../../services/api';
 import ConfigurePaymentTermsModal from './ConfigurePaymentTermsModal';
 import CreateAccountModal from './CreateAccountModal';
 import VendorForm from './VendorForm';
@@ -59,12 +59,14 @@ const BillEntryView = ({ companyId }) => {
   });
 
   const [items, setItems] = useState([
-    { id: Date.now(), itemName: '', account: '', qty: 1, rate: 0, amount: 0 }
+    { id: Date.now(), itemName: '', account: '', qty: 1, rate: 0, amount: 0, isFixedAsset: false, depMethod: 'WDV', depRate: 10, usefulLife: 10, scrapValue: 0 }
   ]);
 
   // ── Search & Dropdown State ─────────────────────────────────────
   const [vendors, setVendors] = useState([]);
   const [projects, setProjects] = useState([]);
+  const [isProjectModalOpen, setIsProjectModalOpen] = useState(false);
+  const [projectCustomers, setProjectCustomers] = useState([]);
   const [inventoryItems, setInventoryItems] = useState([]);
   const [isVendorDropdownOpen, setIsVendorDropdownOpen] = useState(false);
   const [vendorSearch, setVendorSearch] = useState('');
@@ -115,6 +117,7 @@ const BillEntryView = ({ companyId }) => {
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
   const [savedPO, setSavedPO] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [formError, setFormError] = useState(null);
   const [vendorPanelTab, setVendorPanelTab] = useState('details');
   const [isAddressExpanded, setIsAddressExpanded] = useState(false);
   const [isContactPersonsExpanded, setIsContactPersonsExpanded] = useState(false);
@@ -177,12 +180,13 @@ const BillEntryView = ({ companyId }) => {
   }, [formData.date, formData.paymentTerms, isDataLoaded, id]);
 
   const tdsOptions = [
-    { name: 'Commission or Brokerage', rate: 2 },
-    { name: 'Dividend', rate: 10 },
-    { name: 'Other Interest than securities', rate: 10 },
-    { name: 'Payment of contractors for Others', rate: 2 },
-    { name: 'Payment of contractors HUF/Indiv', rate: 1 },
-    { name: 'Technical Fees (2%)', rate: 2 },
+    { section: '194H', name: 'Commission or Brokerage', rate: 2 },
+    { section: '194',  name: 'Dividend', rate: 10 },
+    { section: '194A', name: 'Other Interest than securities', rate: 10 },
+    { section: '194C', name: 'Payment of contractors for Others', rate: 2 },
+    { section: '194C', name: 'Payment of contractors HUF/Indiv', rate: 1 },
+    { section: '194J', name: 'Technical Fees (2%)', rate: 2 },
+    { section: '194J', name: 'Professional Fees', rate: 10 },
   ];
 
   const filteredTdsOptions = tdsOptions.filter(opt => 
@@ -214,7 +218,7 @@ const BillEntryView = ({ companyId }) => {
         setVendors(res.data || []);
       }).catch(err => console.error("Failed to fetch vendors:", err?.response?.status, err?.response?.data?.error || err.message));
       projectAPI.getByCompany(companyId).then(res => setProjects(res.data || []));
-      inventoryAPI.getByCompany(companyId, 'purchase').then(res => {
+      inventoryAPI.getByCompany(companyId).then(res => {
         setInventoryItems(res.data || []);
       });
       companyAPI.getById(companyId).then(res => {
@@ -222,6 +226,21 @@ const BillEntryView = ({ companyId }) => {
       });
     }
   }, [companyId]);
+
+  useEffect(() => {
+    if (isProjectModalOpen && companyId && projectCustomers.length === 0) {
+      ledgerAPI.getByCompany(companyId).then(res => {
+        const allLedgers = Array.isArray(res.data) ? res.data : [];
+        const customerLedgers = allLedgers.filter(l => 
+          l.Group?.name?.toLowerCase().includes('debtor') || 
+          l.groupName?.toLowerCase().includes('debtor') ||
+          l.Group?.name?.toLowerCase().includes('customer') ||
+          l.groupName?.toLowerCase().includes('customer')
+        );
+        setProjectCustomers(customerLedgers);
+      }).catch(err => console.error("Failed to load customer list for projects:", err));
+    }
+  }, [isProjectModalOpen, companyId, projectCustomers.length]);
 
   useEffect(() => {
     if (queryVendorId && vendors.length > 0) {
@@ -395,6 +414,7 @@ const BillEntryView = ({ companyId }) => {
           if (itemsList && itemsList.length > 0) {
             setItems(itemsList.map((item, idx) => ({
               id: item.id || Date.now() + idx,
+              itemId: item.itemId || item.ItemId || '',
               itemName: item.itemName || '',
               account: item.account || '',
               qty: item.qty || 1,
@@ -427,6 +447,7 @@ const BillEntryView = ({ companyId }) => {
       if (it.id === rowId) {
         return {
           ...it,
+          itemId: invItem.id,
           itemName: invItem.name,
           rate: invItem.costPrice || invItem.sellingPrice || 0,
           account: invItem.purchaseAccount || it.account || 'Cost of Goods Sold',
@@ -539,7 +560,7 @@ const BillEntryView = ({ companyId }) => {
   };
 
   const addItem = () => {
-    setItems([...items, { id: Date.now(), itemName: '', account: '', qty: 1, rate: 0, amount: 0 }]);
+    setItems([...items, { id: Date.now(), itemName: '', account: '', qty: 1, rate: 0, amount: 0, isFixedAsset: false, depMethod: 'WDV', depRate: 10, usefulLife: 10, scrapValue: 0 }]);
   };
 
   const removeItem = (id) => {
@@ -573,12 +594,14 @@ const BillEntryView = ({ companyId }) => {
   };
 
   const handleSaveOrder = async (statusOrSendEmail = 'draft') => {
+    setFormError(null);
     if (!formData.vendorId) {
       alert('Please select a vendor');
       return;
     }
     if (!formData.billNumber || !formData.billNumber.trim()) {
-      alert('Please enter a Bill number');
+      setFormError('Please enter the bill number.');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
     if (items.some(item => !item.itemName || item.qty <= 0)) {
@@ -642,6 +665,8 @@ const BillEntryView = ({ companyId }) => {
     const vendorId = queryParams.get('vendorId');
     if (backTo === 'vendors' && vendorId) {
       navigate(`/vendors/view/${vendorId}`);
+    } else if (backTo === 'dashboard') {
+      navigate('/dashboard');
     } else {
       navigate('/bills');
     }
@@ -671,6 +696,18 @@ const BillEntryView = ({ companyId }) => {
           </div>
        </div>
 
+        {formError && (
+           <div className="mx-6 mt-4 p-3 bg-red-50 border border-red-100 rounded text-red-600 text-[13px] font-medium flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                 <span className="w-1 h-1 bg-red-600 rounded-full"></span>
+                 {formError}
+              </div>
+              <button onClick={() => setFormError(null)} className="text-red-400 hover:text-red-600">
+                 <X size={16} />
+              </button>
+           </div>
+        )}
+
        <div className="flex relative">
           <div className="flex-1 px-8 py-6 max-w-[1200px]">
              {/* Form Grid */}
@@ -693,9 +730,17 @@ const BillEntryView = ({ companyId }) => {
                               onFocus={() => setIsVendorDropdownOpen(true)}
                               className="w-full h-9 px-3 pr-8 border border-slate-300 rounded-l text-slate-800 focus:border-blue-500 outline-none"
                             />
-                            <ChevronDown size={14} className="absolute right-3 top-2.5 text-slate-400 cursor-pointer" />
+                            <ChevronDown 
+                              size={14} 
+                              className="absolute right-3 top-2.5 text-slate-400 cursor-pointer" 
+                              onClick={() => setIsVendorDropdownOpen(!isVendorDropdownOpen)}
+                            />
                          </div>
-                         <button className="h-9 w-9 bg-blue-600 text-white rounded-r flex items-center justify-center hover:bg-blue-700 transition-colors border-y border-r border-blue-600">
+                         <button 
+                           type="button"
+                           onClick={() => setIsVendorDropdownOpen(!isVendorDropdownOpen)}
+                           className="h-9 w-9 bg-blue-600 text-white rounded-r flex items-center justify-center hover:bg-blue-700 transition-colors border-y border-r border-blue-600"
+                         >
                             <Search size={14} />
                          </button>
                       </div>
@@ -733,11 +778,30 @@ const BillEntryView = ({ companyId }) => {
                          <div className="max-h-[200px] overflow-y-auto py-1 custom-scrollbar">
                             {filteredVendors.map(vendor => (
                                <div key={vendor.id} onClick={() => {
+                                  let newTdsName = formData.tdsName;
+                                  let newTdsRate = formData.tdsRate;
+                                  
+                                  if (vendor.tdsApplicable && vendor.tds_section) {
+                                     const matched = tdsOptions.find(o => o.section === vendor.tds_section && o.rate === Number(vendor.tds_rate));
+                                     if (matched) {
+                                        newTdsName = matched.name;
+                                        newTdsRate = matched.rate;
+                                     } else {
+                                        newTdsName = `TDS - ${vendor.tds_section}`;
+                                        newTdsRate = Number(vendor.tds_rate) || 0;
+                                     }
+                                  } else {
+                                     newTdsName = '';
+                                     newTdsRate = 0;
+                                  }
+
                                   setFormData({ 
                                      ...formData, 
                                      vendorId: vendor.id, 
                                      vendorName: vendor.name,
-                                     paymentTerms: vendor.paymentTerms || 'Due on Receipt'
+                                     paymentTerms: vendor.paymentTerms || 'Due on Receipt',
+                                     tdsName: newTdsName,
+                                     tdsRate: newTdsRate
                                   });
                                   setSelectedVendor(vendor);
                                   setVendorSearch('');
@@ -763,19 +827,36 @@ const BillEntryView = ({ companyId }) => {
                 <input type="text" value={formData.reference} onChange={(e) => setFormData({ ...formData, reference: e.target.value })} className="w-full max-w-[400px] h-9 px-3 border border-slate-300 rounded text-slate-800 focus:border-blue-500 outline-none" />
 
                 <label className="text-slate-700 pt-2">Project</label>
-                <div className="relative w-full max-w-[400px]">
-                   <select 
-                     value={formData.projectId} 
-                     onChange={(e) => setFormData({ ...formData, projectId: e.target.value })} 
-                     className="w-full h-9 px-3 border border-slate-300 rounded text-slate-800 focus:border-blue-500 outline-none bg-white appearance-none pr-8"
-                   >
-                      <option value="">Select or associate project</option>
-                      {projects.map(p => (
-                         <option key={p.id} value={p.id}>{p.name}</option>
-                      ))}
-                   </select>
-                   <ChevronDown size={14} className="absolute right-3 top-2.5 text-slate-400 pointer-events-none" />
-                </div>
+                 <div className="flex w-full max-w-[400px] gap-2">
+                    <div className="relative flex-1">
+                       <select 
+                         value={formData.projectId} 
+                         onChange={(e) => {
+                            if (e.target.value === 'NEW') {
+                               setIsProjectModalOpen(true);
+                            } else {
+                               setFormData({ ...formData, projectId: e.target.value });
+                            }
+                         }} 
+                         className="w-full h-9 px-3 border border-slate-300 rounded text-slate-800 focus:border-blue-500 outline-none bg-white appearance-none pr-8"
+                       >
+                          <option value="">Select or associate project</option>
+                          {projects.map(p => (
+                             <option key={p.id} value={p.id}>{p.name}</option>
+                          ))}
+                          <option value="NEW" className="text-blue-600 font-bold font-sans">+ Create New Project</option>
+                       </select>
+                       <ChevronDown size={14} className="absolute right-3 top-2.5 text-slate-400 pointer-events-none" />
+                    </div>
+                    <button
+                       type="button"
+                       onClick={() => setIsProjectModalOpen(true)}
+                       className="h-9 px-3 bg-blue-600 hover:bg-blue-700 text-white rounded flex items-center justify-center transition-colors gap-1 text-[12px] font-bold"
+                       title="Create New Project"
+                    >
+                       <Plus size={14} /> Project
+                    </button>
+                 </div>
 
                 <label className="text-red-500 pt-2"><span className="text-slate-700">Bill Date</span>*</label>
                 <input type="date" value={formData.date} onChange={(e) => setFormData({ ...formData, date: e.target.value })} className="w-full max-w-[400px] h-9 px-3 border border-slate-300 rounded text-slate-800 focus:border-blue-500 outline-none" />
@@ -833,65 +914,100 @@ const BillEntryView = ({ companyId }) => {
                 </div>
                 <div className="divide-y divide-slate-100">
                    {items.map((item, index) => (
-                      <div key={item.id} className="grid grid-cols-[2.5fr_2fr_1fr_1fr_1fr_40px] items-start hover:bg-slate-50/50 group/row relative min-h-[44px]">
-                         <div className="absolute left-1 top-4 text-slate-300 opacity-0 group-hover/row:opacity-100 cursor-grab"><GripVertical size={14} /></div>
-                         <div className="px-6 py-2 relative" ref={openItemDropdown === item.id ? itemDropdownRef : null}>
-                            <textarea placeholder="Type or click to select an item." value={item.itemName} onClick={() => setOpenItemDropdown(openItemDropdown === item.id ? null : item.id)} onChange={(e) => { handleItemChange(item.id, 'itemName', e.target.value); setOpenItemDropdown(item.id); }} className={`w-full bg-transparent text-[13px] text-slate-800 resize-none h-[50px] px-2 py-1.5 outline-none border border-transparent rounded ${openItemDropdown === item.id ? 'border-blue-500 ring-1 ring-blue-500 bg-white' : 'hover:border-slate-300'}`} />
-                            {(item.hsnCode || item.gstRate !== undefined) && (
-                               <div className="flex gap-3 mt-0.5 px-2 text-[11px] font-medium text-slate-400">
-                                  {item.hsnCode && <span>HSN/SAC: <strong className="text-slate-600">{item.hsnCode}</strong></span>}
-                                  {item.gstRate !== undefined && <span>GST: <strong className="text-slate-600">{item.gstRate}%</strong></span>}
+                      <div key={item.id} className="flex flex-col hover:bg-slate-50/50 group/row relative min-h-[44px]">
+                         <div className="grid grid-cols-[2.5fr_2fr_1fr_1fr_1fr_40px] items-start">
+                            <div className="absolute left-1 top-4 text-slate-300 opacity-0 group-hover/row:opacity-100 cursor-grab"><GripVertical size={14} /></div>
+                            <div className="px-6 py-2 relative" ref={openItemDropdown === item.id ? itemDropdownRef : null}>
+                               <textarea placeholder="Type or click to select an item." value={item.itemName} onClick={() => setOpenItemDropdown(openItemDropdown === item.id ? null : item.id)} onChange={(e) => { handleItemChange(item.id, 'itemName', e.target.value); setOpenItemDropdown(item.id); }} className={`w-full bg-transparent text-[13px] text-slate-800 resize-none h-[50px] px-2 py-1.5 outline-none border border-transparent rounded ${openItemDropdown === item.id ? 'border-blue-500 ring-1 ring-blue-500 bg-white' : 'hover:border-slate-300'}`} />
+                               <div className="flex gap-4 mt-1 items-center px-2">
+                                  <label className="flex items-center gap-1.5 cursor-pointer hover:bg-blue-50 p-1 -ml-1 rounded transition-colors group/cap">
+                                     <input type="checkbox" checked={item.isFixedAsset || false} onChange={(e) => handleItemChange(item.id, 'isFixedAsset', e.target.checked)} className="accent-blue-600 w-3.5 h-3.5" />
+                                     <span className={`text-[10px] font-bold uppercase tracking-wider ${item.isFixedAsset ? 'text-blue-600' : 'text-slate-400 group-hover/cap:text-blue-500'}`}>Capitalize Asset</span>
+                                  </label>
+                                  {(item.hsnCode || item.gstRate !== undefined) && (
+                                     <div className="flex gap-3 text-[11px] font-medium text-slate-400">
+                                        {item.hsnCode && <span>HSN: <strong className="text-slate-600">{item.hsnCode}</strong></span>}
+                                        {item.gstRate !== undefined && <span>GST: <strong className="text-slate-600">{item.gstRate}%</strong></span>}
+                                     </div>
+                                  )}
                                </div>
-                            )}
-                            {openItemDropdown === item.id && (
-                               <div className="absolute top-full left-1 w-[400px] bg-white border border-slate-200 shadow-xl z-50 rounded overflow-hidden flex flex-col">
-                                  <div className="max-h-[250px] overflow-y-auto custom-scrollbar flex-1">
-                                     {inventoryItems.filter(inv => {
-                                        const matchesSearch = inv.name.toLowerCase().includes((item.itemName || '').toLowerCase());
-                                        const isPurchaseItem = inv.purchaseInformation !== false && inv.purchaseInformation !== 0 && inv.purchaseInformation !== 'false';
-                                        return matchesSearch && isPurchaseItem;
-                                     }).map(invItem => (
-                                        <div key={invItem.id || invItem._id} onClick={() => handleItemSelect(item.id, invItem)} className={`px-4 py-2 text-[13px] cursor-pointer border-b border-slate-100 last:border-0 ${item.itemName === invItem.name ? 'bg-blue-500 text-white' : 'hover:bg-slate-50'}`}>
-                                           <div className="font-medium">{invItem.name}</div>
-                                           <div className={`text-[12px] ${item.itemName === invItem.name ? 'text-blue-100' : 'text-slate-500'}`}>Rate: ₹{(invItem.costPrice || 0).toLocaleString()}</div>
-                                        </div>
-                                     ))}
+                               {openItemDropdown === item.id && (
+                                  <div className="absolute top-full left-1 w-[400px] bg-white border border-slate-200 shadow-xl z-50 rounded overflow-hidden flex flex-col">
+                                     <div className="max-h-[250px] overflow-y-auto custom-scrollbar flex-1">
+                                        {inventoryItems.filter(inv => {
+                                           return inv.name.toLowerCase().includes((item.itemName || '').toLowerCase());
+                                        }).map(invItem => (
+                                           <div key={invItem.id || invItem._id} onClick={() => handleItemSelect(item.id, invItem)} className={`px-4 py-2 text-[13px] cursor-pointer border-b border-slate-100 last:border-0 ${item.itemName === invItem.name ? 'bg-blue-500 text-white' : 'hover:bg-slate-50'}`}>
+                                              <div className="font-medium">{invItem.name}</div>
+                                              <div className={`text-[12px] ${item.itemName === invItem.name ? 'text-blue-100' : 'text-slate-500'}`}>Rate: ₹{(invItem.costPrice || 0).toLocaleString()}</div>
+                                           </div>
+                                        ))}
+                                     </div>
+                                     <div onClick={() => { setActiveRowForItemModal(item.id); setIsItemModalOpen(true); setOpenItemDropdown(null); }} className="px-4 py-3 bg-white border-t border-slate-100 flex items-center gap-2 text-[13px] font-medium text-blue-600 hover:bg-slate-50 cursor-pointer shrink-0">
+                                        <PlusCircle size={14} /> Add New Item
+                                     </div>
                                   </div>
-                                  <div onClick={() => { setActiveRowForItemModal(item.id); setIsItemModalOpen(true); setOpenItemDropdown(null); }} className="px-4 py-3 bg-white border-t border-slate-100 flex items-center gap-2 text-[13px] font-medium text-blue-600 hover:bg-slate-50 cursor-pointer shrink-0">
-                                     <PlusCircle size={14} /> Add New Item
-                                  </div>
-                               </div>
-                            )}
-                         </div>
-                         <div className="px-3 py-2 border-l border-slate-100 relative" ref={openAccountDropdown === item.id ? accountDropdownRef : null}>
-                            <div onClick={() => setOpenAccountDropdown(openAccountDropdown === item.id ? null : item.id)} className="w-full flex items-center justify-between text-[13px] cursor-pointer hover:bg-white border-b border-transparent hover:border-slate-300 px-1 py-1">
-                               <span className={item.account ? 'text-slate-800 truncate' : 'text-slate-500'}>{item.account || 'Select an account'}</span>
-                               <ChevronDown size={14} className="text-slate-400" />
+                               )}
                             </div>
-                            {openAccountDropdown === item.id && (
-                                <div className="absolute top-[80%] left-0 w-full min-w-[200px] bg-white border border-slate-200 shadow-xl z-50 rounded-md overflow-hidden flex flex-col font-normal">
-                                   <div className="p-2 border-b border-slate-100 bg-slate-50/50">
-                                      <div className="relative"><Search size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400" /><input autoFocus placeholder="Search accounts..." value={accountSearchTerm} onChange={(e) => setAccountSearchTerm(e.target.value)} className="w-full pl-7 pr-2 py-1 text-[12px] outline-none border border-slate-200 rounded" /></div>
+                            <div className="px-3 py-2 border-l border-slate-100 relative" ref={openAccountDropdown === item.id ? accountDropdownRef : null}>
+                               <div onClick={() => setOpenAccountDropdown(openAccountDropdown === item.id ? null : item.id)} className="w-full flex items-center justify-between text-[13px] cursor-pointer hover:bg-white border-b border-transparent hover:border-slate-300 px-1 py-1">
+                                  <span className={item.account ? 'text-slate-800 truncate' : 'text-slate-500'}>{item.account || 'Select an account'}</span>
+                                  <ChevronDown size={14} className="text-slate-400" />
+                               </div>
+                               {openAccountDropdown === item.id && (
+                                   <div className="absolute top-[80%] left-0 w-full min-w-[200px] bg-white border border-slate-200 shadow-xl z-50 rounded-md overflow-hidden flex flex-col font-normal">
+                                      <div className="p-2 border-b border-slate-100 bg-slate-50/50">
+                                         <div className="relative"><Search size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400" /><input autoFocus placeholder="Search accounts..." value={accountSearchTerm} onChange={(e) => setAccountSearchTerm(e.target.value)} className="w-full pl-7 pr-2 py-1 text-[12px] outline-none border border-slate-200 rounded" /></div>
+                                      </div>
+                                      <div className="max-h-[220px] overflow-y-auto py-1 custom-scrollbar">
+                                         {accountGroups.map(group => (
+                                            <div key={group.category}>
+                                               <div className="px-3 py-1 font-bold text-slate-400 bg-slate-50 text-[11px] uppercase">{group.category}</div>
+                                               {group.accounts.filter(acc => acc.toLowerCase().includes(accountSearchTerm.toLowerCase())).map(acc => (
+                                                  <div key={acc} onClick={() => { handleItemChange(item.id, 'account', acc); setOpenAccountDropdown(null); setAccountSearchTerm(''); }} className={`px-4 py-1.5 text-[13px] cursor-pointer hover:bg-blue-600 hover:text-white ${item.account === acc ? 'bg-blue-50 text-blue-600' : ''}`}>{acc}</div>
+                                               ))}
+                                            </div>
+                                         ))}
+                                      </div>
                                    </div>
-                                   <div className="max-h-[220px] overflow-y-auto py-1 custom-scrollbar">
-                                      {accountGroups.map(group => (
-                                         <div key={group.category}>
-                                            <div className="px-3 py-1 font-bold text-slate-400 bg-slate-50 text-[11px] uppercase">{group.category}</div>
-                                            {group.accounts.filter(acc => acc.toLowerCase().includes(accountSearchTerm.toLowerCase())).map(acc => (
-                                               <div key={acc} onClick={() => { handleItemChange(item.id, 'account', acc); setOpenAccountDropdown(null); setAccountSearchTerm(''); }} className={`px-4 py-1.5 text-[13px] cursor-pointer hover:bg-blue-600 hover:text-white ${item.account === acc ? 'bg-blue-50 text-blue-600' : ''}`}>{acc}</div>
-                                            ))}
-                                         </div>
-                                      ))}
-                                   </div>
-                                </div>
-                             )}
+                                )}
+                            </div>
+                            <div className="px-3 py-2 border-l border-slate-100"><input type="number" value={item.qty} onChange={(e) => handleItemChange(item.id, 'qty', e.target.value)} className="w-full bg-transparent text-[13px] text-right focus:bg-white px-1 py-1 outline-none border-b border-transparent focus:border-slate-300" /></div>
+                            <div className="px-3 py-2 border-l border-slate-100"><input type="number" value={item.rate} onChange={(e) => handleItemChange(item.id, 'rate', e.target.value)} className="w-full bg-transparent text-[13px] text-right focus:bg-white px-1 py-1 outline-none border-b border-transparent focus:border-slate-300" /></div>
+                            <div className="px-3 py-2 border-l border-slate-100 text-right font-medium py-3 text-slate-800">{Number(item.qty * item.rate).toFixed(2)}</div>
+                            <div className="flex items-center justify-center pt-2.5">
+                               <button onClick={() => removeItem(item.id)} className="text-slate-300 hover:text-red-500 transition-colors opacity-0 group-hover/row:opacity-100"><Trash2 size={16} /></button>
+                            </div>
                          </div>
-                         <div className="px-3 py-2 border-l border-slate-100"><input type="number" value={item.qty} onChange={(e) => handleItemChange(item.id, 'qty', e.target.value)} className="w-full bg-transparent text-[13px] text-right focus:bg-white px-1 py-1 outline-none border-b border-transparent focus:border-slate-300" /></div>
-                         <div className="px-3 py-2 border-l border-slate-100"><input type="number" value={item.rate} onChange={(e) => handleItemChange(item.id, 'rate', e.target.value)} className="w-full bg-transparent text-[13px] text-right focus:bg-white px-1 py-1 outline-none border-b border-transparent focus:border-slate-300" /></div>
-                         <div className="px-3 py-2 border-l border-slate-100 text-right font-medium py-3 text-slate-800">{Number(item.qty * item.rate).toFixed(2)}</div>
-                         <div className="flex items-center justify-center pt-2.5">
-                            <button onClick={() => removeItem(item.id)} className="text-slate-300 hover:text-red-500 transition-colors opacity-0 group-hover/row:opacity-100"><Trash2 size={16} /></button>
-                         </div>
+
+                         {item.isFixedAsset && (
+                            <div className="bg-blue-50/50 border-t border-blue-100/50 px-8 py-3 animate-fade-in flex flex-wrap gap-4 items-end rounded-b-md mb-2 mx-2">
+                               <div className="flex flex-col gap-1 w-36">
+                                  <label className="text-[9px] font-black text-blue-600 uppercase tracking-widest">Dep. Method</label>
+                                  <select value={item.depMethod || 'WDV'} onChange={(e) => handleItemChange(item.id, 'depMethod', e.target.value)} className="w-full border border-slate-200 rounded px-2 py-1.5 text-[11px] font-semibold text-slate-700 outline-none focus:border-blue-500 bg-white shadow-sm cursor-pointer">
+                                     <option value="WDV">WDV</option>
+                                     <option value="SLM">SLM</option>
+                                  </select>
+                               </div>
+                               {item.depMethod !== 'SLM' && (
+                                  <div className="flex flex-col gap-1 w-24">
+                                     <label className="text-[9px] font-black text-blue-600 uppercase tracking-widest">Rate (%)</label>
+                                     <input type="number" value={item.depRate || 10} onChange={(e) => handleItemChange(item.id, 'depRate', e.target.value)} className="w-full border border-slate-200 rounded px-2 py-1.5 text-[11px] font-semibold text-slate-700 outline-none focus:border-blue-500 bg-white shadow-sm" />
+                                  </div>
+                               )}
+                               <div className="flex flex-col gap-1 w-24">
+                                  <label className="text-[9px] font-black text-blue-600 uppercase tracking-widest">Life (Years)</label>
+                                  <input type="number" value={item.usefulLife || 10} onChange={(e) => handleItemChange(item.id, 'usefulLife', e.target.value)} className="w-full border border-slate-200 rounded px-2 py-1.5 text-[11px] font-semibold text-slate-700 outline-none focus:border-blue-500 bg-white shadow-sm" />
+                               </div>
+                               <div className="flex flex-col gap-1 w-32">
+                                  <label className="text-[9px] font-black text-blue-600 uppercase tracking-widest">Scrap Value (₹)</label>
+                                  <input type="number" value={item.scrapValue || 0} onChange={(e) => handleItemChange(item.id, 'scrapValue', e.target.value)} className="w-full border border-slate-200 rounded px-2 py-1.5 text-[11px] font-semibold text-slate-700 outline-none focus:border-blue-500 bg-white shadow-sm" />
+                               </div>
+                               <div className="ml-auto flex items-center text-[9px] text-blue-500 font-bold uppercase gap-1 bg-white px-2.5 py-1 rounded border border-blue-100 shadow-sm">
+                                 <CheckCircle2 size={12} className="text-blue-500"/> Asset Registry Link Enabled
+                               </div>
+                            </div>
+                         )}
                       </div>
                    ))}
                 </div>
@@ -1030,7 +1146,7 @@ const BillEntryView = ({ companyId }) => {
           </div>
        </div>
 
-       <div className="fixed bottom-0 left-0 right-0 h-16 bg-white border-t border-slate-200 flex items-center justify-between px-8 z-50">
+       <div className="fixed bottom-0 right-0 h-16 bg-white border-t border-slate-200 flex items-center justify-between px-8 z-50" style={{ left: 'var(--sidebar-width)' }}>
           <div className="flex items-center gap-3">
              {id ? (
                // Edit mode: Save + Cancel
@@ -1069,6 +1185,138 @@ const BillEntryView = ({ companyId }) => {
 
        {isVendorModalOpen && <div className="fixed inset-0 bg-slate-900/50 flex items-center justify-center z-[100] p-6 animate-in fade-in"><div className="bg-white rounded-2xl shadow-xl w-full max-w-5xl h-[90vh] overflow-hidden flex flex-col slide-in-from-bottom-4 animate-in duration-300"><div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50/50"><h2 className="text-[16px] font-bold text-slate-800 flex items-center gap-2"><User size={18} className="text-blue-600" /> Create New Vendor</h2><button onClick={() => setIsVendorModalOpen(false)} className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:bg-slate-200 transition-colors"><X size={16} /></button></div><div className="flex-1 overflow-y-auto custom-scrollbar bg-[#f8fafc]"><VendorForm standalone={false} onCancel={() => setIsVendorModalOpen(false)} onSaveSuccess={(newVendor) => { if (companyId) { purchaseAPI.getVendors(companyId).then(res => { setVendors(res.data || []); if (newVendor && newVendor.id) { setFormData(prev => ({ ...prev, vendorId: newVendor.id, vendorName: newVendor.name })); } }); } setIsVendorModalOpen(false); }} /></div></div></div>}
        {isItemModalOpen && <CreateItemModal isOpen={isItemModalOpen} onClose={() => setIsItemModalOpen(false)} onSuccess={handleItemCreatedSuccess} companyId={companyId} />}
+       {isProjectModalOpen && (
+          <CreateProjectModal 
+            isOpen={isProjectModalOpen} 
+            onClose={() => setIsProjectModalOpen(false)} 
+            companyId={companyId}
+            projectCustomers={projectCustomers}
+            onSave={(newProj) => {
+              setProjects(prev => [newProj, ...prev]);
+              setFormData(prev => ({ ...prev, projectId: newProj.id }));
+            }}
+          />
+        )}
+    </div>
+  );
+};
+
+const CreateProjectModal = ({ isOpen, onClose, onSave, companyId, projectCustomers }) => {
+  const [name, setName] = useState('');
+  const [projectCode, setProjectCode] = useState('');
+  const [customerLedgerId, setCustomerLedgerId] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState(null);
+
+  if (!isOpen) return null;
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!name.trim()) {
+      setError('Project Name is required');
+      return;
+    }
+    setSaving(true);
+    setError(null);
+    try {
+      const payload = {
+        name: name.trim(),
+        projectCode: projectCode.trim() || null,
+        customerLedgerId: customerLedgerId || null,
+        CompanyId: companyId,
+        billingMethod: 'Hourly Project Rate',
+        budgetType: 'None',
+        costBudget: 0,
+        revenueBudget: 0,
+        ratePerHour: 0,
+        startDate: null,
+        endDate: null,
+        tasks: [],
+        users: [],
+        addToWatchlist: false
+      };
+      const res = await projectAPI.create(payload);
+      onSave(res.data);
+      onClose();
+    } catch (err) {
+      console.error(err);
+      setError(err.response?.data?.error || 'Failed to create project');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-slate-900/50 flex items-center justify-center z-[150] p-4 animate-in fade-in">
+      <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col slide-in-from-bottom-4 animate-in duration-300">
+        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+          <h3 className="text-[15px] font-bold text-slate-800 flex items-center gap-2">
+            <Package size={18} className="text-blue-600" /> Create New Project
+          </h3>
+          <button onClick={onClose} className="p-1 hover:bg-slate-100 rounded-lg text-slate-400"><X size={18}/></button>
+        </div>
+        <form onSubmit={handleSubmit} className="p-6 space-y-4 text-[13px]">
+          {error && (
+            <div className="p-3 bg-red-50 border border-red-200 rounded text-red-600 font-medium">
+              {error}
+            </div>
+          )}
+          <div>
+            <label className="text-[12px] font-bold text-slate-500 mb-1 block uppercase tracking-wider">Project Name *</label>
+            <input 
+              required 
+              type="text" 
+              value={name} 
+              onChange={e => setName(e.target.value)} 
+              className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:border-blue-500 outline-none text-slate-800" 
+              placeholder="e.g. Website Redesign"
+            />
+          </div>
+          <div>
+            <label className="text-[12px] font-bold text-slate-500 mb-1 block uppercase tracking-wider">Project Code</label>
+            <input 
+              type="text" 
+              value={projectCode} 
+              onChange={e => setProjectCode(e.target.value)} 
+              className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:border-blue-500 outline-none text-slate-800" 
+              placeholder="e.g. WR-2026"
+            />
+          </div>
+          <div>
+            <label className="text-[12px] font-bold text-slate-500 mb-1 block uppercase tracking-wider">Customer Name</label>
+            <div className="relative">
+              <select 
+                value={customerLedgerId} 
+                onChange={e => setCustomerLedgerId(e.target.value)} 
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:border-blue-500 outline-none bg-white text-slate-800 appearance-none pr-8"
+              >
+                <option value="">Select customer (optional)</option>
+                {projectCustomers.map(c => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+              <ChevronDown size={14} className="absolute right-3 top-3 text-slate-400 pointer-events-none" />
+            </div>
+          </div>
+          <div className="pt-4 flex gap-3 border-t border-slate-100">
+            <button 
+              type="submit" 
+              disabled={saving} 
+              className="flex-1 bg-blue-600 text-white font-bold py-2.5 rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors text-[13px] uppercase tracking-wider"
+            >
+              {saving ? 'Creating...' : 'Create Project'}
+            </button>
+            <button 
+              type="button" 
+              onClick={onClose} 
+              className="px-6 py-2.5 border border-slate-300 text-slate-700 font-semibold rounded-lg hover:bg-slate-50 transition-colors text-[13px] uppercase tracking-wider"
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 };

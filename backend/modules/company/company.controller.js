@@ -1,4 +1,5 @@
 const { Company, User, Group, Ledger, sequelize } = require('../../models');
+const AuditService = require('../../services/AuditService');
 
 exports.seedDefaultGroups = async (companyId, transaction = null) => {
   const { Group: GroupModel } = require('../../models');
@@ -136,7 +137,7 @@ exports.createCompany = async (req, res, next) => {
     const userIdToFind = req.user?.id || userId;
     const userInstance = userIdToFind ? await User.findByPk(userIdToFind, { transaction }) : null;
     if (userInstance) {
-      await company.addUser(userInstance, { transaction });
+      await company.addUser(userInstance, { through: { role: 'ADMIN' }, transaction });
       
       // Auto-set as active company if user doesn't have one
       if (!userInstance.activeCompanyId) {
@@ -190,7 +191,10 @@ exports.getCompanies = async (req, res, next) => {
 
 exports.getCompanyById = async (req, res, next) => {
   try {
-    const company = await Company.findByPk(req.params.id);
+    const { Company, SubscriptionPlan } = require('../../models');
+    const company = await Company.findByPk(req.params.id, {
+      include: [{ model: SubscriptionPlan, as: 'SubscriptionPlan' }]
+    });
     if (!company) return res.status(404).json({ error: 'Company not found' });
 
     if (req.user.role !== 'SUPER_ADMIN') {
@@ -261,6 +265,8 @@ exports.updateCompany = async (req, res, next) => {
       }
     }
 
+    const oldData = { ...company.get() };
+
     fieldsToUpdate.forEach(field => {
       if (req.body[field] !== undefined) {
         if (field === 'features') {
@@ -272,6 +278,18 @@ exports.updateCompany = async (req, res, next) => {
     });
 
     await company.save();
+
+    await AuditService.log({
+      action: 'UPDATE_COMPANY',
+      tableName: 'Companies',
+      recordId: company.id,
+      oldData,
+      newData: company.toJSON(),
+      companyId: company.id,
+      userId: req.user.id,
+      req
+    });
+
     res.json(company);
   } catch (err) {
     next(err);
@@ -404,7 +422,20 @@ exports.deleteCompany = async (req, res, next) => {
       return res.status(403).json({ error: 'Access denied: Only the owner or SUPER_ADMIN can delete this company' });
     }
 
+    const oldData = company.toJSON();
     await company.destroy();
+
+    await AuditService.log({
+      action: 'DELETE_COMPANY',
+      tableName: 'Companies',
+      recordId: id,
+      oldData,
+      newData: null,
+      companyId: id,
+      userId: req.user.id,
+      req
+    });
+
     res.json({ message: 'Company deleted successfully' });
   } catch (err) {
     next(err);

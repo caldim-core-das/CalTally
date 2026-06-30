@@ -25,9 +25,24 @@ const hashToken = (token) =>
 /**
  * Issue a short-lived access JWT (15 minutes).
  */
-const signAccessToken = (user, companyId) =>
+const getCompanyRole = async (userId, globalRole, companyId) => {
+  if (globalRole === 'SUPER_ADMIN') return 'SUPER_ADMIN';
+  if (!companyId) return 'VIEWER';
+  try {
+    const { UserCompany } = require('../../models');
+    const relation = await UserCompany.findOne({
+      where: { userId, companyId }
+    });
+    return relation ? relation.role : 'VIEWER';
+  } catch (err) {
+    console.error('Error fetching company role:', err);
+    return 'VIEWER';
+  }
+};
+
+const signAccessToken = (user, companyId, resolvedRole) =>
   jwt.sign(
-    { id: user.id, role: user.role, companyId },
+    { id: user.id, role: resolvedRole || user.role, companyId },
     process.env.JWT_SECRET,
     { expiresIn: '15m' }
   );
@@ -51,7 +66,7 @@ const setRefreshCookie = (res, rawToken) => {
   res.cookie('refreshToken', rawToken, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict',
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict',
     maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
   });
 };
@@ -60,18 +75,19 @@ const setAccessCookie = (res, token) => {
   res.cookie('accessToken', token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict',
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict',
     maxAge: 15 * 60 * 1000 // 15 minutes
   });
 };
 
 const setCsrfCookie = (res, token) => {
   res.cookie('csrfToken', token, {
-    httpOnly: false, // Frontend needs to read this
+    httpOnly: false, // Frontend needs to read this locally
     secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict',
-    maxAge: 60 * 60 * 1000 // 1 hour — long enough to outlast the access token, refreshed on every login/refresh
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict',
+    maxAge: 60 * 60 * 1000 // 1 hour
   });
+  res.setHeader('X-CSRF-Token', token); // For cross-domain frontend access
 };
 
 /**
@@ -263,7 +279,15 @@ exports.login = async (req, res) => {
     return await _issueTokens(req, res, user);
   } catch (err) {
     const eId = require('crypto').randomBytes(6).toString('hex');
+    const { sequelize } = require('../../models');
     console.error(`[AUTH-LOGIN-${eId}]`, err.message, err.stack);
+    
+    // Write to a log file so we can read it
+    const fs = require('fs');
+    const path = require('path');
+    const logPath = path.join(__dirname, '../../error-capture.log');
+    fs.appendFileSync(logPath, `[AUTH-LOGIN-${eId}] DB: ${sequelize.options.dialect} | ${err.message}\n${err.stack}\n`);
+    
     res.status(500).json({ error: 'Login failed. Please try again.', errorId: eId });
   }
 };
@@ -285,14 +309,15 @@ async function _issueTokens(req, res, user, extraFields = {}) {
   }
 
   let activeCoId = user.activeCompanyId;
-  if (!activeCoId && userCompanies.length === 1) {
+  if (!activeCoId && userCompanies.length > 0) {
     activeCoId = userCompanies[0].id;
     user.activeCompanyId = activeCoId;
     await user.save();
   }
 
   // Phase 2: short-lived access token + rotating refresh token
-  const accessToken = signAccessToken(user, activeCoId);
+  const resolvedRole = await getCompanyRole(user.id, user.role, activeCoId);
+  const accessToken = signAccessToken(user, activeCoId, resolvedRole);
   const rawRefreshToken = await issueRefreshToken(user.id);
   const csrfToken = require('crypto').randomBytes(24).toString('hex');
   
@@ -303,7 +328,7 @@ async function _issueTokens(req, res, user, extraFields = {}) {
   res.json({
     // We no longer return the accessToken in the JSON body.
     message: 'Authentication successful',
-    user: { id: user.id, email: user.email, name: user.name, role: user.role, activeCompanyId: activeCoId },
+    user: { id: user.id, email: user.email, name: user.name, role: resolvedRole, activeCompanyId: activeCoId },
     companies: userCompanies,
     ...extraFields
   });
@@ -352,7 +377,8 @@ exports.refresh = async (req, res) => {
       return res.status(401).json({ error: 'User not found.' });
     }
 
-    const accessToken = signAccessToken(user, user.activeCompanyId);
+    const resolvedRole = await getCompanyRole(user.id, user.role, user.activeCompanyId);
+    const accessToken = signAccessToken(user, user.activeCompanyId, resolvedRole);
     const rawNew = await issueRefreshToken(user.id);
     const csrfToken = require('crypto').randomBytes(24).toString('hex');
     
@@ -363,7 +389,7 @@ exports.refresh = async (req, res) => {
     await logAuthEvent('TOKEN_REFRESHED', { userId: user.id, ip, userAgent });
     res.json({
       message: 'Token refreshed',
-      user: { id: user.id, email: user.email, name: user.name, role: user.role, activeCompanyId: user.activeCompanyId }
+      user: { id: user.id, email: user.email, name: user.name, role: resolvedRole, activeCompanyId: user.activeCompanyId }
     });
   } catch (err) {
     const eId = require('crypto').randomBytes(6).toString('hex');
@@ -384,9 +410,9 @@ exports.logout = async (req, res) => {
       const hashed = hashToken(rawToken);
       await RefreshToken.destroy({ where: { token: hashed } });
     }
-    res.clearCookie('refreshToken', { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'strict' });
-    res.clearCookie('accessToken', { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'strict' });
-    res.clearCookie('csrfToken', { httpOnly: false, secure: process.env.NODE_ENV === 'production', sameSite: 'strict' });
+    res.clearCookie('refreshToken', { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict' });
+    res.clearCookie('accessToken', { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict' });
+    res.clearCookie('csrfToken', { httpOnly: false, secure: process.env.NODE_ENV === 'production', sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict' });
     await logAuthEvent('LOGOUT', { userId: req.user?.id, ip, userAgent });
     res.json({ message: 'Logged out successfully.' });
   } catch (err) {
@@ -423,14 +449,15 @@ exports.switchCompany = async (req, res) => {
     await user.save();
 
     // Re-issue tokens with new companyId embedded
-    const accessToken = signAccessToken(user, companyId);
+    const resolvedRole = await getCompanyRole(user.id, user.role, companyId);
+    const accessToken = signAccessToken(user, companyId, resolvedRole);
     const rawNew = await issueRefreshToken(user.id);
     setRefreshCookie(res, rawNew);
 
     res.json({
       message: 'Company switched successfully',
       token: accessToken,
-      user: { id: user.id, email: user.email, name: user.name, role: user.role, activeCompanyId: user.activeCompanyId }
+      user: { id: user.id, email: user.email, name: user.name, role: resolvedRole, activeCompanyId: user.activeCompanyId }
     });
   } catch (err) {
     const eId = require('crypto').randomBytes(6).toString('hex');
@@ -641,7 +668,7 @@ exports.oauthTokenExchange = async (req, res) => {
     res.clearCookie('oauthAccessToken', {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
       path: '/'
     });
 
@@ -678,12 +705,154 @@ exports.me = async (req, res) => {
       return res.status(404).json({ error: 'User not found.' });
     }
 
+    const resolvedRole = await getCompanyRole(user.id, user.role, user.activeCompanyId);
+
     res.json({
-      user: { id: user.id, email: user.email, name: user.name, role: user.role, activeCompanyId: user.activeCompanyId },
+      user: { id: user.id, email: user.email, name: user.name, role: resolvedRole, activeCompanyId: user.activeCompanyId },
       companies: user.Companies || []
     });
   } catch (err) {
     console.error('Failed to fetch /me:', err);
     res.status(500).json({ error: 'Failed to fetch user data.' });
+  }
+};
+
+// ─── GET /auth/profile: return oauthOnly flag so frontend knows which UI to show ──
+exports.getProfile = async (req, res) => {
+  try {
+    const user = await User.findByPk(req.user.id, {
+      attributes: ['id', 'name', 'email', 'role', 'activeCompanyId', 'oauthOnly']
+    });
+    if (!user) return res.status(404).json({ error: 'User not found.' });
+    const resolvedRole = await getCompanyRole(user.id, user.role, user.activeCompanyId);
+    res.json({
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: resolvedRole,
+      oauthOnly: user.oauthOnly
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch profile.' });
+  }
+};
+
+// ─── POST /auth/change-password ────────────────────────────────────────────────
+// For regular users: requires currentPassword + newPassword
+// For oauthOnly users: only newPassword is required (they never set one before)
+exports.changePassword = async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    if (!newPassword) return res.status(400).json({ error: 'New password is required.' });
+
+    // Enforce complexity
+    const issues = validatePasswordComplexity(newPassword);
+    if (issues.length > 0) {
+      return res.status(422).json({
+        error: 'Password does not meet security requirements.',
+        requirements: issues
+      });
+    }
+
+    const user = await User.findByPk(req.user.id);
+    if (!user) return res.status(404).json({ error: 'User not found.' });
+
+    if (user.oauthOnly) {
+      // First-time password setup for Google/OAuth users — no current password check needed
+      user.password = await bcrypt.hash(newPassword, 10);
+      user.oauthOnly = false; // Now they have a password, allow email/password login too
+      await user.save();
+
+      await logAuthEvent('PASSWORD_SET', { userId: user.id, email: user.email, detail: 'OAuth user set a password for the first time' });
+      return res.json({ message: 'Password set successfully! You can now log in with email & password.' });
+    }
+
+    // Regular user — verify current password first
+    if (!currentPassword) {
+      return res.status(400).json({ error: 'Current password is required.' });
+    }
+    const isMatch = await bcrypt.compare(currentPassword, user.password);
+    if (!isMatch) {
+      return res.status(401).json({ error: 'Current password is incorrect.' });
+    }
+    if (currentPassword === newPassword) {
+      return res.status(400).json({ error: 'New password must be different from your current password.' });
+    }
+
+    user.password = await bcrypt.hash(newPassword, 10);
+    await user.save();
+
+    await logAuthEvent('PASSWORD_CHANGED', { userId: user.id, email: user.email, detail: 'Password changed via profile settings' });
+    res.json({ message: 'Password updated successfully!' });
+  } catch (err) {
+    console.error('changePassword error:', err);
+    res.status(500).json({ error: 'Failed to update password.' });
+  }
+};
+
+// ─── GET /auth/notification-preferences ──────────────────────────────────────
+// Returns the current user's saved notification preferences from the DB.
+exports.getNotificationPreferences = async (req, res) => {
+  try {
+    const user = await User.findByPk(req.user.id, {
+      attributes: ['notificationPreferences']
+    });
+    if (!user) return res.status(404).json({ error: 'User not found.' });
+
+    // Return saved prefs or sensible defaults if never saved before
+    const defaults = {
+      emailInvoices: true,
+      emailReports: false,
+      emailUsers: true,
+      smsInvoices: false,
+      smsCritical: true,
+      appAlerts: true,
+      appInventory: true
+    };
+    res.json(user.notificationPreferences || defaults);
+  } catch (err) {
+    console.error('getNotificationPreferences error:', err);
+    res.status(500).json({ error: 'Failed to load notification preferences.' });
+  }
+};
+
+// ─── POST /auth/notification-preferences ─────────────────────────────────────
+// Saves the user's notification preferences to the DB.
+exports.saveNotificationPreferences = async (req, res) => {
+  try {
+    const allowed = ['emailInvoices', 'emailReports', 'emailUsers', 'smsInvoices', 'smsCritical', 'appAlerts', 'appInventory'];
+    const prefs = {};
+    for (const key of allowed) {
+      if (key in req.body) prefs[key] = Boolean(req.body[key]);
+    }
+
+    if (Object.keys(prefs).length === 0) {
+      return res.status(400).json({ error: 'No valid preference fields provided.' });
+    }
+
+    const user = await User.findByPk(req.user.id);
+    if (!user) return res.status(404).json({ error: 'User not found.' });
+
+    // Merge with existing to avoid overwriting untouched fields
+    const existing = user.notificationPreferences || {};
+    user.notificationPreferences = { ...existing, ...prefs };
+    await user.save();
+
+    await AuditLog.create({
+      action: 'NOTIFICATION_PREFS_UPDATED',
+      tableName: 'Users',
+      recordId: user.id,
+      newData: JSON.stringify(user.notificationPreferences),
+      UserId: user.id,
+      CompanyId: req.user.companyId || null
+    }).catch(() => {}); // Non-blocking
+
+    res.json({
+      message: 'Notification preferences saved successfully.',
+      preferences: user.notificationPreferences
+    });
+  } catch (err) {
+    console.error('saveNotificationPreferences error:', err);
+    res.status(500).json({ error: 'Failed to save notification preferences.' });
   }
 };

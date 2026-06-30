@@ -9,8 +9,10 @@ import { purchaseAPI, ledgerAPI } from '../../services/api';
 import useNotificationStore from '../../store/notificationStore';
 import ConfirmModal from '../../components/ConfirmModal';
 import { getCurrencyDisplay } from '../../utils/currencies';
+import usePermissions from '../../hooks/usePermissions';
 
 const VendorsListView = ({ companyId }) => {
+  const { canCreate } = usePermissions();
   const navigate = useNavigate();
   const { addNotification } = useNotificationStore();
   const [vendors, setVendors] = useState([]);
@@ -155,12 +157,14 @@ const VendorsListView = ({ companyId }) => {
              <ChevronDown size={18} className="text-blue-600 mt-1" />
           </div>
           <div className="flex items-center gap-2">
-             <button 
-               onClick={() => navigate('/vendors/new')}
-               className="bg-[#1e61f0] hover:bg-[#1a54d1] text-white px-4 py-2 rounded-md font-medium flex items-center gap-1.5 transition-all shadow-sm"
-             >
-                <Plus size={18} strokeWidth={2.5}/> New
-             </button>
+             {canCreate && (
+               <button 
+                 onClick={() => navigate('/vendors/new')}
+                 className="bg-[#1e61f0] hover:bg-[#1a54d1] text-white px-4 py-2 rounded-md font-medium flex items-center gap-1.5 transition-all shadow-sm"
+               >
+                  <Plus size={18} strokeWidth={2.5}/> New
+               </button>
+             )}
              
              <div className="relative">
                 <button 
@@ -248,7 +252,7 @@ const VendorsListView = ({ companyId }) => {
                    <th className="px-6 py-4">GSTIN</th>
                    <th className="px-6 py-4 text-right">Payables</th>
                    <th className="px-6 py-4 text-right">Unused Credits (BCY)</th>
-                   <th className="px-6 py-4 text-center">Actions</th>
+                   <th className="px-6 py-4 w-10"></th>
                 </tr>
              </thead>
              <tbody className="divide-y divide-slate-100">
@@ -262,7 +266,7 @@ const VendorsListView = ({ companyId }) => {
                         <td className="px-6 py-4 text-[14px] font-medium text-blue-600 group-hover:underline">{v.name}</td>
                         <td className="px-6 py-4 text-[14px] text-slate-600">{v.companyName || '-'}</td>
                         <td className="px-6 py-4 text-[14px] text-slate-600">{v.email || '-'}</td>
-                        <td className="px-6 py-4 text-[14px] text-slate-600">{v.workPhone || '-'}</td>
+                        <td className="px-6 py-4 text-[14px] text-slate-600">{v.phone || v.workPhone || v.mobile || '-'}</td>
                         <td className="px-6 py-4 text-[14px] text-slate-600">
                            {v.gstNumber ? (
                              <span title={v.gstNumber} className="cursor-help border-b border-dotted border-slate-400 font-mono">
@@ -280,27 +284,20 @@ const VendorsListView = ({ companyId }) => {
                               {getCurrencyDisplay(v.currency)} {(parseFloat(v.unusedCredits || 0)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                            </span>
                         </td>
-                        <td className="px-6 py-4">
-                           <div className="flex items-center justify-center gap-2">
-                              <button 
-                                onClick={(e) => { e.stopPropagation(); navigate(`/vendors/${v.id}`); }} 
-                                className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 text-slate-600 hover:text-blue-600 hover:border-blue-200 rounded shadow-sm transition-all text-[12px] font-medium"
-                              >
-                                 <Edit size={14} /> Edit
-                              </button>
-                              <button 
-                                onClick={(e) => handleDelete(v.id, v.name, e)} 
-                                className="flex items-center justify-center p-1.5 bg-white border border-slate-200 text-slate-400 hover:text-red-600 hover:border-red-200 hover:bg-red-50 rounded shadow-sm transition-all"
-                              >
-                                 <Trash2 size={16} />
-                              </button>
-                           </div>
+                        <td className="px-6 py-4 text-right">
+                           <button 
+                             onClick={(e) => handleDelete(v.id, v.name, e)}
+                             className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-md transition-colors opacity-0 group-hover:opacity-100"
+                             title="Delete Vendor"
+                           >
+                              <Trash2 size={16} />
+                           </button>
                         </td>
                      </tr>
                    ))
                  ) : (
                    <tr>
-                     <td colSpan="8" className="px-6 py-40 text-center bg-white">
+                     <td colSpan="7" className="px-6 py-40 text-center bg-white">
                         <div className="flex flex-col items-center justify-center max-w-[600px] mx-auto animate-fade-in">
                            <div className="relative mb-10 group">
                              <div className="w-28 h-28 bg-blue-50/50 rounded-[2.5rem] flex items-center justify-center text-[#1e61f0] border border-blue-100 shadow-sm transition-transform duration-500 group-hover:scale-105 group-hover:rotate-3">
@@ -318,12 +315,14 @@ const VendorsListView = ({ companyId }) => {
                               Company: {companyId || 'none'} | Vendors: {vendors.length}
                            </div>
                            <div className="flex items-center gap-5">
-                              <button 
-                                onClick={() => navigate('/vendors/new')}
-                                className="bg-[#1e61f0] hover:bg-[#1a54d1] text-white px-8 py-3 rounded-xl font-bold text-[15px] flex items-center gap-2.5 transition-all shadow-xl shadow-blue-600/20 hover:shadow-blue-600/30 active:scale-[0.98]"
-                              >
-                                 <Plus size={20} strokeWidth={3}/> Onboard New Vendor
-                              </button>
+                              {canCreate && (
+                                <button 
+                                  onClick={() => navigate('/vendors/new')}
+                                  className="bg-[#1e61f0] hover:bg-[#1a54d1] text-white px-8 py-3 rounded-xl font-bold text-[15px] flex items-center gap-2.5 transition-all shadow-xl shadow-blue-600/20 hover:shadow-blue-600/30 active:scale-[0.98]"
+                                >
+                                   <Plus size={20} strokeWidth={3}/> Onboard New Vendor
+                                </button>
+                              )}
                            </div>
                         </div>
                      </td>

@@ -62,6 +62,14 @@ router.get('/me', looseLimiter, verifyToken, authController.me);
 // ── Company Context ───────────────────────────────────────────────────────────
 router.post('/switch-company', verifyToken, authController.switchCompany);
 
+// Profile & password management
+router.get('/profile',          verifyToken, authController.getProfile);
+router.post('/change-password', verifyToken, authController.changePassword);
+
+// Notification preferences (per-user, stored in DB)
+router.get('/notification-preferences',  verifyToken, authController.getNotificationPreferences);
+router.post('/notification-preferences', verifyToken, authController.saveNotificationPreferences);
+
 // ── MFA (Phase 3) ─────────────────────────────────────────────────────────────
 // All MFA routes require a valid access token (user must be logged in first).
 router.post('/mfa/enroll',        verifyToken, authController.mfaEnroll);
@@ -95,7 +103,7 @@ router.get('/callback',
       res.cookie('oauthAccessToken', accessToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax', // 'lax' required for cross-site redirect flows
+        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // 'lax' required for cross-site redirect flows locally, 'none' in prod
         maxAge: 2 * 60 * 1000, // 2 minutes — frontend must exchange immediately
         path: '/'
       });

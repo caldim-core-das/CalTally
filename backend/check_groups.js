@@ -6,6 +6,8 @@ async function check() {
     console.log('No company found.');
     return;
   }
+
+  
   const groups = await Group.findAll({ where: { CompanyId: company.id } });
   console.log(`Found ${groups.length} groups for company ${company.name}:`);
   groups.forEach(g => {
@@ -13,5 +15,7 @@ async function check() {
   });
   process.exit(0);
 }
+
+
 
 check();
