@@ -5,16 +5,11 @@ const dotenv = require('dotenv');
 const passport = require('passport');
 const { sequelize } = require('./models');
 const path = require('path');
+const jwt = require('jsonwebtoken');
 
 // 1. Initial Config (Loaded from backend/.env)
 dotenv.config({ path: path.join(__dirname, '.env') });
 
-const fs = require('fs');
-const originalConsoleError = console.error;
-console.error = function (...args) {
-  fs.appendFileSync(path.join(__dirname, 'error_log.txt'), args.map(a => typeof a === 'object' ? JSON.stringify(a) : a).join(' ') + '\n');
-  originalConsoleError.apply(console, args);
-};
 
 // Phase 2: Validate required env vars before any other code runs
 // If JWT_SECRET or other critical vars are missing, process.exit(1) is called.
@@ -69,10 +64,10 @@ const corsOptions = {
     // Allow requests with no origin (curl, Postman, server-to-server)
     if (!origin) return callback(null, true);
     if (allowedOrigins.includes(origin)) return callback(null, true);
-    // Auto-allow Render and Vercel preview environments
-    if (origin.endsWith('.onrender.com') || origin.endsWith('.vercel.app')) return callback(null, true);
-    // If we're in production without a specific CLIENT_URL, allow anyway to prevent locking out the frontend
-    if (process.env.NODE_ENV === 'production' && !process.env.CLIENT_URL) return callback(null, true);
+    // Auto-allow Render and Vercel preview environments only in development/staging configurations
+    if (process.env.NODE_ENV !== 'production' && (origin.endsWith('.onrender.com') || origin.endsWith('.vercel.app'))) {
+      return callback(null, true);
+    }
     callback(new Error(`CORS: Origin '${origin}' not allowed`));
   },
   credentials: true,
@@ -168,39 +163,7 @@ app.use('/api/credit-notes', require('./modules/sales/creditNote.routes'));
 app.use('/api/projects', require('./modules/time_tracking/project.routes'));
 app.use('/api/timesheets', require('./modules/time_tracking/timesheet.routes'));
 
-// ⚠️  DEBUG ENDPOINTS — only active in development, removed from production
-if (process.env.NODE_ENV !== 'production') {
-  app.get('/api/fixed-assets-debug', async (req, res) => {
-    try {
-      const { FixedAsset, DepreciationLog, Ledger } = require('./models');
-      const assets = await FixedAsset.findAll({
-        include: [
-          { model: DepreciationLog },
-          { model: Ledger, as: 'AssetLedger', attributes: ['name'] }
-        ]
-      });
-      res.json({ status: 'ok', count: assets.length, assets });
-    } catch (err) {
-      // Safe in dev — full details only shown in development
-      res.status(500).json({ error: err.message, stack: err.stack });
-    }
-  });
-
-  app.get('/api/test-tenant-access', async (req, res) => {
-    try {
-      const { User, Company } = require('./models');
-      const user = await User.findOne({
-        where: { email: 'lokeshwari@gmail.com' },
-        include: [Company]
-      });
-      const companyIdToCheck = '9e2261ae-dd0a-47f9-b14d-5c6fb9dfb505';
-      const hasAccess = user.Companies && user.Companies.some(c => c.id === companyIdToCheck);
-      res.json({ user: user.email, hasAccess, companies: user.Companies });
-    } catch (err) {
-      res.status(500).json({ error: err.message, stack: err.stack });
-    }
-  });
-}
+// Debug endpoints removed
 
 // 5. Health Check
 app.get('/api/ping', (req, res) => res.json({ status: 'active', platform: 'Tally Replica' }));
@@ -289,8 +252,8 @@ app.use((err, req, res, next) => {
   const statusCode = err.statusCode || 500;
   res.status(statusCode).json({
     success: false,
-    error: err.message,
-    stack: err.stack,
+    error: process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message,
+    ...(process.env.NODE_ENV !== 'production' && { stack: err.stack }),
     errorId: errorId
   });
 });
@@ -320,11 +283,11 @@ const startServer = async () => {
     try {
       await sequelize.authenticate();
       console.log('✅ Database connection authenticated.');
-      await sequelize.models.User.sync({ alter: true });
-      await sequelize.models.Company.sync({ alter: true });
+      await sequelize.models.User.sync({ alter: process.env.NODE_ENV !== 'production' });
+      await sequelize.models.Company.sync({ alter: process.env.NODE_ENV !== 'production' });
       
       try {
-        await sequelize.models.CustomRole.sync({ alter: true });
+        await sequelize.models.CustomRole.sync({ alter: process.env.NODE_ENV !== 'production' });
         await sequelize.query('ALTER TABLE "UserCompanies" ADD COLUMN IF NOT EXISTS "customRoleId" INTEGER;');
       } catch(e) {
         console.error('Safe Column Add Error:', e.message);

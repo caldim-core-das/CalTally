@@ -10,6 +10,7 @@
 
 const REQUIRED_VARS = [
   { key: 'JWT_SECRET',          hint: 'Set to a long random string (min 32 chars), e.g. openssl rand -hex 32' },
+  { key: 'ENCRYPTION_SECRET',   hint: 'Set to a dedicated long random key for field-level encryption (min 32 chars)' },
   { key: 'Client_ID',           hint: 'Google OAuth Client ID from Google Cloud Console' },
   { key: 'Client_secret',       hint: 'Google OAuth Client Secret from Google Cloud Console' },
 ];
@@ -49,9 +50,12 @@ module.exports = function validateEnv() {
     process.exit(1);
   }
 
-  // Warn (but don't exit) if JWT_SECRET looks too short
+  // Warn (but don't exit) if JWT_SECRET/ENCRYPTION_SECRET looks too short
   if (process.env.JWT_SECRET && process.env.JWT_SECRET.length < 32) {
     console.warn('⚠️  WARNING: JWT_SECRET is shorter than 32 characters. Use a longer secret in production.');
+  }
+  if (process.env.ENCRYPTION_SECRET && process.env.ENCRYPTION_SECRET.length < 32) {
+    console.warn('⚠️  WARNING: ENCRYPTION_SECRET is shorter than 32 characters. Use a longer secret in production.');
   }
 
   console.log('✅ Environment variables validated.');

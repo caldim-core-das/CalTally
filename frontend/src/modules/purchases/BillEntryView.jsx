@@ -676,7 +676,15 @@ const BillEntryView = ({ companyId }) => {
     <div className="bg-white min-h-screen text-[13px] text-slate-800 font-medium pb-24">
        {/* Top Bar */}
        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
+             <button 
+               onClick={handleCancel} 
+               className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-500 hover:text-slate-700 transition-colors flex items-center justify-center"
+               title="Go Back"
+             >
+                <ArrowLeft size={20} />
+             </button>
+             <div className="w-px h-5 bg-slate-200"></div>
              <ShoppingBag size={20} className="text-slate-800" />
              <h1 className="text-[18px] text-slate-800">{id ? 'Edit Bill' : 'New Bill'}</h1>
           </div>

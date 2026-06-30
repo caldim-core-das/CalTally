@@ -49,30 +49,32 @@ exports.validateEmail = async (req, res) => {
 exports.validatePan = async (req, res) => {
   try {
     const { panNumber, excludeId } = req.body;
+    const companyId = req.companyId;
     if (!panNumber) return res.json({ available: true });
-    
-    const where = { panNumber };
+
+    const where = { panNumber, CompanyId: companyId };
     if (excludeId) where.id = { [Op.ne]: excludeId };
-    
+
     const count = await Employee.count({ where, paranoid: false });
     res.json({ available: count === 0 });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: process.env.NODE_ENV === 'production' ? 'Validation failed' : err.message });
   }
 };
 
 exports.validateAadhaar = async (req, res) => {
   try {
     const { aadhaarNumber, excludeId } = req.body;
+    const companyId = req.companyId;
     if (!aadhaarNumber) return res.json({ available: true });
-    
-    const where = { aadhaarNumber };
+
+    const where = { aadhaarNumber, CompanyId: companyId };
     if (excludeId) where.id = { [Op.ne]: excludeId };
-    
+
     const count = await Employee.count({ where, paranoid: false });
     res.json({ available: count === 0 });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: process.env.NODE_ENV === 'production' ? 'Validation failed' : err.message });
   }
 };
 
@@ -92,12 +94,12 @@ exports.createEmployee = async (req, res, next) => {
         if (emailExists > 0) return res.status(400).json({ error: 'Work Email already exists in the system.' });
       }
       if (req.body.panNumber) {
-        const panExists = await Employee.count({ where: { panNumber: req.body.panNumber }, paranoid: false });
-        if (panExists > 0) return res.status(400).json({ error: 'PAN number already exists in the system.' });
+        const panExists = await Employee.count({ where: { panNumber: req.body.panNumber, CompanyId: companyId }, paranoid: false });
+        if (panExists > 0) return res.status(400).json({ error: 'PAN number already exists in this company.' });
       }
       if (req.body.aadhaarNumber) {
-        const aadhaarExists = await Employee.count({ where: { aadhaarNumber: req.body.aadhaarNumber }, paranoid: false });
-        if (aadhaarExists > 0) return res.status(400).json({ error: 'Aadhaar number already exists in the system.' });
+        const aadhaarExists = await Employee.count({ where: { aadhaarNumber: req.body.aadhaarNumber, CompanyId: companyId }, paranoid: false });
+        if (aadhaarExists > 0) return res.status(400).json({ error: 'Aadhaar number already exists in this company.' });
       }
     }
 
@@ -231,17 +233,18 @@ exports.updateEmployee = async (req, res, next) => {
     // Validate uniqueness of email/PAN/Aadhaar excluding current employee
     if (!req.body.isDraft) {
       const emailToCheck = req.body.workEmail || req.body.email;
+      const companyId = req.companyId;
       if (emailToCheck && emailToCheck !== employee.workEmail) {
-        const emailExists = await Employee.count({ where: { workEmail: emailToCheck }, paranoid: false });
-        if (emailExists > 0) return res.status(400).json({ error: 'Work Email already exists.' });
+        const emailExists = await Employee.count({ where: { workEmail: emailToCheck, CompanyId: companyId }, paranoid: false });
+        if (emailExists > 0) return res.status(400).json({ error: 'Work Email already exists in this company.' });
       }
       if (req.body.panNumber && req.body.panNumber !== employee.panNumber) {
-        const panExists = await Employee.count({ where: { panNumber: req.body.panNumber }, paranoid: false });
-        if (panExists > 0) return res.status(400).json({ error: 'PAN number already exists.' });
+        const panExists = await Employee.count({ where: { panNumber: req.body.panNumber, CompanyId: companyId }, paranoid: false });
+        if (panExists > 0) return res.status(400).json({ error: 'PAN number already exists in this company.' });
       }
       if (req.body.aadhaarNumber && req.body.aadhaarNumber !== employee.aadhaarNumber) {
-        const aadhaarExists = await Employee.count({ where: { aadhaarNumber: req.body.aadhaarNumber }, paranoid: false });
-        if (aadhaarExists > 0) return res.status(400).json({ error: 'Aadhaar number already exists.' });
+        const aadhaarExists = await Employee.count({ where: { aadhaarNumber: req.body.aadhaarNumber, CompanyId: companyId }, paranoid: false });
+        if (aadhaarExists > 0) return res.status(400).json({ error: 'Aadhaar number already exists in this company.' });
       }
     }
 
@@ -387,23 +390,23 @@ exports.importEmployees = async (req, res) => {
         continue;
       }
       
-      const emailDup = await Employee.count({ where: { workEmail: email }, paranoid: false, transaction });
+      const emailDup = await Employee.count({ where: { workEmail: email, CompanyId: companyId }, paranoid: false, transaction });
       if (emailDup > 0) {
-        errors.push({ row: rowNum, error: `Email ${email} already exists` });
+        errors.push({ row: rowNum, error: `Email ${email} already exists in this company` });
         continue;
       }
-      
+
       if (panNumber) {
-        const panDup = await Employee.count({ where: { panNumber }, paranoid: false, transaction });
+        const panDup = await Employee.count({ where: { panNumber, CompanyId: companyId }, paranoid: false, transaction });
         if (panDup > 0) {
-          errors.push({ row: rowNum, error: `PAN ${panNumber} already exists` });
+          errors.push({ row: rowNum, error: `PAN ${panNumber} already exists in this company` });
           continue;
         }
       }
       if (aadhaarNumber) {
-        const aadhaarDup = await Employee.count({ where: { aadhaarNumber }, paranoid: false, transaction });
+        const aadhaarDup = await Employee.count({ where: { aadhaarNumber, CompanyId: companyId }, paranoid: false, transaction });
         if (aadhaarDup > 0) {
-          errors.push({ row: rowNum, error: `Aadhaar ${aadhaarNumber} already exists` });
+          errors.push({ row: rowNum, error: `Aadhaar ${aadhaarNumber} already exists in this company` });
           continue;
         }
       }
