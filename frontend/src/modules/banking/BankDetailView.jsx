@@ -6,7 +6,7 @@ import {
   CreditCard, Building2, Globe, Hash, Edit3, X, Check,
   MapPin, Info, Save, Plus, Loader2
 } from 'lucide-react';
-import { ledgerAPI, voucherAPI } from '../../services/api';
+import { ledgerAPI, voucherAPI, bankFeedAPI } from '../../services/api';
 import useNotificationStore from '../../store/notificationStore';
 
 const BankDetailView = () => {
@@ -42,6 +42,16 @@ const BankDetailView = () => {
   });
   const companyId = sessionStorage.getItem('companyId');
 
+  // Setu Integration State
+  const [setuConsent, setSetuConsent] = useState(null);
+  const [syncingFeed, setSyncingFeed] = useState(false);
+  const [showSetuModal, setShowSetuModal] = useState(false);
+  const [setuStep, setSetuStep] = useState(1);
+  const [setuForm, setSetuForm] = useState({ phone: '', bank: '' });
+  const [setuOtp, setSetuOtp] = useState('');
+  const [consentId, setConsentId] = useState('');
+  const [consentApproveLoading, setConsentApproveLoading] = useState(false);
+
   useEffect(() => {
     fetchData();
   }, [id]);
@@ -66,6 +76,14 @@ const BankDetailView = () => {
         const ledgersRes = await ledgerAPI.getByCompany(companyId);
         setLedgers(Array.isArray(ledgersRes.data) ? ledgersRes.data : []);
       }
+
+      // Fetch Setu Connection Status
+      try {
+        const consentRes = await bankFeedAPI.getConsentByLedger(id);
+        setSetuConsent(consentRes.data);
+      } catch (e) {
+        console.error('Failed to load Setu consent status:', e);
+      }
     } catch (err) {
       console.error('Failed to fetch bank details:', err);
       const serverError = err.response?.data?.error || err.message;
@@ -84,6 +102,69 @@ const BankDetailView = () => {
       }
     } catch (err) {
       console.error('IFSC lookup failed');
+    }
+  };
+
+  const handleInitiateSetuConsent = async (e) => {
+    e.preventDefault();
+    if (!setuForm.phone || !setuForm.bank) {
+      addNotification('Please enter your mobile number and select a bank.', 'error');
+      return;
+    }
+    try {
+      const res = await bankFeedAPI.createConsent({
+        ledgerId: id,
+        bankName: setuForm.bank
+      });
+      setConsentId(res.data.consentId);
+      setSetuStep(2); // move to consent review screen
+      addNotification('Consent request generated via Setu Bridge!', 'success');
+    } catch (err) {
+      console.error(err);
+      addNotification(err.response?.data?.error || 'Failed to generate consent request', 'error');
+    }
+  };
+
+  const handleApproveSetuConsent = async () => {
+    setConsentApproveLoading(true);
+    try {
+      await bankFeedAPI.approveConsent(consentId);
+      setSetuStep(3); // move to OTP entering screen
+      addNotification('Consent mock-approved on Setu portal!', 'success');
+    } catch (err) {
+      console.error(err);
+      addNotification(err.response?.data?.error || 'Failed to approve consent', 'error');
+    } finally {
+      setConsentApproveLoading(false);
+    }
+  };
+
+  const handleVerifySetuOtp = async (e) => {
+    e.preventDefault();
+    if (!setuOtp || setuOtp.length < 4) {
+      addNotification('Please enter a 4-digit verification code.', 'error');
+      return;
+    }
+    setSetuStep(4); // success screen
+    addNotification('Identity verified successfully!', 'success');
+  };
+
+  const handleSyncSetuFeed = async () => {
+    const activeConsent = setuConsent || { consentId };
+    if (!activeConsent.consentId) return;
+    setSyncingFeed(true);
+    try {
+      const res = await bankFeedAPI.syncTransactions({
+        consentId: activeConsent.consentId,
+        ledgerId: id
+      });
+      addNotification(`Bank Feed Synced! Successfully imported ${res.data.syncedCount} new transactions.`, 'success');
+      fetchData();
+    } catch (err) {
+      console.error(err);
+      addNotification(err.response?.data?.error || 'Failed to sync bank feed', 'error');
+    } finally {
+      setSyncingFeed(false);
     }
   };
 
@@ -224,15 +305,38 @@ const BankDetailView = () => {
                  </button>
                )}
                
-                <button onClick={fetchData} className="p-2.5 border border-slate-200 rounded-xl hover:bg-slate-50 transition-all text-slate-500">
-                  <RefreshCw size={18} />
-                </button>
-                <button 
-                  onClick={() => setShowRecordModal(true)}
-                  className="px-5 py-2.5 bg-[#1e61f0] text-white rounded-xl text-[12px] font-bold hover:bg-blue-700 transition-all flex items-center gap-2 shadow-lg shadow-blue-500/20"
-                >
-                  <Plus size={14} /> Record Transaction
-                </button>
+                 <button onClick={fetchData} className="p-2.5 border border-slate-200 rounded-xl hover:bg-slate-50 transition-all text-slate-500">
+                   <RefreshCw size={18} />
+                 </button>
+
+                 {setuConsent && setuConsent.status === 'ACTIVE' ? (
+                   <button 
+                     onClick={handleSyncSetuFeed}
+                     disabled={syncingFeed}
+                     className="px-5 py-2.5 bg-emerald-600 text-white rounded-xl text-[12px] font-bold hover:bg-emerald-700 transition-all flex items-center gap-2 shadow-lg shadow-emerald-500/20 disabled:opacity-55"
+                   >
+                     <RefreshCw size={14} className={syncingFeed ? "animate-spin" : ""} /> 
+                     {syncingFeed ? "Syncing..." : "Sync Setu Feed"}
+                   </button>
+                 ) : (
+                   <button 
+                     onClick={() => {
+                       setSetuStep(1);
+                       setSetuForm({ phone: account?.mobile || '', bank: account?.bankName || 'HDFC Bank' });
+                       setShowSetuModal(true);
+                     }}
+                     className="px-5 py-2.5 bg-slate-900 text-white rounded-xl text-[12px] font-bold hover:bg-slate-800 transition-all flex items-center gap-2 shadow-lg shadow-slate-900/10"
+                   >
+                     <Landmark size={14} className="text-[#408DFB]" /> Link Setu Feed
+                   </button>
+                 )}
+
+                 <button 
+                   onClick={() => setShowRecordModal(true)}
+                   className="px-5 py-2.5 bg-[#1e61f0] text-white rounded-xl text-[12px] font-bold hover:bg-blue-700 transition-all flex items-center gap-2 shadow-lg shadow-blue-500/20"
+                 >
+                   <Plus size={14} /> Record Transaction
+                 </button>
                 <button className="px-5 py-2.5 bg-slate-900 text-white rounded-xl text-[12px] font-bold hover:bg-slate-800 transition-all flex items-center gap-2 shadow-lg shadow-slate-900/10">
                   <Upload size={14} /> Import
                 </button>
@@ -593,6 +697,142 @@ const BankDetailView = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+      {/* ── SETU CONSENT MODAL ── */}
+      {showSetuModal && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[150] p-4 animate-fade-in">
+          <div className="bg-white rounded-3xl max-w-md w-full overflow-hidden shadow-2xl border border-slate-100 animate-scale-up">
+            
+            <div className="px-6 py-5 border-b border-slate-100 flex justify-between items-center bg-[#FBFCFE]">
+              <div className="flex items-center gap-2">
+                <Landmark className="text-[#408DFB]" size={18} />
+                <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">Setu Connect Sandbox</h3>
+              </div>
+              <button 
+                onClick={() => setShowSetuModal(false)}
+                className="text-slate-400 hover:text-slate-600 p-1.5 hover:bg-slate-100 rounded-lg transition-all"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="p-6">
+              
+              {setuStep === 1 && (
+                <form onSubmit={handleInitiateSetuConsent} className="space-y-4">
+                  <div className="bg-blue-50/50 rounded-2xl p-4 border border-blue-100 text-slate-600 text-[11px] leading-relaxed">
+                    Link your bank account using Setu's secure Account Aggregator network to fetch transaction feeds automatically.
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Mobile Number *</label>
+                    <input 
+                      type="tel"
+                      required
+                      placeholder="e.g. +91 9876543210"
+                      value={setuForm.phone}
+                      onChange={e => setSetuForm({ ...setuForm, phone: e.target.value })}
+                      className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:border-blue-400 transition-all bg-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Select Bank *</label>
+                    <select
+                      required
+                      value={setuForm.bank}
+                      onChange={e => setSetuForm({ ...setuForm, bank: e.target.value })}
+                      className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:border-blue-400 transition-all bg-white"
+                    >
+                      <option value="HDFC Bank">HDFC Bank</option>
+                      <option value="State Bank of India">State Bank of India</option>
+                      <option value="ICICI Bank">ICICI Bank</option>
+                      <option value="Axis Bank">Axis Bank</option>
+                      <option value="Kotak Mahindra Bank">Kotak Mahindra Bank</option>
+                    </select>
+                  </div>
+                  <button 
+                    type="submit"
+                    className="w-full mt-2 py-3 bg-[#1e61f0] text-white rounded-xl text-[11px] font-bold uppercase tracking-wider hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/20"
+                  >
+                    Initiate Link (Setu Secure)
+                  </button>
+                </form>
+              )}
+
+              {setuStep === 2 && (
+                <div className="space-y-4">
+                  <div className="border border-amber-200 bg-amber-50/50 rounded-2xl p-4 space-y-3">
+                    <div className="flex justify-between items-center pb-2 border-b border-amber-100">
+                      <span className="text-[10px] font-extrabold text-amber-700 uppercase tracking-widest">Setu Consent Request</span>
+                      <span className="bg-amber-100 text-amber-850 text-[9px] font-bold px-1.5 py-0.5 rounded">SANDBOX MODE</span>
+                    </div>
+                    <div className="space-y-2 text-[11px] text-slate-600">
+                      <p><strong>FIU:</strong> CalTally (Tally replica)</p>
+                      <p><strong>Purpose:</strong> Account Management</p>
+                      <p><strong>Data requested:</strong> All deposits (savings, current)</p>
+                      <p><strong>Requested Range:</strong> Last 12 months</p>
+                      <p><strong>Fetch Type:</strong> PERIODIC (hourly sync)</p>
+                    </div>
+                  </div>
+                  <button 
+                    onClick={handleApproveSetuConsent}
+                    disabled={consentApproveLoading}
+                    className="w-full py-3 bg-emerald-600 text-white rounded-xl text-[11px] font-bold uppercase tracking-wider hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-500/20 flex justify-center items-center gap-2"
+                  >
+                    {consentApproveLoading ? 'Processing...' : 'Approve Consent'}
+                  </button>
+                </div>
+              )}
+
+              {setuStep === 3 && (
+                <form onSubmit={handleVerifySetuOtp} className="space-y-4">
+                  <div className="bg-blue-50/50 rounded-2xl p-4 border border-blue-100 text-slate-600 text-[11px] leading-relaxed">
+                    A mock 4-digit verification code has been sent to your phone. Use any code (e.g. 1234) to confirm.
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Verification Code (OTP) *</label>
+                    <input 
+                      type="text"
+                      maxLength="4"
+                      required
+                      placeholder="e.g. 1234"
+                      value={setuOtp}
+                      onChange={e => setSetuOtp(e.target.value)}
+                      className="w-full text-center tracking-widest border border-slate-200 rounded-xl px-4 py-3 text-lg font-bold text-slate-700 outline-none focus:border-blue-400 transition-all bg-white"
+                    />
+                  </div>
+                  <button 
+                    type="submit"
+                    className="w-full py-3 bg-[#1e61f0] text-white rounded-xl text-[11px] font-bold uppercase tracking-wider hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/20"
+                  >
+                    Verify & Connect
+                  </button>
+                </form>
+              )}
+
+              {setuStep === 4 && (
+                <div className="text-center space-y-4 py-4">
+                  <div className="w-16 h-16 bg-emerald-50 rounded-full flex items-center justify-center mx-auto text-emerald-500 border border-emerald-100">
+                    <Check size={32} />
+                  </div>
+                  <div>
+                    <h4 className="text-base font-bold text-slate-800">Connection Successful!</h4>
+                    <p className="text-xs text-slate-400 mt-1">Your {setuForm.bank} feed is connected via Setu Account Aggregator.</p>
+                  </div>
+                  <button 
+                    onClick={() => {
+                      setShowSetuModal(false);
+                      handleSyncSetuFeed();
+                    }}
+                    className="w-full py-3 bg-slate-900 text-white rounded-xl text-[11px] font-bold uppercase tracking-wider hover:bg-slate-800 transition-all shadow-md"
+                  >
+                    Close & Sync Now
+                  </button>
+                </div>
+              )}
+
+            </div>
           </div>
         </div>
       )}

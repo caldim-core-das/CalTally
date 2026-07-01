@@ -72,6 +72,7 @@ app.use('/api/sales', require('./modules/sales/sales.routes'));
 app.use('/api/quotes', require('./modules/sales/quote.routes'));
 app.use('/api/inventory', require('./modules/inventory/inventory.routes'));
 app.use('/api/reconciliation', require('./modules/reconciliation/reconciliation.routes'));
+app.use('/api/bankfeed', require('./modules/bankFeed/bankFeed.routes'));
 
 // 5. Health Check
 app.get('/api/ping', (req, res) => res.json({ status: 'active', platform: 'Tally Replica' }));

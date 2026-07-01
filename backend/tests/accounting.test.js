@@ -5,7 +5,7 @@ const assert = require('assert');
 async function runTests() {
   console.log('--- STARTING ACCOUNTING ENGINE INTEGRATION TEST ---');
   let t;
-  try {
+  try { 
     await sequelize.authenticate();
 
     const testEmail = `test_accounting_${Date.now()}@example.com`;

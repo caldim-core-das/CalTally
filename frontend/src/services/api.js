@@ -383,6 +383,15 @@ export const reconciliationAPI = {
   reconcile: (data) => api.post('/reconciliation/reconcile', data),
 };
 
+// ─── Setu Bank Feed Integration ──────────────────────
+export const bankFeedAPI = {
+  createConsent: (data) => api.post('/bankfeed/consent', data),
+  getConsentStatus: (consentId) => api.get(`/bankfeed/consent/${consentId}`),
+  getConsentByLedger: (ledgerId) => api.get(`/bankfeed/consent/ledger/${ledgerId}`),
+  approveConsent: (consentId) => api.post(`/bankfeed/consent/${consentId}/approve`),
+  syncTransactions: (data) => api.post('/bankfeed/sync', data),
+};
+
 // ─── Sales & Orders ──────────────────────────────────
 export const salesAPI = {
   createOrder: (data) => api.post('/sales/orders', data),

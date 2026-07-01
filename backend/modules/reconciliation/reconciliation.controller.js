@@ -29,10 +29,22 @@ exports.getUnmatched = async (req, res, next) => {
 exports.reconcile = async (req, res, next) => {
   try {
     const { bankTransactionId, voucherId } = req.body;
-    const bt = await BankTransaction.findByPk(bankTransactionId);
+    const companyId = req.user.companyId; // from tenantAccess middleware
+
+    // BOLA fix: verify both records belong to this company
+    const bt = await BankTransaction.findOne({
+      where: { id: bankTransactionId, CompanyId: companyId }
+    });
     if (!bt) return res.status(404).json({ error: 'Bank entry not found' });
 
-    await bt.update({ isMatched: true, matchedVoucherId: voucherId });
+    if (voucherId) {
+      const voucher = await Voucher.findOne({
+        where: { id: voucherId, CompanyId: companyId }
+      });
+      if (!voucher) return res.status(404).json({ error: 'Voucher not found' });
+    }
+
+    await bt.update({ isMatched: true, matchedVoucherId: voucherId || null });
     res.json({ message: 'Successfully reconciled', bankTransaction: bt });
   } catch (err) {
     next(err);
