@@ -262,7 +262,14 @@ const InventoryView = () => {
                         {item.sellingPrice ? formatCurrency(item.sellingPrice) : '—'}
                       </td>
                       <td className="px-6 py-4 text-[13px] text-slate-500 font-medium">
-                        {item.currentStock ? `${item.currentStock} ${item.unit || 'Nos'}` : `0 ${item.unit || 'Nos'}`}
+                        <div className="flex flex-col">
+                          <span>{item.currentStock ? `${item.currentStock} ${item.unit || 'Nos'}` : `0 ${item.unit || 'Nos'}`}</span>
+                          {parseFloat(item.reorderLevel) > 0 && (parseFloat(item.currentStock) || 0) <= parseFloat(item.reorderLevel) && (
+                            <div className="text-[10px] text-rose-500 font-bold mt-1 flex items-center gap-1">
+                              <AlertTriangle size={10} /> Low Stock (Min: {item.reorderLevel})
+                            </div>
+                          )}
+                        </div>
                       </td>
                       <td className="px-6 py-4" onClick={e => e.stopPropagation()}>
                         <div className="flex items-center justify-center gap-2">
@@ -349,6 +356,9 @@ const InventoryView = () => {
                        <span className={`text-[13px] font-medium truncate ${selectedItem?.id === item.id ? 'text-[#1e61f0]' : 'text-slate-700'}`}>
                           {item.name}
                        </span>
+                       {parseFloat(item.reorderLevel) > 0 && (parseFloat(item.currentStock) || 0) <= parseFloat(item.reorderLevel) && (
+                         <div className="text-[9px] text-rose-500 font-bold uppercase tracking-widest mt-0.5">Low Stock</div>
+                       )}
                     </div>
                   </div>
                   <div className="flex flex-col items-end gap-0.5 shrink-0">

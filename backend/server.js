@@ -3,6 +3,8 @@ const cors = require('cors');
 const helmet = require('helmet');
 const dotenv = require('dotenv');
 const passport = require('passport');
+const path = require('path');
+const jwt = require('jsonwebtoken');
 const { sequelize } = require('./models');
 
 // 1. Initial Config
@@ -10,6 +12,11 @@ dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+
+const corsOptions = {
+  origin: process.env.CLIENT_URL || 'http://localhost:5173',
+  credentials: true
+};
 
 // 2. Middleware Strategy
 app.use(cors(corsOptions));
@@ -72,16 +79,45 @@ app.use('/api/sales', require('./modules/sales/sales.routes'));
 app.use('/api/quotes', require('./modules/sales/quote.routes'));
 app.use('/api/inventory', require('./modules/inventory/inventory.routes'));
 app.use('/api/reconciliation', require('./modules/reconciliation/reconciliation.routes'));
+app.use('/api/:companyId/purchases', require('./modules/purchases/purchases.routes'));
 
 // 5. Health Check
 app.get('/api/ping', (req, res) => res.json({ status: 'active', platform: 'Tally Replica' }));
 
 // 6. DB Sync & Boot Strategy
 const dialect = process.env.DB_DIALECT || 'sqlite';
-const syncOptions = dialect === 'sqlite' ? {} : { alter: true };
+const syncOptions = {}; // Disabled alter to avoid Postgres Enum cast crashes
 
-sequelize.sync(syncOptions).then(() => {
+sequelize.sync(syncOptions).then(async () => {
   console.log(`✅ Ledger Database Synced [${dialect}]`);
+  
+  // Auto-migrate missing columns to prevent Sequelize errors
+  try {
+    const queries = [
+      'ALTER TABLE "Users" ADD COLUMN "pendingEmail" VARCHAR(255);',
+      'ALTER TABLE "Users" ADD COLUMN "emailVerificationToken" VARCHAR(255);',
+      'ALTER TABLE "Users" ADD COLUMN "emailVerificationExpiry" TIMESTAMP WITH TIME ZONE;',
+      'ALTER TABLE "Users" ADD COLUMN "notificationPreferences" JSON;',
+      'ALTER TABLE "Users" ADD COLUMN "oauthOnly" BOOLEAN DEFAULT false;',
+      'ALTER TABLE "Users" ADD COLUMN "failedLoginAttempts" INTEGER DEFAULT 0;',
+      'ALTER TABLE "Users" ADD COLUMN "lockedUntil" TIMESTAMP WITH TIME ZONE;',
+      'ALTER TABLE "Ledgers" ADD COLUMN "tdsApplicable" BOOLEAN DEFAULT false;'
+    ];
+    for (const q of queries) {
+      await sequelize.query(q).catch(e => {
+        // Ignore column already exists errors
+        if (!e.message.includes('already exists') && !e.message.includes('multiple assignments')) {
+           console.log('Migration note:', e.message);
+        }
+      });
+    }
+  } catch (err) {
+    console.error('Migration block error:', err.message);
+  }
+
+  // Load Background Jobs
+  require('./jobs/inventoryAlerts');
+
   app.listen(PORT, () => {
     console.log(`🚀 Tally Enterprise Hub online at PORT: ${PORT}`);
   });

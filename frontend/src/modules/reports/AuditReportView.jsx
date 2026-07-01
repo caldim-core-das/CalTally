@@ -9,7 +9,48 @@ import {
 import { reportsAPI } from '../../services/api';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import autoTable from 'jspdf-autotable';
 
+const formatMetadata = (data, tableName) => {
+  if (!data || Object.keys(data).length === 0) return '—';
+  
+  try {
+    const table = (tableName || '').toLowerCase();
+    
+    // Formatting logic based on module
+    if (table.includes('voucher') || table.includes('invoice') || table.includes('order')) {
+      const parts = [];
+      if (data.voucherNumber || data.invoiceNumber || data.orderNumber) parts.push(`No: ${data.voucherNumber || data.invoiceNumber || data.orderNumber}`);
+      if (data.voucherType || data.type) parts.push(`Type: ${data.voucherType || data.type}`);
+      if (data.totalAmount || data.amount || data.totalValue) parts.push(`Amount: ${data.totalAmount || data.amount || data.totalValue}`);
+      if (parts.length > 0) return parts.join(' | ');
+    }
+    
+    if (table.includes('ledger') || table.includes('contact') || table.includes('company')) {
+      const parts = [];
+      if (data.name) parts.push(`Name: ${data.name}`);
+      if (data.gstin) parts.push(`GSTIN: ${data.gstin}`);
+      if (data.email || data.phone) parts.push(`Contact: ${data.email || data.phone}`);
+      if (parts.length > 0) return parts.join(' | ');
+    }
+    
+    if (table.includes('item') || table.includes('inventory')) {
+      const parts = [];
+      if (data.name) parts.push(`Item: ${data.name}`);
+      if (data.currentStock !== undefined) parts.push(`Stock: ${data.currentStock}`);
+      if (data.reorderLevel !== undefined) parts.push(`Min: ${data.reorderLevel}`);
+      if (parts.length > 0) return parts.join(' | ');
+    }
+
+    // Generic fallback for changed fields
+    return Object.entries(data)
+      .filter(([k]) => !['createdAt', 'updatedAt', 'id', 'CompanyId'].includes(k))
+      .map(([k, v]) => `${k}: ${v}`)
+      .join(' | ');
+  } catch (err) {
+    return JSON.stringify(data).substring(0, 60);
+  }
+};
 
 export default function AuditReportView() {
   const companyId = sessionStorage.getItem('companyId');
@@ -76,6 +117,12 @@ export default function AuditReportView() {
     return 'bg-slate-50 text-slate-700 border-slate-100';
   };
 
+  const statusBadge = (status = 'COMPLETED') => {
+    if (status === 'COMPLETED') return 'text-emerald-600 bg-emerald-50';
+    if (status === 'FAILED') return 'text-rose-600 bg-rose-50';
+    return 'text-slate-600 bg-slate-50';
+  };
+
   const handleDownloadPDF = () => {
     const doc = new jsPDF();
     const companyName = sessionStorage.getItem('companyName') || 'CalTally Company';
@@ -104,17 +151,21 @@ export default function AuditReportView() {
       log.User?.name || 'Administrator',
       log.action,
       log.tableName,
-      JSON.stringify(log.newData || log.oldData || {}).substring(0, 60),
+      formatMetadata(log.newData || log.oldData || {}, log.tableName),
+      log.status || 'COMPLETED',
       (log.recordId || 'GEN-01').toString().substring(0, 8)
     ]);
     
     autoTable(doc, {
       startY: 48,
-      head: [['Timestamp', 'Operator', 'Action Type', 'Target Module', 'Key Metadata', 'Record ID']],
+      head: [['Timestamp', 'Operator', 'Action Type', 'Target Module', 'Key Metadata', 'Status', 'Ref ID']],
       body: logRows,
       theme: 'striped',
       headStyles: { fillColor: [30, 41, 59] },
-      styles: { fontSize: 8, cellPadding: 2 }
+      styles: { fontSize: 8, cellPadding: 2, overflow: 'linebreak' },
+      columnStyles: {
+        4: { cellWidth: 50 } // Give metadata column more space for wrapping
+      }
     });
     
     // Save PDF
@@ -272,6 +323,7 @@ export default function AuditReportView() {
                     <th className="px-4 py-3">Action Type</th>
                     <th className="px-4 py-3">Target Module</th>
                     <th className="px-4 py-3">Key Metadata</th>
+                    <th className="px-4 py-3 text-center">Status</th>
                     <th className="px-8 py-3 text-right">Reference ID</th>
                   </tr>
                 </thead>
@@ -310,9 +362,14 @@ export default function AuditReportView() {
                           <td className="px-4 py-4">
                             <span className="font-bold text-slate-700 uppercase tracking-tight text-[11px]">{log.tableName}</span>
                           </td>
-                          <td className="px-4 py-4 max-w-xs">
-                            <span className="text-[11px] text-slate-400 italic truncate block">
-                              {JSON.stringify(log.newData || log.oldData || {}).substring(0, 60)}...
+                          <td className="px-4 py-4 min-w-[200px] whitespace-normal">
+                            <span className="text-[11px] text-slate-500 font-medium leading-relaxed block">
+                              {formatMetadata(log.newData || log.oldData || {}, log.tableName)}
+                            </span>
+                          </td>
+                          <td className="px-4 py-4 text-center">
+                            <span className={`px-2 py-1 rounded text-[9px] font-black uppercase tracking-widest ${statusBadge(log.status)}`}>
+                              {log.status || 'COMPLETED'}
                             </span>
                           </td>
                           <td className="px-8 py-4 text-right">
