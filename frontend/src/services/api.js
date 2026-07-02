@@ -173,7 +173,10 @@ export const authAPI = {
   getProfile: () => api.get('/auth/profile'),
   changePassword: (data) => api.post('/auth/change-password', data),
   getNotificationPreferences: () => api.get('/auth/notification-preferences'),
-  saveNotificationPreferences: (data) => api.post('/auth/notification-preferences', data)
+  saveNotificationPreferences: (data) => api.post('/auth/notification-preferences', data),
+  forgotPassword: (email) => api.post('/auth/forgot-password', { email }),
+  resetPassword: (token, newPassword) => api.post('/auth/reset-password', { token, newPassword }),
+  resendVerification: (email) => api.post('/auth/resend-verification', { email })
 };
 
 // ─── Users ─────────────────────────────────────────
@@ -328,6 +331,13 @@ export const reportsAPI = {
   payablesReport: (companyId) => api.get(`/reports/payables-report/${companyId}`),
   inventoryReport: (companyId, params) => api.get(`/reports/inventory-report/${companyId}`, { params }),
   costCenterReport: (companyId) => api.get(`/reports/cost-centers/${companyId}`),
+  // Custom Reports
+  runCustomReport: (companyId, payload) => api.post(`/reports/custom/${companyId}`, payload),
+  getValidColumns: (module) => api.get(`/reports/custom/columns`, { params: { module } }),
+  createSavedReport: (companyId, data) => api.post(`/reports/saved/${companyId}`, data),
+  getSavedReports: (companyId) => api.get(`/reports/saved/${companyId}`),
+  updateSavedReport: (companyId, id, data) => api.put(`/reports/saved/${companyId}/${id}`, data),
+  deleteSavedReport: (companyId, id) => api.delete(`/reports/saved/${companyId}/${id}`),
 };
 
 

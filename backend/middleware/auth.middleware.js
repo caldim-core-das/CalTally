@@ -32,7 +32,9 @@ exports.csrfProtection = (req, res, next) => {
     '/api/auth/oauth-token-exchange',
     '/api/auth/refresh',
     '/api/auth/mfa/verify',
-    '/api/bank-feed/webhook'
+    '/api/bank-feed/webhook',
+    '/api/auth/forgot-password',
+    '/api/auth/reset-password'
   ];
 
   const requestPath = req.path || req.originalUrl || '';

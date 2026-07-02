@@ -220,7 +220,7 @@ exports.getInvoicesByCompany = async (req, res, next) => {
     const invoices = await SalesInvoice.findAll({
       where: { CompanyId: companyId },
       include: [
-        { model: Ledger, as: 'CustomerLedger', attributes: ['name', 'currency'] }
+        { model: Ledger, as: 'CustomerLedger', attributes: ['name', 'currency', 'mobile', 'phone', 'workPhone'] }
       ],
       order: [['date', 'DESC'], ['createdAt', 'DESC']]
     });
@@ -237,7 +237,7 @@ exports.getInvoiceById = async (req, res, next) => {
     const invoice = await SalesInvoice.findByPk(id, {
       include: [
         { model: SalesInvoiceItem, as: 'items', include: [{ model: Item }] },
-        { model: Ledger, as: 'CustomerLedger', attributes: ['name', 'email', 'billingAddress', 'address', 'currency'] },
+        { model: Ledger, as: 'CustomerLedger', attributes: ['name', 'email', 'billingAddress', 'address', 'currency', 'mobile', 'phone', 'workPhone'] },
         { model: InvoicePayment, as: 'payments', include: [{ model: PaymentTransaction }] }
       ]
     });
@@ -765,6 +765,25 @@ exports.triggerReminders = async (req, res, next) => {
     const ReminderService = require('../../services/ReminderService');
     const result = await ReminderService.processPaymentReminders(companyId);
     res.json(result);
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.generateShareToken = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const crypto = require('crypto');
+    const invoice = await SalesInvoice.findByPk(id);
+    if (!invoice) return res.status(404).json({ error: 'Invoice not found' });
+
+    if (!invoice.shareToken) {
+      invoice.shareToken = crypto.randomBytes(16).toString('hex');
+      invoice.shareExpiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days
+      await invoice.save();
+    }
+    
+    res.json({ success: true, shareToken: invoice.shareToken });
   } catch (err) {
     next(err);
   }

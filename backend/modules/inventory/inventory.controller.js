@@ -63,15 +63,7 @@ exports.createItem = async (req, res, next) => {
       itemCode
     });
 
-    await AuditService.log({
-      action: 'CREATE_ITEM',
-      tableName: 'Items',
-      recordId: item.id,
-      newData: item,
-      companyId: item.CompanyId,
-      userId: req.user?.id,
-      req
-    });
+
 
     if (item.openingStock > 0) {
       await StockMovement.create({
@@ -124,16 +116,7 @@ exports.updateStock = async (req, res, next) => {
     
     await item.update({ currentStock: newStock });
 
-    await AuditService.log({
-      action: 'UPDATE_STOCK',
-      tableName: 'Items',
-      recordId: item.id,
-      oldData,
-      newData: { id: item.id, currentStock: item.currentStock },
-      companyId: item.CompanyId,
-      userId: req.user?.id,
-      req
-    });
+
 
     res.json(item);
   } catch (err) {
@@ -253,16 +236,7 @@ exports.adjustStock = async (req, res, next) => {
 
     await transaction.commit();
 
-    await AuditService.log({
-      action: 'ADJUST_STOCK',
-      tableName: 'Items',
-      recordId: item.id,
-      oldData: { currentStock },
-      newData: { currentStock: nQuantity },
-      companyId,
-      userId: req.user?.id,
-      req
-    });
+
 
     const updatedItem = await Item.findByPk(item.id);
     res.json(updatedItem);
@@ -324,16 +298,7 @@ exports.updateItem = async (req, res, next) => {
       itemCode
     });
 
-    await AuditService.log({
-      action: 'UPDATE_ITEM',
-      tableName: 'Items',
-      recordId: item.id,
-      oldData,
-      newData: item,
-      companyId: item.CompanyId,
-      userId: req.user?.id,
-      req
-    });
+
 
     res.json(item);
   } catch (err) {
@@ -384,16 +349,7 @@ exports.deleteItem = async (req, res, next) => {
     // Send response immediately to avoid connection issues
     res.json({ message: 'Item deleted successfully' });
 
-    // Handle audit log asynchronously after response
-    AuditService.log({
-      action: 'DELETE_ITEM',
-      tableName: 'Items',
-      recordId: itemId,
-      oldData,
-      companyId,
-      userId: req.user?.id,
-      req
-    }).catch(err => console.error('[Audit Error]:', err.message));
+    // Handle audit log asynchronously after response (Handled by global hooks)
 
   } catch (err) {
     console.error('[INVENTORY DELETE ERROR]:', err);

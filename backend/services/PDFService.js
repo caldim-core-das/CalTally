@@ -1,5 +1,14 @@
 const PDFDocument = require('pdfkit');
 
+const getCurrencySymbol = (currency) => {
+    const symbols = { USD: '$', EUR: '€', GBP: '£', INR: 'Rs.', AUD: 'A$', CAD: 'C$' };
+    return symbols[currency] || 'Rs.';
+};
+
+const formatAmount = (val, currency) => {
+    const num = parseFloat(val) || 0;
+    return num.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+};
 class PDFService {
     static async generateRetainerInvoice(retainer, items, company = {}) {
         return new Promise((resolve, reject) => {

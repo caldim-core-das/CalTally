@@ -353,7 +353,7 @@ const DashboardView = ({ companyId: propCompanyId }) => {
             ]}
           >
             <div>
-              <p className="text-[11px] text-slate-400 font-medium mb-1">Confirmed Invoiced Revenue</p>
+              <p className="text-[11px] text-slate-400 font-medium mb-1">Confirmed Invoiced Revenue (excl. TCS)</p>
               <p className="text-2xl font-bold text-slate-900">{fmt(data?.totalSales || 0)}</p>
               <div className="mt-3 text-[11px] text-slate-400 font-medium flex items-center gap-1.5">
                 <TrendingUp size={12} className="text-emerald-500" />
@@ -373,7 +373,7 @@ const DashboardView = ({ companyId: propCompanyId }) => {
             ]}
           >
             <div>
-              <p className="text-[11px] text-slate-400 font-medium mb-1">Incurred Cost of Purchases</p>
+              <p className="text-[11px] text-slate-400 font-medium mb-1">Incurred Cost of Purchases (excl. TDS)</p>
               <p className="text-2xl font-bold text-slate-900">{fmt(data?.totalPurchases || 0)}</p>
               <div className="mt-3 text-[11px] text-slate-400 font-medium flex items-center gap-1.5">
                 <TrendingDown size={12} className="text-orange-500" />
@@ -483,14 +483,30 @@ const DashboardView = ({ companyId: propCompanyId }) => {
             ]}
           >
             <div>
-              <div className="grid grid-cols-2 gap-2 mb-2">
+              <div className="grid grid-cols-2 gap-y-3 gap-x-2 mb-2">
                 <div>
                   <p className="text-[10px] text-slate-400 font-medium">GST Payable</p>
-                  <p className="text-[15px] font-bold text-red-600">{fmt(gst.payable)}</p>
+                  <p className="text-[14px] font-bold text-red-600">{fmt(gst.payable)}</p>
                 </div>
                 <div>
                   <p className="text-[10px] text-slate-400 font-medium">ITC/Receivable</p>
-                  <p className="text-[15px] font-bold text-emerald-600">{fmt(gst.receivable)}</p>
+                  <p className="text-[14px] font-bold text-emerald-600">{fmt(gst.receivable)}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] text-slate-400 font-medium">TDS Payable</p>
+                  <p className="text-[14px] font-bold text-red-600">{fmt(data?.tax?.tdsPayable || 0)}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] text-slate-400 font-medium">TDS Receivable</p>
+                  <p className="text-[14px] font-bold text-emerald-600">{fmt(data?.tax?.tdsReceivable || 0)}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] text-slate-400 font-medium">TCS Payable</p>
+                  <p className="text-[14px] font-bold text-red-600">{fmt(data?.tax?.tcsPayable || 0)}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] text-slate-400 font-medium">TCS Receivable</p>
+                  <p className="text-[14px] font-bold text-emerald-600">{fmt(data?.tax?.tcsReceivable || 0)}</p>
                 </div>
               </div>
               {gst.payable === 0 && gst.receivable === 0 ? (

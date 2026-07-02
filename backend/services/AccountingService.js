@@ -171,22 +171,7 @@ class AccountingService {
       }
     }
 
-    // 4. Audit Log Injection (Fraud Prevention)
-    if (AuditLog) {
-      await AuditLog.create({
-        action: 'CREATE_VOUCHER',
-        tableName: 'Vouchers',
-        recordId: voucher.id,
-        newData: {
-          voucherNumber,
-          voucherType,
-          totalValue: totalDebit,
-          lines: entries.length
-        },
-        CompanyId: companyId,
-        UserId: userId
-      }, options);
-    }
+    // 4. Audit Log Injection is handled by Sequelize global hooks in models/index.js
 
     // Invalidate reports cache
     cacheService.publishCacheInvalidation(companyId).catch(err => {
@@ -354,21 +339,7 @@ class AccountingService {
       }
     }
 
-    // 6. Audit Log
-    if (AuditLog) {
-      await AuditLog.create({
-        action: 'UPDATE_VOUCHER',
-        tableName: 'Vouchers',
-        recordId: voucher.id,
-        newData: {
-          voucherNumber: voucher.voucherNumber,
-          totalValue: totalDebit,
-          lines: entries.length
-        },
-        CompanyId: companyId,
-        UserId: userId
-      }, options);
-    }
+    // 6. Audit Log is handled by Sequelize global hooks
 
     // Invalidate reports cache
     cacheService.publishCacheInvalidation(companyId).catch(err => {
@@ -449,22 +420,7 @@ class AccountingService {
     // 2. Delete Voucher
     await voucher.destroy(options);
 
-    // 3. Audit Log
-    if (AuditLog) {
-      await AuditLog.create({
-        action: 'DELETE_VOUCHER',
-        tableName: 'Vouchers',
-        recordId: voucherId,
-        newData: {
-          voucherNumber: voucher.voucherNumber,
-          voucherType: voucher.voucherType,
-          totalValue: totalDebit,
-          lines: voucher.Transactions ? voucher.Transactions.length : 0
-        },
-        CompanyId: companyId,
-        UserId: userId
-      }, options);
-    }
+    // 3. Audit Log is handled by Sequelize global hooks
 
     // Invalidate reports cache
     cacheService.publishCacheInvalidation(companyId).catch(err => {

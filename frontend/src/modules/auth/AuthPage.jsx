@@ -2,14 +2,19 @@ import React, { useState } from 'react';
 import { 
   Building2, Mail, Lock, LogIn, ChevronRight, 
   ShieldCheck, ArrowRight, Play, Globe, Zap,
-  UserPlus, User, Check
+  UserPlus, User, Check, ArrowLeft
 } from 'lucide-react';
-import { login, register, googleLogin } from '../../services/api';
+import { useNavigate } from 'react-router-dom';
+import { login, register, googleLogin, authAPI } from '../../services/api';
 import { GoogleOAuthProvider, GoogleLogin } from '@react-oauth/google';
 import { setUser } from '../../stores/authStore';
 
 const AuthPage = ({ onLogin }) => {
+  const navigate = useNavigate();
   const [isLogin, setIsLogin] = useState(false); // Start with signup as per screenshot
+  const [isForgotPassword, setIsForgotPassword] = useState(false);
+  const [forgotPasswordStatus, setForgotPasswordStatus] = useState('idle');
+  const [forgotPasswordMsg, setForgotPasswordMsg] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
@@ -49,6 +54,23 @@ const AuthPage = ({ onLogin }) => {
       } else {
         setError(err.response?.data?.error || err.message || 'Authentication failed.');
       }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleForgotPasswordSubmit = async (e) => {
+    e.preventDefault();
+    if (!email) return;
+    setLoading(true);
+    setForgotPasswordStatus('idle');
+    try {
+      const res = await authAPI.forgotPassword(email);
+      setForgotPasswordStatus('success');
+      setForgotPasswordMsg(res.data.message);
+    } catch (err) {
+      setForgotPasswordStatus('error');
+      setForgotPasswordMsg(err.response?.data?.error || 'Failed to request reset.');
     } finally {
       setLoading(false);
     }
@@ -114,151 +136,227 @@ const AuthPage = ({ onLogin }) => {
         </div>
 
         {/* ─── RIGHT SIDE: AUTH CARD ───────────────────────────── */}
-        <div className="w-full lg:w-[480px] bg-white rounded-lg border-[1px] border-blue-500/50 shadow-2xl p-8 lg:p-12 relative z-10 animate-fade-in translate-y-0 hover:-translate-y-1 transition-all duration-500">
+        <div className="w-full lg:w-[480px] bg-white rounded-lg border-[1px] border-blue-500/50 shadow-2xl p-8 lg:p-12 relative z-10 animate-fade-in translate-y-0 hover:-translate-y-1 transition-all duration-500 overflow-hidden">
           
-          <header className="mb-8">
-            <h2 className="text-2xl font-bold text-[#1F314F] tracking-tight">
-              {isLogin ? 'Sign in to your account' : 'Start with your free account today!'}
-            </h2>
-            <p className="text-xs text-slate-400 mt-2 font-medium italic">
-               All fields are mandatory*
-            </p>
-          </header>
+          {/* LOGIN / SIGNUP VIEW */}
+          <div className={`transition-all duration-500 ${isForgotPassword ? '-translate-x-full absolute opacity-0 pointer-events-none' : 'translate-x-0 opacity-100'}`}>
+            <header className="mb-8">
+              <h2 className="text-2xl font-bold text-[#1F314F] tracking-tight">
+                {isLogin ? 'Sign in to your account' : 'Start with your free account today!'}
+              </h2>
+              <p className="text-xs text-slate-400 mt-2 font-medium italic">
+                 All fields are mandatory*
+              </p>
+            </header>
 
-          {error && (
-            <div className={`mb-6 p-3 rounded-md text-[11px] font-bold border ${error.includes('successfully') ? 'bg-green-50 border-green-200 text-green-700' : 'bg-red-50 border-red-200 text-red-600'}`}>
-              {error}
-            </div>
-          )}
+            {error && (
+              <div className={`mb-6 p-3 rounded-md text-[11px] font-bold border ${error.includes('successfully') ? 'bg-green-50 border-green-200 text-green-700' : 'bg-red-50 border-red-200 text-red-600'}`}>
+                {error}
+              </div>
+            )}
 
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {!isLogin && (
+            <form onSubmit={handleSubmit} className="space-y-6">
+              {!isLogin && (
+                <div className="space-y-1">
+                  <label className="text-[11px] font-bold text-slate-700 flex items-center gap-1.5 ml-1">
+                     <User size={12} className="text-slate-400"/> Full Name
+                  </label>
+                  <input 
+                    type="text" 
+                    value={name} 
+                    onChange={e => setName(e.target.value)}
+                    placeholder="Enter your name"
+                    className="w-full px-4 py-3 bg-[#F5F8FA] border border-slate-200 rounded-md text-sm outline-none focus:border-blue-400 focus:bg-white transition-all font-medium"
+                    required={!isLogin}
+                  />
+                </div>
+              )}
+
               <div className="space-y-1">
                 <label className="text-[11px] font-bold text-slate-700 flex items-center gap-1.5 ml-1">
-                   <User size={12} className="text-slate-400"/> Full Name
+                  <Mail size={12} className="text-slate-400"/> Email address
                 </label>
                 <input 
-                  type="text" 
-                  value={name} 
-                  onChange={e => setName(e.target.value)}
-                  placeholder="Enter your name"
+                  type="email" 
+                  value={email} 
+                  onChange={e => setEmail(e.target.value)}
+                  placeholder="Enter your email"
                   className="w-full px-4 py-3 bg-[#F5F8FA] border border-slate-200 rounded-md text-sm outline-none focus:border-blue-400 focus:bg-white transition-all font-medium"
                   required
                 />
               </div>
-            )}
 
-            <div className="space-y-1">
-              <label className="text-[11px] font-bold text-slate-700 flex items-center gap-1.5 ml-1">
-                <Mail size={12} className="text-slate-400"/> Email address
-              </label>
-              <input 
-                type="email" 
-                value={email} 
-                onChange={e => setEmail(e.target.value)}
-                placeholder="Enter your email"
-                className="w-full px-4 py-3 bg-[#F5F8FA] border border-slate-200 rounded-md text-sm outline-none focus:border-blue-400 focus:bg-white transition-all font-medium"
-                required
-              />
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-[11px] font-bold text-slate-700 flex items-center gap-1.5 ml-1">
-                <Lock size={12} className="text-slate-400"/> Password
-              </label>
-              <input 
-                type="password" 
-                value={password} 
-                onChange={e => setPassword(e.target.value)}
-                placeholder="••••••••"
-                className="w-full px-4 py-3 bg-[#F5F8FA] border border-slate-200 rounded-md text-sm outline-none focus:border-blue-400 focus:bg-white transition-all font-medium"
-                required
-              />
-              {!isLogin && (
-                <div className="mt-2 p-3 bg-slate-50 border border-slate-200 rounded-md text-[11px] space-y-1.5 animate-fade-in">
-                  <p className="font-bold text-slate-700">Password must contain:</p>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-3 gap-y-1">
-                    <div className={`flex items-center gap-1.5 ${password.length >= 8 ? 'text-green-600 font-semibold' : 'text-slate-400'}`}>
-                      {password.length >= 8 ? <Check size={12} className="shrink-0" strokeWidth={3} /> : <div className="w-1.5 h-1.5 rounded-full bg-slate-300 ml-1 mr-1 shrink-0" />}
-                      At least 8 characters
-                    </div>
-                    <div className={`flex items-center gap-1.5 ${/[a-z]/.test(password) ? 'text-green-600 font-semibold' : 'text-slate-400'}`}>
-                      {/[a-z]/.test(password) ? <Check size={12} className="shrink-0" strokeWidth={3} /> : <div className="w-1.5 h-1.5 rounded-full bg-slate-300 ml-1 mr-1 shrink-0" />}
-                      One lowercase letter
-                    </div>
-                    <div className={`flex items-center gap-1.5 ${/[A-Z]/.test(password) ? 'text-green-600 font-semibold' : 'text-slate-400'}`}>
-                      {/[A-Z]/.test(password) ? <Check size={12} className="shrink-0" strokeWidth={3} /> : <div className="w-1.5 h-1.5 rounded-full bg-slate-300 ml-1 mr-1 shrink-0" />}
-                      One uppercase letter
-                    </div>
-                    <div className={`flex items-center gap-1.5 ${/[0-9]/.test(password) ? 'text-green-600 font-semibold' : 'text-slate-400'}`}>
-                      {/[0-9]/.test(password) ? <Check size={12} className="shrink-0" strokeWidth={3} /> : <div className="w-1.5 h-1.5 rounded-full bg-slate-300 ml-1 mr-1 shrink-0" />}
-                      One numeric digit
-                    </div>
-                    <div className={`flex items-center gap-1.5 ${/[!@#$%^&*(),.?":{}|<>]/.test(password) ? 'text-green-600 font-semibold' : 'text-slate-400'}`}>
-                      {/[!@#$%^&*(),.?":{}|<>]/.test(password) ? <Check size={12} className="shrink-0" strokeWidth={3} /> : <div className="w-1.5 h-1.5 rounded-full bg-slate-300 ml-1 mr-1 shrink-0" />}
-                      One special character
+              <div className="space-y-1">
+                <div className="flex justify-between items-center pr-1">
+                  <label className="text-[11px] font-bold text-slate-700 flex items-center gap-1.5 ml-1">
+                    <Lock size={12} className="text-slate-400"/> Password
+                  </label>
+                  {isLogin && (
+                    <button type="button" onClick={() => setIsForgotPassword(true)} className="text-[11px] text-blue-600 font-semibold hover:underline cursor-pointer">
+                      Forgot password?
+                    </button>
+                  )}
+                </div>
+                <input 
+                  type="password" 
+                  value={password} 
+                  onChange={e => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="w-full px-4 py-3 bg-[#F5F8FA] border border-slate-200 rounded-md text-sm outline-none focus:border-blue-400 focus:bg-white transition-all font-medium"
+                  required
+                />
+                {!isLogin && (
+                  <div className="mt-2 p-3 bg-slate-50 border border-slate-200 rounded-md text-[11px] space-y-1.5 animate-fade-in">
+                    <p className="font-bold text-slate-700">Password must contain:</p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-3 gap-y-1">
+                      <div className={`flex items-center gap-1.5 ${password.length >= 8 ? 'text-green-600 font-semibold' : 'text-slate-400'}`}>
+                        {password.length >= 8 ? <Check size={12} className="shrink-0" strokeWidth={3} /> : <div className="w-1.5 h-1.5 rounded-full bg-slate-300 ml-1 mr-1 shrink-0" />}
+                        At least 8 characters
+                      </div>
+                      <div className={`flex items-center gap-1.5 ${/[a-z]/.test(password) ? 'text-green-600 font-semibold' : 'text-slate-400'}`}>
+                        {/[a-z]/.test(password) ? <Check size={12} className="shrink-0" strokeWidth={3} /> : <div className="w-1.5 h-1.5 rounded-full bg-slate-300 ml-1 mr-1 shrink-0" />}
+                        One lowercase letter
+                      </div>
+                      <div className={`flex items-center gap-1.5 ${/[A-Z]/.test(password) ? 'text-green-600 font-semibold' : 'text-slate-400'}`}>
+                        {/[A-Z]/.test(password) ? <Check size={12} className="shrink-0" strokeWidth={3} /> : <div className="w-1.5 h-1.5 rounded-full bg-slate-300 ml-1 mr-1 shrink-0" />}
+                        One uppercase letter
+                      </div>
+                      <div className={`flex items-center gap-1.5 ${/[0-9]/.test(password) ? 'text-green-600 font-semibold' : 'text-slate-400'}`}>
+                        {/[0-9]/.test(password) ? <Check size={12} className="shrink-0" strokeWidth={3} /> : <div className="w-1.5 h-1.5 rounded-full bg-slate-300 ml-1 mr-1 shrink-0" />}
+                        One numeric digit
+                      </div>
+                      <div className={`flex items-center gap-1.5 ${/[!@#$%^&*(),.?":{}|<>]/.test(password) ? 'text-green-600 font-semibold' : 'text-slate-400'}`}>
+                        {/[!@#$%^&*(),.?":{}|<>]/.test(password) ? <Check size={12} className="shrink-0" strokeWidth={3} /> : <div className="w-1.5 h-1.5 rounded-full bg-slate-300 ml-1 mr-1 shrink-0" />}
+                        One special character
+                      </div>
                     </div>
                   </div>
-                </div>
+                )}
+              </div>
+
+              {!isLogin && (
+                 <div className="flex items-center gap-2 py-2">
+                   <div className="w-5 h-5 rounded border border-blue-500 bg-blue-500 flex items-center justify-center text-white shrink-0 cursor-pointer">
+                      <Check size={12} strokeWidth={4}/>
+                   </div>
+                   <p className="text-[11px] text-slate-500 font-medium">
+                     I agree to the <span onClick={() => setShowTermsModal(true)} className="text-blue-600 underline cursor-pointer hover:text-blue-700">Terms of Service</span> and <span onClick={() => setShowPrivacyModal(true)} className="text-blue-600 underline cursor-pointer hover:text-blue-700">Privacy Policy</span>.
+                   </p>
+                 </div>
               )}
+
+              <button 
+                type="submit" 
+                disabled={loading}
+                className="w-full py-4 bg-[#F15A29] text-white rounded-md font-bold text-sm tracking-wide shadow-lg shadow-orange-200/50 hover:bg-[#D94F25] transition-all disabled:opacity-50"
+              >
+                {loading ? 'Processing...' : (isLogin ? 'Sign In' : 'Create my account')}
+              </button>
+            </form>
+
+            <div className="mt-6 flex items-center justify-between">
+              <span className="w-1/5 border-b border-slate-200 lg:w-1/4"></span>
+              <span className="text-xs text-center text-slate-500 font-medium uppercase tracking-widest">or</span>
+              <span className="w-1/5 border-b border-slate-200 lg:w-1/4"></span>
             </div>
 
-            {!isLogin && (
-               <div className="flex items-center gap-2 py-2">
-                 <div className="w-5 h-5 rounded border border-blue-500 bg-blue-500 flex items-center justify-center text-white shrink-0 cursor-pointer">
-                    <Check size={12} strokeWidth={4}/>
+            <div className="mt-6 flex justify-center">
+              <GoogleLogin
+                onSuccess={handleGoogleSuccess}
+                onError={() => setError('Google Login Failed')}
+                useOneTap
+                theme="outline"
+                size="large"
+                shape="rectangular"
+                width="100%"
+              />
+            </div>
+
+            <div className="mt-8 text-center space-y-4">
+               <p className="text-[11px] font-medium text-slate-400 italic font-mono">*No credit card required</p>
+               <p className="text-xs font-semibold text-slate-700">
+                  {isLogin ? "Don't have an account? " : "Already have an account? "}
+                  <button 
+                    onClick={() => setIsLogin(!isLogin)}
+                    className="text-blue-600 hover:underline"
+                  >
+                    {isLogin ? 'Sign Up' : 'Log In'}
+                  </button>
+               </p>
+            </div>
+
+            <p className="mt-10 text-[9px] text-center text-slate-300 font-bold uppercase tracking-[0.1em]">
+              *This offer is applicable only for CalTally users
+            </p>
+          </div>
+
+          {/* FORGOT PASSWORD VIEW */}
+          <div className={`transition-all duration-500 ${!isForgotPassword ? 'translate-x-full absolute opacity-0 pointer-events-none top-8 left-8 right-8' : 'translate-x-0 opacity-100 relative'}`}>
+            <header className="mb-8 text-center space-y-2">
+              <div className="w-12 h-12 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                 <ShieldCheck size={24} className="text-blue-600" />
+              </div>
+              <h2 className="text-2xl font-bold text-[#1F314F] tracking-tight">
+                Forgot Password
+              </h2>
+              <p className="text-[13px] text-slate-500 font-medium">
+                No worries, we'll send you reset instructions.
+              </p>
+            </header>
+
+            {forgotPasswordStatus === 'success' ? (
+              <div className="p-6 rounded-xl bg-emerald-50 border border-emerald-100 flex flex-col items-center text-center space-y-3 animate-in fade-in zoom-in">
+                 <div className="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center">
+                   <Mail size={24} className="text-emerald-600"/>
                  </div>
-                 <p className="text-[11px] text-slate-500 font-medium">
-                   I agree to the <span onClick={() => setShowTermsModal(true)} className="text-blue-600 underline cursor-pointer hover:text-blue-700">Terms of Service</span> and <span onClick={() => setShowPrivacyModal(true)} className="text-blue-600 underline cursor-pointer hover:text-blue-700">Privacy Policy</span>.
-                 </p>
-               </div>
-            )}
+                 <h3 className="font-bold text-emerald-800">Check your email</h3>
+                 <p className="text-xs font-medium opacity-90 text-emerald-700">{forgotPasswordMsg}</p>
+                 <button onClick={() => { setIsForgotPassword(false); setForgotPasswordStatus('idle'); }} className="mt-4 text-xs font-bold text-emerald-700 hover:underline">
+                   Back to Login
+                 </button>
+              </div>
+            ) : (
+              <form onSubmit={handleForgotPasswordSubmit} className="space-y-6">
+                {forgotPasswordStatus === 'error' && (
+                  <div className="p-3 bg-red-50 text-red-600 border border-red-100 rounded-md text-[11px] font-bold text-center">
+                    {forgotPasswordMsg}
+                  </div>
+                )}
+                
+                <div className="space-y-1">
+                  <label className="text-[11px] font-bold text-slate-700 flex items-center gap-1.5 ml-1">
+                    <Mail size={12} className="text-slate-400"/> Email address
+                  </label>
+                  <input 
+                    type="email" 
+                    value={email} 
+                    onChange={e => setEmail(e.target.value)}
+                    placeholder="Enter your registered email"
+                    className="w-full px-4 py-3 bg-[#F5F8FA] border border-slate-200 rounded-md text-sm outline-none focus:border-blue-400 focus:bg-white transition-all font-medium"
+                    required
+                  />
+                </div>
 
-            <button 
-              type="submit" 
-              disabled={loading}
-              className="w-full py-4 bg-[#F15A29] text-white rounded-md font-bold text-sm tracking-wide shadow-lg shadow-orange-200/50 hover:bg-[#D94F25] transition-all disabled:opacity-50"
-            >
-              {loading ? 'Processing...' : (isLogin ? 'Sign In' : 'Create my account')}
-            </button>
-          </form>
-
-          <div className="mt-6 flex items-center justify-between">
-            <span className="w-1/5 border-b border-slate-200 lg:w-1/4"></span>
-            <span className="text-xs text-center text-slate-500 font-medium uppercase tracking-widest">or</span>
-            <span className="w-1/5 border-b border-slate-200 lg:w-1/4"></span>
-          </div>
-
-          <div className="mt-6 flex justify-center">
-            <GoogleLogin
-              onSuccess={handleGoogleSuccess}
-              onError={() => setError('Google Login Failed')}
-              useOneTap
-              theme="outline"
-              size="large"
-              shape="rectangular"
-              width="100%"
-            />
-          </div>
-
-          <div className="mt-8 text-center space-y-4">
-             <p className="text-[11px] font-medium text-slate-400 italic font-mono">*No credit card required</p>
-             <p className="text-xs font-semibold text-slate-700">
-                {isLogin ? "Don't have an account? " : "Already have an account? "}
                 <button 
-                  onClick={() => setIsLogin(!isLogin)}
-                  className="text-blue-600 hover:underline"
+                  type="submit" 
+                  disabled={loading}
+                  className="w-full py-4 bg-blue-600 text-white rounded-md font-bold text-sm tracking-wide shadow-lg shadow-blue-200/50 hover:bg-blue-700 transition-all disabled:opacity-50"
                 >
-                  {isLogin ? 'Sign Up' : 'Log In'}
+                  {loading ? 'Sending...' : 'Send Reset Link'}
                 </button>
-             </p>
+
+                <div className="text-center pt-2">
+                  <button type="button" onClick={() => { setIsForgotPassword(false); setForgotPasswordStatus('idle'); }} className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-slate-800 transition-colors">
+                    <ArrowLeft size={14} /> Back to Login
+                  </button>
+                </div>
+              </form>
+            )}
           </div>
 
-          <p className="mt-10 text-[9px] text-center text-slate-300 font-bold uppercase tracking-[0.1em]">
-            *This offer is applicable only for CalTally users
-          </p>
+        </div>
       </div>
-
+      
       {/* ─── TERMS OF SERVICE MODAL ───────────────────────── */}
       {showTermsModal && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in">
@@ -318,9 +416,8 @@ const AuthPage = ({ onLogin }) => {
           </div>
         </div>
       )}
-
+      
       </div>
-    </div>
     </GoogleOAuthProvider>
   );
 };

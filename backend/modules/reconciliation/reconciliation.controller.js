@@ -4,7 +4,8 @@ const autoMatchService = require('./autoMatch.service');
 
 exports.importStatement = async (req, res, next) => {
   try {
-    const { companyId, entries } = req.body; // entries: [{ date, description, amount, type }]
+    const { entries } = req.body; // entries: [{ date, description, amount, type }]
+    const companyId = req.companyId; // securely retrieved from tenantAccess
     const created = await BankTransaction.bulkCreate(entries.map(e => ({
       ...e,
       CompanyId: companyId
@@ -21,7 +22,7 @@ exports.importStatement = async (req, res, next) => {
 
 exports.getUnmatched = async (req, res, next) => {
   try {
-    const { companyId } = req.params;
+    const companyId = req.companyId; // securely retrieved from tenantAccess
     const unmatched = await BankTransaction.findAll({
       where: { CompanyId: companyId, isMatched: false }
     });
@@ -34,9 +35,7 @@ exports.getUnmatched = async (req, res, next) => {
 exports.reconcile = async (req, res, next) => {
   try {
     const { bankTransactionId, voucherId } = req.body;
-    const companyId = req.user.companyId; // from tenantAccess middleware
-
-    // BOLA fix: verify both records belong to this company
+    const companyId = req.companyId;
     const bt = await BankTransaction.findOne({
       where: { id: bankTransactionId, CompanyId: companyId }
     });

@@ -75,6 +75,7 @@ const PeriodLock = require('./periodLock.model')(sequelize);
 const FinancialPeriod = require('./financialPeriod.model')(sequelize, DataTypes);
 const UserCompany = require('./userCompany.model')(sequelize, DataTypes);
 const CustomRole = require('./customRole.model')(sequelize, DataTypes);
+const SavedReport = require('./savedReport.model')(sequelize, DataTypes);
 
 
 // ─── Associations ────────────────────────────────────────────────────────────
@@ -514,13 +515,22 @@ Company.hasMany(AppNotification, { foreignKey: 'CompanyId' });
 AppNotification.belongsTo(Company, { foreignKey: 'CompanyId' });
 
 const { getNamespace } = require('../middleware/cls.middleware');
+const fs = require('fs');
+const path = require('path');
+const debugLogPath = path.join(__dirname, '..', 'audit_debug.txt');
+
+function logAuditError(msg) {
+  try {
+    fs.appendFileSync(debugLogPath, new Date().toISOString() + ' - ' + msg + '\n');
+  } catch (e) {}
+}
 
 function registerAuditHooks(model, tableName) {
   model.addHook('afterCreate', async (instance, options) => {
     try {
       const ns = getNamespace();
-      const userId = ns ? ns.get('userId') : null;
-      const companyId = ns ? ns.get('companyId') : instance.CompanyId;
+      const userId = (ns && ns.get('userId')) || null;
+      const companyId = (ns && ns.get('companyId')) || instance.CompanyId;
       
       await AuditLog.create({
         action: `CREATE_${tableName.toUpperCase()}`,
@@ -533,19 +543,33 @@ function registerAuditHooks(model, tableName) {
       });
     } catch (err) {
       console.error(`[Audit Hook Error on Create ${tableName}]:`, err.message);
+      logAuditError(`[Create ${tableName}] ${err.message}\n${err.stack}`);
+    }
+  });
+
+  model.addHook('beforeUpdate', (instance, options) => {
+    const changedKeys = instance.changed();
+    if (changedKeys && Array.isArray(changedKeys)) {
+      instance._auditChangedKeys = changedKeys;
+      instance._auditOldData = {};
+      changedKeys.forEach(field => {
+        instance._auditOldData[field] = instance.previous(field);
+      });
     }
   });
 
   model.addHook('afterUpdate', async (instance, options) => {
     try {
+      const changedKeys = instance._auditChangedKeys;
+      if (!changedKeys || !Array.isArray(changedKeys) || changedKeys.length === 0) return;
+
       const ns = getNamespace();
-      const userId = ns ? ns.get('userId') : null;
-      const companyId = ns ? ns.get('companyId') : instance.CompanyId;
+      const userId = (ns && ns.get('userId')) || null;
+      const companyId = (ns && ns.get('companyId')) || instance.CompanyId;
       
-      const oldData = {};
+      const oldData = instance._auditOldData || {};
       const newData = {};
-      instance.changed().forEach(field => {
-        oldData[field] = instance.previous(field);
+      changedKeys.forEach(field => {
         newData[field] = instance.getDataValue(field);
       });
 
@@ -558,16 +582,21 @@ function registerAuditHooks(model, tableName) {
         CompanyId: companyId,
         UserId: userId
       });
+      
+      // Cleanup
+      delete instance._auditChangedKeys;
+      delete instance._auditOldData;
     } catch (err) {
       console.error(`[Audit Hook Error on Update ${tableName}]:`, err.message);
+      logAuditError(`[Update ${tableName}] ${err.message}\n${err.stack}`);
     }
   });
 
   model.addHook('afterDestroy', async (instance, options) => {
     try {
       const ns = getNamespace();
-      const userId = ns ? ns.get('userId') : null;
-      const companyId = ns ? ns.get('companyId') : instance.CompanyId;
+      const userId = (ns && ns.get('userId')) || null;
+      const companyId = (ns && ns.get('companyId')) || instance.CompanyId;
       
       await AuditLog.create({
         action: `DELETE_${tableName.toUpperCase()}`,
@@ -584,11 +613,25 @@ function registerAuditHooks(model, tableName) {
   });
 }
 
+// 25. Saved Reports
+Company.hasMany(SavedReport, { foreignKey: 'companyId' });
+SavedReport.belongsTo(Company, { foreignKey: 'companyId' });
+User.hasMany(SavedReport, { foreignKey: 'createdBy' });
+SavedReport.belongsTo(User, { as: 'Creator', foreignKey: 'createdBy' });
+
 registerAuditHooks(Voucher, 'Voucher');
 registerAuditHooks(Ledger, 'Ledger');
 registerAuditHooks(Company, 'Company');
 registerAuditHooks(User, 'User');
-
+registerAuditHooks(Item, 'Item');
+registerAuditHooks(Employee, 'Employee');
+registerAuditHooks(FixedAsset, 'FixedAsset');
+registerAuditHooks(CostCenter, 'CostCenter');
+registerAuditHooks(Budget, 'Budget');
+registerAuditHooks(Quote, 'Quote');
+registerAuditHooks(SalesOrder, 'SalesOrder');
+registerAuditHooks(PurchaseOrder, 'PurchaseOrder');
+registerAuditHooks(SalesInvoice, 'SalesInvoice');
 
 
 module.exports = {
@@ -665,5 +708,6 @@ module.exports = {
   PeriodLock,
   FinancialPeriod,
   CustomRole,
-  UserCompany
+  UserCompany,
+  SavedReport
 };
