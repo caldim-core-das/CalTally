@@ -35,7 +35,7 @@ exports.getUnmatched = async (req, res, next) => {
 exports.reconcile = async (req, res, next) => {
   try {
     const { bankTransactionId, voucherId } = req.body;
-    const companyId = req.companyId;
+    const companyId = req.companyId || (req.user && req.user.companyId);
     const bt = await BankTransaction.findOne({
       where: { id: bankTransactionId, CompanyId: companyId }
     });
@@ -51,6 +51,10 @@ exports.reconcile = async (req, res, next) => {
     await bt.update({ isMatched: true, matchedVoucherId: voucherId || null });
     res.json({ message: 'Successfully reconciled', bankTransaction: bt });
   } catch (err) {
-    next(err);
+    if (typeof next === 'function') {
+      next(err);
+    } else {
+      throw err;
+    }
   }
 };
