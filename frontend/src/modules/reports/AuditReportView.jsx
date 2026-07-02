@@ -9,7 +9,6 @@ import {
 import { reportsAPI } from '../../services/api';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import autoTable from 'jspdf-autotable';
 
 const formatMetadata = (data, tableName) => {
   if (!data || Object.keys(data).length === 0) return '—';

@@ -9,6 +9,8 @@ import AuthPage from './modules/auth/AuthPage';
 import LandingPage from './modules/landing/LandingPage';
 import UpgradeScreen from './modules/billing/UpgradeScreen';
 import VerifyEmailPage from './pages/VerifyEmailPage';
+import ForgotPasswordPage from './pages/auth/ForgotPasswordPage';
+import ResetPasswordPage from './pages/auth/ResetPasswordPage';
 import DashboardView from './modules/dashboard/DashboardView';
 import SupportHelpButton from './components/SupportHelpButton';
 import SupportCenter from './modules/settings/SupportCenter';
@@ -55,6 +57,8 @@ import ReceivablesReportView from './modules/reports/ReceivablesReportView';
 import PayablesReportView from './modules/reports/PayablesReportView';
 import InventoryReportView from './modules/reports/InventoryReportView';
 import PayrollSummaryReportView from './modules/reports/PayrollSummaryReportView';
+import CustomReportBuilder from './modules/reports/CustomReportBuilder';
+import SavedReportsView from './modules/reports/SavedReportsView';
 import AIAssistantView from './modules/dashboard/AIAssistantView';
 import VendorsListView from './modules/purchases/VendorsListView';
 import VendorsView from './modules/purchases/VendorsView';
@@ -98,7 +102,7 @@ import {
   Bell, ChevronRight, ChevronDown, ChevronsLeft, ChevronsRight,
   Building2, Activity, ShoppingCart, UserCheck, FileBarChart2,
   PieChart, Landmark, Target, Clock, Undo2, Truck, Repeat, ClipboardList, FileStack, Plus,
-  RefreshCw, PanelLeftClose, PanelLeftOpen, MessageSquare, Sliders, CreditCard, LifeBuoy
+  RefreshCw, PanelLeftClose, PanelLeftOpen, MessageSquare, Sliders, CreditCard, LifeBuoy, Bookmark
 } from 'lucide-react';
 
 // ═══════════════════════════════════════════════════════════════════
@@ -190,6 +194,8 @@ const NAV = [
       { label: 'Cash Flow',          path: '/reports/cash-flow', icon: TrendingUp },
       { label: 'Inventory Report',   path: '/reports/inventory-report', icon: Package },
       { label: 'Audit Trails',       path: '/reports/audit', icon: Shield },
+      { label: 'Custom Reports',     path: '/reports/custom', icon: Sliders },
+      { label: 'Saved Reports',      path: '/reports/saved', icon: Bookmark },
     ]
   },
   {
@@ -503,7 +509,6 @@ const AppShell = ({ children, onLogout, companies = [], currentCompanyId, onComp
         '--sidebar-width': `${sidebarW}px`
       }}
     >
-
       {/* ─── SIDEBAR ─────────────────────────────────────────── */}
       <aside className="no-print bg-white/85 dark:bg-slate-900/90 backdrop-blur-md border-r border-slate-100 dark:border-slate-800" style={{
         width: sidebarW,
@@ -612,6 +617,28 @@ const AppShell = ({ children, onLogout, companies = [], currentCompanyId, onComp
 
       {/* ─── MAIN CONTENT ────────────────────────────────────── */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        
+        {/* Email Verification Banner */}
+        {user && user.isEmailVerified === false && (
+          <div className="bg-yellow-50 border-b border-yellow-200 px-4 py-2 flex items-center justify-between text-xs text-yellow-800 shrink-0">
+            <div className="flex items-center gap-2">
+              <Shield size={14} className="text-yellow-600"/>
+              <span><strong>Security Alert:</strong> Please verify your email address. Some features may be restricted until your email is verified.</span>
+            </div>
+            <button 
+              onClick={async () => {
+                try {
+                  await authAPI.resendVerification(user.email);
+                  alert("A new verification link has been sent to your email.");
+                } catch(e) {
+                  alert("Failed to resend verification. Please try again later.");
+                }
+              }}
+              className="font-bold underline hover:text-yellow-900">
+              Resend Link
+            </button>
+          </div>
+        )}
 
         {/* Top Header */}
         <header className="h-20 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-100 dark:border-slate-800 flex items-center justify-between px-10 relative z-[60] shrink-0 no-print">
@@ -789,6 +816,8 @@ function AuthenticatedApp() {
       <Route path="/" element={<Navigate to="/dashboard" replace />} />
       <Route path="/upgrade" element={<UpgradeScreen />} />
       <Route path="/verify-email" element={<VerifyEmailPage />} />
+      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+      <Route path="/reset-password" element={<ResetPasswordPage />} />
 
       <Route path="/setup-company" element={
         <CompanyInfoView firstTime={true} onCompanyCreated={(id, name) => {
@@ -973,6 +1002,8 @@ function AuthenticatedApp() {
       <Route path="/reports/payroll-summary"       element={shell(PayrollSummaryReportView)} />
       <Route path="/reports/customer-outstanding"  element={shell(CustomerOutstandingView)} />
       <Route path="/reports/vendor-outstanding"    element={shell(VendorOutstandingView)} />
+      <Route path="/reports/custom"                element={shell(CustomReportBuilder)} />
+      <Route path="/reports/saved"                 element={shell(SavedReportsView)} />
 
       {/* AI Assistant */}
       <Route path="/ai-assistant"          element={shell(AIAssistantView)} />
@@ -1038,6 +1069,12 @@ export default function App() {
         {/* OAuth redirect landing page — exchanges httpOnly cookie for session */}
         <Route path="/auth-callback" element={<OAuthCallbackPage onSuccess={() => setAuthed(true)} />} />
         <Route path="/shared/invoice/:share_token" element={<SharedInvoiceView />} />
+        
+        {/* Auth Flows */}
+        <Route path="/verify-email" element={<VerifyEmailPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
+
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     );
