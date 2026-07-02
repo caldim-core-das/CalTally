@@ -580,7 +580,11 @@ exports.getDashboardStats = async (req, res, next) => {
       SalesInvoice.findAll({ where: { CompanyId: companyId, status: { [Op.notIn]: ['Draft', 'Void'] } } }).catch(() => []),
       Voucher.findAll({
         where: { CompanyId: companyId, voucherType: 'Purchase' },
-        include: [{ model: Transaction, attributes: ['credit'] }]
+        include: [{ 
+          model: Transaction, 
+          attributes: ['credit'],
+          include: [{ model: Ledger, attributes: ['name'] }]
+        }]
       }).catch(() => []),
     ]);
 
@@ -591,15 +595,22 @@ exports.getDashboardStats = async (req, res, next) => {
 
     let totalSales = 0;
     salesInvoices.forEach(inv => {
-      totalSales += parseFloat(inv.totalAmount || 0);
+      totalSales += parseFloat(inv.totalAmount || 0) - parseFloat(inv.tcsAmount || 0);
     });
 
     let totalPurchases = 0;
     purchaseVouchers.forEach(v => {
-      const crTx = (v.Transactions || []).find(t => parseFloat(t.credit || 0) > 0);
-      if (crTx) {
-        totalPurchases += parseFloat(crTx.credit || 0);
-      }
+      let voucherTotal = 0;
+      (v.Transactions || []).forEach(t => {
+        const credit = parseFloat(t.credit || 0);
+        if (credit > 0) {
+          const ledgerName = (t.Ledger?.name || '').toLowerCase();
+          if (!ledgerName.includes('tds')) {
+            voucherTotal += credit;
+          }
+        }
+      });
+      totalPurchases += voucherTotal;
     });
 
     // ── All ledgers with transaction totals ──────────────────────
@@ -822,6 +833,9 @@ exports.getDashboardStats = async (req, res, next) => {
 
     // ── GST Summary (from ledgers containing GST/tax in name) ────
     let gstPayable = 0, gstReceivable = 0;
+    let tdsPayable = 0, tdsReceivable = 0;
+    let tcsPayable = 0, tcsReceivable = 0;
+
     ledgers.forEach(l => {
       const name = (l.name || '').toLowerCase();
       const rawOpening = parseFloat(l.openingBalance || 0);
@@ -839,6 +853,12 @@ exports.getDashboardStats = async (req, res, next) => {
       } else if (name.includes('cgst') || name.includes('sgst') || name.includes('igst')) {
         if (closing < 0) gstPayable += Math.abs(closing);
         else gstReceivable += closing;
+      } else if (name.includes('tds')) {
+        if (closing < 0) tdsPayable += Math.abs(closing);
+        else tdsReceivable += closing;
+      } else if (name.includes('tcs')) {
+        if (closing < 0) tcsPayable += Math.abs(closing);
+        else tcsReceivable += closing;
       }
     });
 
@@ -1067,6 +1087,14 @@ exports.getDashboardStats = async (req, res, next) => {
         receivable:    parseFloat(gstReceivable.toFixed(2)),
         net:           parseFloat((gstPayable - gstReceivable).toFixed(2)),
         filingStatus:  'Check GST Portal',
+      },
+
+      // Tax (TDS/TCS)
+      tax: {
+        tdsPayable:    parseFloat(tdsPayable.toFixed(2)),
+        tdsReceivable: parseFloat(tdsReceivable.toFixed(2)),
+        tcsPayable:    parseFloat(tcsPayable.toFixed(2)),
+        tcsReceivable: parseFloat(tcsReceivable.toFixed(2)),
       },
 
       // Budgeting

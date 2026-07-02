@@ -8,7 +8,7 @@ import {
   Check, AlertCircle, File, Mail, Printer,
   Share2, History, X, ChevronRight, Download,
   Send, Loader2, ArrowLeft, DollarSign, Clock,
-  Tag, Info, Paperclip, Sparkles, CreditCard
+  Tag, Info, Paperclip, Sparkles, CreditCard, MessageCircle
 } from 'lucide-react';
 import html2pdf from 'html2pdf.js';
 import ConfirmModal from '../../components/ConfirmModal';
@@ -420,6 +420,8 @@ const InvoiceDetail = ({ id, company, navigate, onRefresh }) => {
             setGeneratingLink(false);
         }
     };
+
+
 
     const handleDelete = async () => {
         try {
