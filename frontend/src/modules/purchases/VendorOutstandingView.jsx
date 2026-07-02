@@ -50,7 +50,21 @@ const VendorOutstandingView = ({ companyId: propCompanyId }) => {
     const paid       = parseFloat(bill.amountPaid  || bill.paid   || 0);
     const outstanding = Math.max(0, billTotal - paid);
     const status     = getStatus(outstanding, billTotal, bill.dueDate);
-    return { ...bill, billTotal, paid, outstanding, status };
+
+    let daysOverdue = 0;
+    if (bill.dueDate && outstanding > 0) {
+      const diffTime = new Date().setHours(0,0,0,0) - new Date(bill.dueDate).setHours(0,0,0,0);
+      daysOverdue = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+    }
+    
+    let agingBucket = 'Current';
+    if (daysOverdue > 90) agingBucket = '> 90 Days';
+    else if (daysOverdue > 60) agingBucket = '61-90 Days';
+    else if (daysOverdue > 30) agingBucket = '31-60 Days';
+    else if (daysOverdue > 0) agingBucket = '1-30 Days';
+    else if (outstanding === 0) agingBucket = 'Paid';
+
+    return { ...bill, billTotal, paid, outstanding, status, daysOverdue, agingBucket };
   }), [data]);
 
   const filtered = useMemo(() => enriched.filter(b => {
@@ -69,8 +83,18 @@ const VendorOutstandingView = ({ companyId: propCompanyId }) => {
     overdue:     filtered.filter(b => b.status === 'Overdue').reduce((s, b) => s + b.outstanding, 0),
   }), [filtered]);
 
+  const agingTotals = useMemo(() => {
+    const t = { 'Current': 0, '1-30 Days': 0, '31-60 Days': 0, '61-90 Days': 0, '> 90 Days': 0 };
+    filtered.forEach(b => {
+      if (b.outstanding > 0 && t[b.agingBucket] !== undefined) {
+        t[b.agingBucket] += b.outstanding;
+      }
+    });
+    return t;
+  }, [filtered]);
+
   const exportCSV = () => {
-    const headers = ['Vendor', 'Bill No', 'Bill Date', 'Due Date', 'Amount', 'Paid', 'Outstanding', 'Status'];
+    const headers = ['Vendor', 'Bill No', 'Bill Date', 'Due Date', 'Amount', 'Paid', 'Outstanding', 'Status', 'Aging Bucket'];
     const rows = filtered.map(b => [
       b.vendorName || b.Vendor?.name || b.Ledger?.name || '',
       b.billNumber || b.number || '',
@@ -80,6 +104,7 @@ const VendorOutstandingView = ({ companyId: propCompanyId }) => {
       b.paid.toFixed(2),
       b.outstanding.toFixed(2),
       b.status,
+      b.agingBucket
     ]);
     const csv = [headers, ...rows].map(r => r.join(',')).join('\n');
     const blob = new Blob([csv], { type: 'text/csv' });
@@ -128,6 +153,22 @@ const VendorOutstandingView = ({ companyId: propCompanyId }) => {
         ))}
       </div>
 
+      {/* Aging Buckets */}
+      <div className="grid grid-cols-5 gap-4">
+        {[
+          { label: 'Current (Not Due)', value: fmt(agingTotals['Current']),    color: 'bg-slate-50 text-slate-700 border-slate-200' },
+          { label: '1 - 30 Days',       value: fmt(agingTotals['1-30 Days']),  color: 'bg-orange-50 text-orange-700 border-orange-200' },
+          { label: '31 - 60 Days',      value: fmt(agingTotals['31-60 Days']), color: 'bg-orange-100 text-orange-800 border-orange-300' },
+          { label: '61 - 90 Days',      value: fmt(agingTotals['61-90 Days']), color: 'bg-rose-50 text-rose-700 border-rose-200' },
+          { label: '> 90 Days',         value: fmt(agingTotals['> 90 Days']),  color: 'bg-rose-100 text-rose-800 border-rose-300' },
+        ].map(({ label, value, color }) => (
+          <div key={label} className={`border rounded-xl px-4 py-3 flex flex-col gap-1 ${color}`}>
+            <span className="text-[10px] font-bold uppercase tracking-widest opacity-80">{label}</span>
+            <span className="text-lg font-black tracking-tight font-mono">{value}</span>
+          </div>
+        ))}
+      </div>
+
       {/* Filters */}
       <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 flex flex-wrap items-center gap-4">
         <div className="flex items-center gap-2 flex-1 min-w-[200px]">
@@ -160,6 +201,7 @@ const VendorOutstandingView = ({ companyId: propCompanyId }) => {
               <th className="px-6 py-5 text-right">Amount (₹)</th>
               <th className="px-6 py-5 text-right">Paid (₹)</th>
               <th className="px-6 py-5 text-right">Outstanding (₹)</th>
+              <th className="px-6 py-5">Aging</th>
               <th className="px-6 py-5">Status</th>
             </tr>
           </thead>
@@ -200,6 +242,15 @@ const VendorOutstandingView = ({ companyId: propCompanyId }) => {
                     <td className="px-6 py-4 text-right font-mono font-bold text-emerald-600">{fmt(b.paid)}</td>
                     <td className="px-6 py-4 text-right font-mono font-black text-orange-600">{fmt(b.outstanding)}</td>
                     <td className="px-6 py-4">
+                      {b.outstanding > 0 ? (
+                        <span className={`text-[11px] font-bold ${b.daysOverdue > 0 ? 'text-rose-600' : 'text-slate-500'}`}>
+                          {b.agingBucket} {b.daysOverdue > 0 ? `(${b.daysOverdue}d)` : ''}
+                        </span>
+                      ) : (
+                        <span className="text-slate-300">—</span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4">
                       <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider ${s.bg} ${s.text}`}>
                         <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`} />
                         {b.status}
@@ -219,7 +270,7 @@ const VendorOutstandingView = ({ companyId: propCompanyId }) => {
                 <td className="px-6 py-4 text-right font-mono font-black text-slate-900">{fmt(totals.total)}</td>
                 <td className="px-6 py-4 text-right font-mono font-black text-emerald-600">{fmt(totals.paid)}</td>
                 <td className="px-6 py-4 text-right font-mono font-black text-orange-600">{fmt(totals.outstanding)}</td>
-                <td />
+                <td colSpan={2} />
               </tr>
             </tfoot>
           )}

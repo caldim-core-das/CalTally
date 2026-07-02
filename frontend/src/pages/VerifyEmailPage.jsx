@@ -13,17 +13,26 @@ const VerifyEmailPage = () => {
 
   useEffect(() => {
     const token = searchParams.get('token');
+    const type = searchParams.get('type');
+    
     if (!token) {
       setStatus('error');
       setMessage('No verification token found in the link. Please request a new verification email.');
       return;
     }
 
-    axios.get(`${API_BASE}/users/verify-email?token=${token}`)
+    const endpoint = type === 'signup' ? '/auth/verify-email-signup' : '/users/verify-email';
+
+    axios.get(`${API_BASE}${endpoint}?token=${token}`)
       .then(() => {
         setStatus('success');
-        setMessage('Your email address has been updated successfully! Please log in again with your new email address.');
-        setTimeout(() => navigate('/login?emailChanged=true'), 4000);
+        if (type === 'signup') {
+          setMessage('Your email address has been verified successfully! You can now log in.');
+          setTimeout(() => navigate('/login'), 4000);
+        } else {
+          setMessage('Your email address has been updated successfully! Please log in again with your new email address.');
+          setTimeout(() => navigate('/login?emailChanged=true'), 4000);
+        }
       })
       .catch(err => {
         const msg = err.response?.data?.error || 'This verification link is invalid or has expired. Please request a new one from your Profile & Security settings.';

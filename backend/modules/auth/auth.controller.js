@@ -1,4 +1,5 @@
 const { User, RefreshToken, MfaSecret, AuditLog } = require('../../models');
+const { sendVerificationEmail, sendPasswordResetEmail } = require('../../services/mail.service');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
@@ -161,16 +162,27 @@ exports.register = async (req, res) => {
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Generate email verification token
+    const rawToken = crypto.randomBytes(32).toString('hex');
+    const hashedToken = crypto.createHash('sha256').update(rawToken).digest('hex');
+
     const user = await User.create({
       email,
       password: hashedPassword,
       name: name || undefined,
       role: 'ADMIN', // Strictly enforce ADMIN role for new registrations to prevent SUPER_ADMIN bypass
-      oauthOnly: false
+      oauthOnly: false,
+      isEmailVerified: false,
+      emailVerificationToken: hashedToken,
+      emailVerificationExpiry: new Date(Date.now() + 24 * 60 * 60 * 1000) // 24 hours
     });
 
+    // Send verification email asynchronously
+    sendVerificationEmail(user, rawToken).catch(e => console.error('Failed to send signup verification email:', e));
+
     res.status(201).json({
-      message: 'User created',
+      message: 'User created. Please check your email to verify your account.',
       user: { id: user.id, email: user.email, name: user.name, role: user.role }
     });
   } catch (err) {
@@ -181,6 +193,137 @@ exports.register = async (req, res) => {
     const eId = require('crypto').randomBytes(6).toString('hex');
     console.error(`[AUTH-REGISTER-${eId}]`, err.message, err.stack);
     res.status(500).json({ error: 'Registration failed. Please try again.', errorId: eId });
+  }
+};
+
+// ── Verification & Recovery ───────────────────────────────────────────────────
+
+exports.verifyEmailSignup = async (req, res) => {
+  try {
+    const { token } = req.query;
+    if (!token) return res.status(400).json({ error: 'Token is required' });
+
+    const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+    const user = await User.findOne({
+      where: {
+        emailVerificationToken: hashedToken,
+        emailVerificationExpiry: { [Op.gt]: new Date() }
+      }
+    });
+
+    if (!user) {
+      return res.status(400).json({ error: 'Invalid or expired verification link.' });
+    }
+
+    await user.update({
+      isEmailVerified: true,
+      emailVerificationToken: null,
+      emailVerificationExpiry: null
+    });
+
+    res.json({ success: true, message: 'Email successfully verified!' });
+  } catch (err) {
+    console.error('[Verify Email]', err);
+    res.status(500).json({ error: 'Failed to verify email.' });
+  }
+};
+
+exports.resendVerification = async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ error: 'Email is required' });
+
+    const user = await User.findOne({ where: { email } });
+    // Generic response to prevent email enumeration
+    if (!user || user.isEmailVerified) {
+      return res.json({ message: 'If an unverified account with this email exists, a verification link has been sent.' });
+    }
+
+    const rawToken = crypto.randomBytes(32).toString('hex');
+    const hashedToken = crypto.createHash('sha256').update(rawToken).digest('hex');
+
+    await user.update({
+      emailVerificationToken: hashedToken,
+      emailVerificationExpiry: new Date(Date.now() + 24 * 60 * 60 * 1000)
+    });
+
+    await sendVerificationEmail(user, rawToken);
+
+    res.json({ message: 'If an unverified account with this email exists, a verification link has been sent.' });
+  } catch (err) {
+    console.error('[Resend Verification]', err);
+    res.status(500).json({ error: 'Failed to process request.' });
+  }
+};
+
+exports.forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ error: 'Email is required' });
+
+    const user = await User.findOne({ where: { email } });
+    
+    // Generic response to prevent email enumeration
+    if (!user || user.oauthOnly) {
+      return res.json({ message: 'If an account with this email exists, a password reset link has been sent.' });
+    }
+
+    const rawToken = crypto.randomBytes(32).toString('hex');
+    const hashedToken = crypto.createHash('sha256').update(rawToken).digest('hex');
+
+    await user.update({
+      resetPasswordToken: hashedToken,
+      resetPasswordExpiry: new Date(Date.now() + 60 * 60 * 1000) // 1 hour
+    });
+
+    await sendPasswordResetEmail(user, rawToken);
+
+    res.json({ message: 'If an account with this email exists, a password reset link has been sent.' });
+  } catch (err) {
+    console.error('[Forgot Password]', err);
+    res.status(500).json({ error: 'Failed to process password reset.' });
+  }
+};
+
+exports.resetPassword = async (req, res) => {
+  try {
+    const { token, newPassword } = req.body;
+    if (!token || !newPassword) return res.status(400).json({ error: 'Token and new password are required' });
+
+    const complexityIssues = validatePasswordComplexity(newPassword);
+    if (complexityIssues.length > 0) {
+      return res.status(400).json({
+        error: 'Password does not meet requirements.',
+        issues: complexityIssues
+      });
+    }
+
+    const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+    const user = await User.findOne({
+      where: {
+        resetPasswordToken: hashedToken,
+        resetPasswordExpiry: { [Op.gt]: new Date() }
+      }
+    });
+
+    if (!user) {
+      return res.status(400).json({ error: 'Invalid or expired reset link. Please request a new one.' });
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    await user.update({
+      password: hashedPassword,
+      resetPasswordToken: null,
+      resetPasswordExpiry: null,
+      failedLoginAttempts: 0,
+      lockedUntil: null
+    });
+
+    res.json({ message: 'Password has been successfully reset. You can now log in.' });
+  } catch (err) {
+    console.error('[Reset Password]', err);
+    res.status(500).json({ error: 'Failed to reset password.' });
   }
 };
 
