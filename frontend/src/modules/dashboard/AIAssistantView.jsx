@@ -31,8 +31,49 @@ const matchMockKey = (msg) => {
   return bestKey;
 };
 
+const parseMessageContent = (content) => {
+  const lines = content.split('\n');
+  const blocks = [];
+  let currentTable = null;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const trimmed = line.trim();
+    const isTableLine = trimmed.startsWith('|') && trimmed.endsWith('|');
+
+    if (isTableLine) {
+      const cells = line.split('|').map(c => c.trim()).filter((_, index, arr) => index > 0 && index < arr.length - 1);
+      const isSeparator = cells.every(cell => /^:?-+:?$/.test(cell));
+
+      if (isSeparator) {
+        continue;
+      }
+
+      if (!currentTable) {
+        currentTable = { headers: cells, rows: [] };
+      } else {
+        currentTable.rows.push(cells);
+      }
+    } else {
+      if (currentTable) {
+        blocks.push({ type: 'table', data: currentTable });
+        currentTable = null;
+      }
+      blocks.push({ type: 'text', content: line });
+    }
+  }
+
+  if (currentTable) {
+    blocks.push({ type: 'table', data: currentTable });
+  }
+
+  return blocks;
+};
+
 const ChatBubble = ({ msg, onActionClick }) => {
   const isUser = msg.role === 'user';
+  const blocks = parseMessageContent(msg.content);
+
   return (
     <div className={`flex gap-4 ${isUser ? 'flex-row-reverse' : 'flex-row'} animate-slide-up`}>
       {/* Avatar */}
@@ -48,17 +89,52 @@ const ChatBubble = ({ msg, onActionClick }) => {
             ? 'bg-[#1A73E8] border-[#1A73E8] text-white rounded-tr-sm'
             : 'bg-white border-slate-100 text-slate-800 rounded-tl-sm'
           }`}>
-          {msg.content.split('\n').map((line, i) => {
-            const parts = line.split(/\*\*(.*?)\*\*/g);
-            return (
-              <div key={i} className={line.startsWith('|') ? 'font-mono text-[11.5px] overflow-x-auto whitespace-pre my-1' : 'mb-1 last:mb-0'}>
-                {parts.map((part, j) =>
-                  j % 2 === 1
-                    ? <strong key={j} className="font-bold">{part}</strong>
-                    : <span key={j}>{part}</span>
-                )}
-              </div>
-            );
+          {blocks.map((block, bIdx) => {
+            if (block.type === 'table') {
+              return (
+                <div key={bIdx} className="overflow-x-auto my-3 border border-slate-100 rounded-xl bg-white shadow-sm">
+                  <table className="min-w-full divide-y divide-slate-100 text-left text-xs">
+                    <thead className="bg-slate-50/70 text-slate-700 font-bold">
+                      <tr>
+                        {block.data.headers.map((h, idx) => (
+                          <th key={idx} className="px-4 py-2.5 font-bold border-b border-slate-100 text-slate-700">
+                            {h}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 bg-white text-slate-600">
+                      {block.data.rows.map((row, rIdx) => (
+                        <tr key={rIdx} className="hover:bg-slate-50/30 transition-colors">
+                          {row.map((cell, cIdx) => {
+                            const parts = cell.split(/\*\*(.*?)\*\*/g);
+                            return (
+                              <td key={cIdx} className="px-4 py-2.5 whitespace-nowrap">
+                                {parts.map((part, pIdx) =>
+                                  pIdx % 2 === 1 ? <strong key={pIdx} className="font-bold text-slate-800">{part}</strong> : part
+                                )}
+                              </td>
+                            );
+                          })}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              );
+            } else {
+              if (block.content.trim() === '') {
+                return <div key={bIdx} className="h-2" />;
+              }
+              const parts = block.content.split(/\*\*(.*?)\*\*/g);
+              return (
+                <div key={bIdx} className="mb-1 last:mb-0">
+                  {parts.map((part, idx) =>
+                    idx % 2 === 1 ? <strong key={idx} className="font-bold">{part}</strong> : part
+                  )}
+                </div>
+              );
+            }
           })}
         </div>
 

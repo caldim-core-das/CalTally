@@ -14,7 +14,8 @@ const Voucher = require('./voucher.model')(sequelize, DataTypes);
 const Transaction = require('./transaction.model')(sequelize, DataTypes);
 const Item = require('./item.model')(sequelize, DataTypes);
 const BankTransaction = require('./bankTransaction.model')(sequelize, DataTypes);
-const SetuConsent = require('./setuConsent.model')(sequelize, DataTypes);
+const BankFeedConsent = require('./bankFeedConsent.model')(sequelize, DataTypes);
+const BankFeedAccount = require('./bankFeedAccount.model')(sequelize, DataTypes);
 const CostCenter = require('./costCenter.model')(sequelize, DataTypes);
 const SalesOrder = require('./salesOrder.model')(sequelize, DataTypes);
 const SalesOrderItem = require('./salesOrderItem.model')(sequelize, DataTypes);
@@ -191,10 +192,14 @@ Ledger.hasMany(PurchaseOrder, { foreignKey: { name: 'LedgerId', type: DataTypes.
 Company.hasMany(BankTransaction, { foreignKey: { name: 'CompanyId', type: DataTypes.UUID } });
 BankTransaction.belongsTo(Company, { foreignKey: { name: 'CompanyId', type: DataTypes.UUID } });
 
-Company.hasMany(SetuConsent, { foreignKey: { name: 'CompanyId', type: DataTypes.UUID } });
-SetuConsent.belongsTo(Company, { foreignKey: { name: 'CompanyId', type: DataTypes.UUID } });
-Ledger.hasOne(SetuConsent, { foreignKey: { name: 'LedgerId', type: DataTypes.UUID } });
-SetuConsent.belongsTo(Ledger, { foreignKey: { name: 'LedgerId', type: DataTypes.UUID } });
+Company.hasMany(BankFeedConsent, { foreignKey: 'CompanyId' });
+BankFeedConsent.belongsTo(Company, { foreignKey: 'CompanyId' });
+
+BankFeedConsent.hasMany(BankFeedAccount, { foreignKey: 'ConsentId' });
+BankFeedAccount.belongsTo(BankFeedConsent, { foreignKey: 'ConsentId' });
+
+BankFeedAccount.hasMany(BankTransaction, { foreignKey: 'BankFeedAccountId' });
+BankTransaction.belongsTo(BankFeedAccount, { foreignKey: 'BankFeedAccountId' });
 
 Company.hasMany(PriceList, { foreignKey: { name: 'CompanyId', type: DataTypes.UUID } });
 PriceList.belongsTo(Company, { foreignKey: { name: 'CompanyId', type: DataTypes.UUID } });
@@ -601,7 +606,8 @@ module.exports = {
   Transaction,
   Item,
   BankTransaction,
-  SetuConsent,
+  BankFeedConsent,
+  BankFeedAccount,
   SalesOrder,
   SalesOrderItem,
   PurchaseOrder,

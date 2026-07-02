@@ -1,15 +1,24 @@
 const express = require('express');
 const router = express.Router();
-const bankFeedController = require('./bankFeed.controller');
+const ctrl = require('./bankFeed.controller');
+const parserCtrl = require('./statementParser.controller');
 const { verifyToken, tenantAccess } = require('../../middleware/auth.middleware');
 
-// Secure all banking and consent routes with token & tenant checks
-router.use(verifyToken, tenantAccess);
+// Webhook — NO auth (Setu calls this directly)
+router.post('/webhook', ctrl.handleWebhook);
 
-router.post('/consent', bankFeedController.createConsent);
-router.get('/consent/:consentId', bankFeedController.getConsentStatus);
-router.get('/consent/ledger/:ledgerId', bankFeedController.getConsentByLedger);
-router.post('/consent/:consentId/approve', bankFeedController.approveConsent);
-router.post('/sync', bankFeedController.syncTransactions);
+// Redirect endpoint from Setu — NO auth needed since browser is redirected here
+router.get('/consent-redirect', (req, res) => {
+  const consentId = req.query.id || req.query.consentId;
+  const clientUrl = process.env.CLIENT_URL || 'http://localhost:5173';
+  res.redirect(`${clientUrl}/banking?consent_id=${consentId}`);
+});
+
+// All other routes require auth + tenant access
+router.use(verifyToken, tenantAccess);
+router.post('/consent', ctrl.createConsent);
+router.get('/accounts', ctrl.getConnectedAccounts);
+router.delete('/consent/:consentId', ctrl.revokeConsent);
+router.post('/upload-statement', parserCtrl.uploadMiddleware, parserCtrl.parseStatement);
 
 module.exports = router;

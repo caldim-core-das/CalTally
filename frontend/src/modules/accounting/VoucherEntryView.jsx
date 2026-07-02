@@ -88,12 +88,14 @@ export default function VoucherEntryView({ onSaveSuccess, onCancel }) {
   const { id }   = useParams();
   const [searchParams] = useSearchParams();
   const initialType = searchParams.get('type') || 'Journal';
+  const initialAmount = searchParams.get('amount') || '';
+  const initialNarration = searchParams.get('narration') || '';
 
   const [vType,     setVType]     = useState(initialType);
   const [date,      setDate]      = useState(new Date().toISOString().split('T')[0]);
   const [refNo,     setRefNo]     = useState('');
-  const [narration, setNarration] = useState('');
-  const [rows,      setRows]      = useState([newRow('Dr'), newRow('Cr')]);
+  const [narration, setNarration] = useState(initialNarration);
+  const [rows,      setRows]      = useState(initialAmount ? [newRow('Dr', initialAmount), newRow('Cr', initialAmount)] : [newRow('Dr'), newRow('Cr')]);
   const [ledgers,   setLedgers]   = useState([]);
   const [costCenters, setCostCenters] = useState([]);
   const [saving,    setSaving]    = useState(false);

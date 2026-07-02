@@ -33,6 +33,7 @@ import {
 import { ledgerAPI, reconciliationAPI, voucherAPI } from '../../services/api';
 import { useNavigate } from 'react-router-dom';
 import BankEntryView from './BankEntryView';
+import BankFeedSection from './BankFeedSection';
 
 const BankingView = () => {
   const navigate = useNavigate();
@@ -401,6 +402,7 @@ const BankingView = () => {
               </tbody>
             </table>
           </div>
+          <BankFeedSection />
         </div>
 
         {/* Closing dropdown when clicking outside */}

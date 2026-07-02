@@ -1,12 +1,20 @@
-const express = require('express'); // Restarted to apply recent DB schema updates
+const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const dotenv = require('dotenv');
 const passport = require('passport');
+const path = require('path');
+const jwt = require('jsonwebtoken');
 const { sequelize } = require('./models');
 
 // 1. Initial Config
 dotenv.config();
+
+const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:5173';
+const corsOptions = {
+  origin: CLIENT_URL,
+  credentials: true
+};
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -36,8 +44,6 @@ app.get('/api/auth/google', passport.authenticate('google', {
   scope: ['profile', 'email'],
   session: false
 }));
-
-const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:5173';
 
 app.get('/api/auth/callback',
   passport.authenticate('google', {
@@ -72,14 +78,14 @@ app.use('/api/sales', require('./modules/sales/sales.routes'));
 app.use('/api/quotes', require('./modules/sales/quote.routes'));
 app.use('/api/inventory', require('./modules/inventory/inventory.routes'));
 app.use('/api/reconciliation', require('./modules/reconciliation/reconciliation.routes'));
-app.use('/api/bankfeed', require('./modules/bankFeed/bankFeed.routes'));
+app.use('/api/bank-feed', require('./modules/bankFeed/bankFeed.routes'));
 
 // 5. Health Check
 app.get('/api/ping', (req, res) => res.json({ status: 'active', platform: 'Tally Replica' }));
 
 // 6. DB Sync & Boot Strategy
 const dialect = process.env.DB_DIALECT || 'sqlite';
-const syncOptions = dialect === 'sqlite' ? {} : { alter: true };
+const syncOptions = {};
 
 sequelize.sync(syncOptions).then(() => {
   console.log(`✅ Ledger Database Synced [${dialect}]`);

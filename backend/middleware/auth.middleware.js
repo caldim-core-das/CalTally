@@ -31,7 +31,8 @@ exports.csrfProtection = (req, res, next) => {
     '/api/auth/google-login',
     '/api/auth/oauth-token-exchange',
     '/api/auth/refresh',
-    '/api/auth/mfa/verify'
+    '/api/auth/mfa/verify',
+    '/api/bank-feed/webhook'
   ];
 
   const requestPath = req.path || req.originalUrl || '';

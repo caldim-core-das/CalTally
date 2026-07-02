@@ -37,6 +37,19 @@ module.exports = (sequelize, DataTypes) => {
     matchedVoucherId: {
       type: DataTypes.UUID,
       allowNull: true
+    },
+    sourceType: {
+      type: DataTypes.ENUM('MANUAL', 'AA_IMPORT', 'CSV_IMPORT'),
+      defaultValue: 'MANUAL'
+    },
+    externalTxnId: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      unique: true
+    },
+    BankFeedAccountId: {
+      type: DataTypes.UUID,
+      allowNull: true
     }
   });
 

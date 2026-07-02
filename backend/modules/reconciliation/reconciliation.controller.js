@@ -1,5 +1,6 @@
 const { BankTransaction, Voucher, Transaction, Ledger, Group, sequelize } = require('../../models');
 const { Op } = require('sequelize');
+const autoMatchService = require('./autoMatch.service');
 
 exports.importStatement = async (req, res, next) => {
   try {
@@ -8,6 +9,10 @@ exports.importStatement = async (req, res, next) => {
       ...e,
       CompanyId: companyId
     })));
+
+    // Try to auto-match imported transactions with local vouchers
+    await autoMatchService.autoMatchImported(companyId);
+
     res.status(201).json(created);
   } catch (err) {
     next(err);

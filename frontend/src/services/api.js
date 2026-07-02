@@ -385,11 +385,12 @@ export const reconciliationAPI = {
 
 // ─── Setu Bank Feed Integration ──────────────────────
 export const bankFeedAPI = {
-  createConsent: (data) => api.post('/bankfeed/consent', data),
-  getConsentStatus: (consentId) => api.get(`/bankfeed/consent/${consentId}`),
-  getConsentByLedger: (ledgerId) => api.get(`/bankfeed/consent/ledger/${ledgerId}`),
-  approveConsent: (consentId) => api.post(`/bankfeed/consent/${consentId}/approve`),
-  syncTransactions: (data) => api.post('/bankfeed/sync', data),
+  createConsent: () => api.post('/bank-feed/consent'),
+  getConnectedAccounts: () => api.get('/bank-feed/accounts'),
+  revokeConsent: (consentId) => api.delete(`/bank-feed/consent/${consentId}`),
+  uploadStatement: (formData) => api.post('/bank-feed/upload-statement', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  })
 };
 
 // ─── Sales & Orders ──────────────────────────────────
@@ -619,5 +620,7 @@ export const gstAPI = {
   getGSTR2A: (companyId) => api.get(`/tax/gst/gstr2a/${companyId}`),
   getGSTR3B: (companyId) => api.get(`/tax/gst/gstr3b/${companyId}`),
 };
+
+
 
 export default api;

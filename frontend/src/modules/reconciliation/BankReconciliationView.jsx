@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Wallet, Upload, CheckCircle2, AlertCircle, FileText, Search, PlusCircle } from 'lucide-react';
 import { reconciliationAPI, voucherAPI } from '../../services/api';
 import useNotificationStore from '../../store/notificationStore';
 
 const BankReconciliationView = () => {
+    const navigate = useNavigate();
     const [unmatched, setUnmatched] = useState([]);
     const [loading, setLoading] = useState(true);
     const [matchingVouchers, setMatchingVouchers] = useState([]);
@@ -143,7 +145,15 @@ const BankReconciliationView = () => {
                                 <div className="p-10 text-center space-y-4">
                                    <AlertCircle size={32} className="mx-auto text-amber-500" />
                                    <p className="text-sm font-bold text-ink-600">No matching recorded vouchers found. Please check manual entries.</p>
-                                   <button className="text-primary-600 text-xs font-bold uppercase tracking-widest">+ Create Manual Entry</button>
+                                   <button 
+                                     onClick={() => {
+                                       const typeParam = selectedEntry.type === 'Credit' ? 'Receipt' : 'Payment';
+                                       navigate(`/vouchers/new?type=${typeParam}&amount=${selectedEntry.amount}&narration=${encodeURIComponent(selectedEntry.description)}`);
+                                     }}
+                                     className="text-primary-600 text-xs font-bold uppercase tracking-widest"
+                                   >
+                                     + Create Manual Entry
+                                   </button>
                                 </div>
                             ) : (
                                 matchingVouchers.map(v => (

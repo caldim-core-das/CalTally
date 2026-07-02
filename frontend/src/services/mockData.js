@@ -341,6 +341,144 @@ Shall I send a payment acknowledgement to XYZ Enterprises?`,
 Compared to last quarter: ▲ +18.4%`,
     actions: ['Download PDF', 'View Details', 'Compare Quarters'],
   },
+  'send reminders': {
+    type: 'action',
+    text: `📧 **Payment Reminders Sent**
+
+I have successfully sent automated payment reminders to:
+- ABC Traders Pvt Ltd (Overdue: ₹3,42,000)
+- Mehta & Sons (Overdue: ₹1,84,500)
+- Rajesh Steel Works (Overdue: ₹87,000)`,
+    actions: [],
+  },
+  'view details': {
+    type: 'action',
+    text: `🔍 **Detailed Outstanding Receivables**
+
+All outstanding invoices are currently tracked under the Accounts Receivable register. You can navigate to **Reports > Receivables** to see the aging buckets.`,
+    actions: [],
+  },
+  'export list': {
+    type: 'action',
+    text: `📥 **List Exported**
+
+The outstanding customer receivables list has been exported to CSV. [Download Link](#)`,
+    actions: [],
+  },
+  'process payment': {
+    type: 'action',
+    text: `💵 **Payment Vouchers Drafted**
+
+I have drafted 3 payment vouchers for the unpaid vendor bills:
+- Global Supplies Ltd: ₹6,20,000
+- Prime Materials Co.: ₹5,10,000
+- Lakshmi Distributors: ₹3,90,000
+
+Would you like to post these vouchers to the ledger?`,
+    actions: ['Post Vouchers', 'Discard Vouchers'],
+  },
+  'view purchase register': {
+    type: 'action',
+    text: `📖 **Purchase Register**
+
+Opening the Purchase Register. You can view all past purchase vouchers and vendor bills here. [Go to Purchases](/purchases)`,
+    actions: [],
+  },
+  'export pdf': {
+    type: 'action',
+    text: `📥 **PDF Exported**
+
+The report has been successfully compiled and downloaded as PDF.`,
+    actions: [],
+  },
+  'send acknowledgement': {
+    type: 'action',
+    text: `📧 **Payment Acknowledgement Sent**
+
+I have sent the payment receipt acknowledgement to **XYZ Enterprises** (accounts@xyz.com).
+
+- **Receipt Number:** #REC-2026-0428
+- **Amount:** ₹87,500
+- **Date:** 01 Jun 2026`,
+    actions: [],
+  },
+  'view statement': {
+    type: 'action',
+    text: `📄 **XYZ Enterprises — Statement of Account**
+Outstanding Balance: **₹2,54,500**
+
+Here is the detailed statement of account for **XYZ Enterprises** (representing recent invoices and payments):
+
+| Date | Type | Ref No. | Original Amt | Amount Paid | Balance | Status |
+|------|------|---------|--------------|-------------|---------|--------|
+| 10 Apr 2026 | Invoice | #INV-2026-0701 | ₹1,20,000 | ₹1,20,000 | ₹0 | Settled ✅ |
+| 02 May 2026 | Invoice | #INV-2026-0821 | ₹3,42,000 | ₹87,500 | ₹2,54,500 | Partial ⚠️ |
+| 01 Jun 2026 | Payment | #REC-2026-0428 | - | ₹87,500 | - | Applied 🔗 |
+
+**Total Outstanding Receivables: ₹2,54,500**
+
+[Open Full Statement Screen](/customers)`,
+    actions: [],
+  },
+  'record another': {
+    type: 'action',
+    text: `✍️ **Record Receipt**
+
+Sure! Please provide the receipt details:
+- Customer name?
+- Amount?
+- Payment mode?`,
+    actions: [],
+  },
+  'clone last invoice': {
+    type: 'action',
+    text: `🔄 **Invoice Cloned**
+
+I have drafted a new recurring invoice for **Sharma Industries** (₹64,000) for this month. Would you like to review and send it?`,
+    actions: ['Review Invoice', 'Send Immediately'],
+  },
+  'create new': {
+    type: 'action',
+    text: `✍️ **New Recurring Invoice**
+
+Please provide:
+- Customer name?
+- Monthly amount?
+- Billing start date?`,
+    actions: [],
+  },
+  'view templates': {
+    type: 'action',
+    text: `📋 **Recurring Templates**
+
+Opening your active recurring invoice templates list. [Manage Templates](/sales)`,
+    actions: [],
+  },
+  'file gstr-1': {
+    type: 'action',
+    text: ` Filing GSTR-1...
+
+I have compiled the GSTR-1 return for May 2026 and initiated the submission to the GST Portal. Status: **Processing** ⏳.`,
+    actions: [],
+  },
+  'download gst excel': {
+    type: 'action',
+    text: `📥 **GST Excel Exported**
+
+The GSTR-1 and GSTR-2A monthly reconciliation sheets have been downloaded. [Download Excel](#)`,
+    actions: [],
+  },
+  'reconcile itc': {
+    type: 'action',
+    text: `🔄 **ITC Reconciliation**
+
+Comparing GSTR-2B against books...
+- Matched: 92% of invoices.
+- Mismatched: 3 bills (₹14,500 tax value).
+
+Would you like to view the list of mismatched vendor invoices?`,
+    actions: ['View Mismatches', 'Email Vendors'],
+  },
   default: {
     type: 'info',
     text: `I'm here to help with your Tally accounting tasks. I can help you:
