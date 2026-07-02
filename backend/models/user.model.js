@@ -56,11 +56,26 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.STRING,
       allowNull: true
     },
+    // Secure email verification flow
+    isEmailVerified: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+      allowNull: false
+    },
     emailVerificationToken: {
       type: DataTypes.STRING,
       allowNull: true
     },
     emailVerificationExpiry: {
+      type: DataTypes.DATE,
+      allowNull: true
+    },
+    // Password Reset Flow
+    resetPasswordToken: {
+      type: DataTypes.STRING,
+      allowNull: true
+    },
+    resetPasswordExpiry: {
       type: DataTypes.DATE,
       allowNull: true
     },

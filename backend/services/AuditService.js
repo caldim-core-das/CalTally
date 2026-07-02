@@ -16,6 +16,7 @@ class AuditService {
    * @param {string} [params.companyId] - The ID of the company (tenant context)
    * @param {string} [params.userId] - The ID of the user who performed the action 
    * @param {Object} [params.req] - Express request object to capture IP/UserAgent
+   * @param {string} [params.status] - Status of the action (e.g. COMPLETED, FAILED)
    */
   static async log({ 
     action, 
@@ -25,7 +26,8 @@ class AuditService {
     newData, 
     companyId, 
     userId, 
-    req 
+    req,
+    status 
   }) {
     try {
       await AuditLog.create({
@@ -37,7 +39,8 @@ class AuditService {
         CompanyId: companyId,
         UserId: userId,
         ipAddress: req?.ip || req?.headers['x-forwarded-for'] || null,
-        userAgent: req?.headers['user-agent'] || null
+        userAgent: req?.headers['user-agent'] || null,
+        status: status || 'COMPLETED'
       });
     } catch (err) {
       // We don't want to crash the main request if logging fails, but we should log the error

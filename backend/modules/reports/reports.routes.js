@@ -26,4 +26,14 @@ router.get('/cost-centers/:companyId', authorizeRoles(...ALL_ROLES), reportsCont
 // Audit logs are restricted to privileged roles
 router.get('/audit/:companyId', authorizeRoles(...AUDIT_ROLES), reportsController.getAuditLogs);
 
+// Custom Reports & Saved Reports
+const customReportController = require('./customReport.controller');
+router.post('/custom/:companyId', authorizeRoles(...ALL_ROLES), customReportController.runCustomReport);
+router.get('/custom/columns', authorizeRoles(...ALL_ROLES), customReportController.getValidColumns);
+
+router.post('/saved/:companyId', authorizeRoles(...ALL_ROLES), customReportController.createSavedReport);
+router.get('/saved/:companyId', authorizeRoles(...ALL_ROLES), customReportController.getSavedReports);
+router.put('/saved/:companyId/:id', authorizeRoles(...ALL_ROLES), customReportController.updateSavedReport);
+router.delete('/saved/:companyId/:id', authorizeRoles(...ALL_ROLES), customReportController.deleteSavedReport);
+
 module.exports = router;

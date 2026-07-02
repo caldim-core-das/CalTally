@@ -1,6 +1,7 @@
 const { User, Company } = require('./models');
 const bcrypt = require('bcryptjs');
 
+
 async function createEmployee() {
   try {
     const email = 'employee@test.com';

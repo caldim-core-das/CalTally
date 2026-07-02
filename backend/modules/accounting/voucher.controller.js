@@ -37,16 +37,7 @@ exports.createVoucher = async (req, res, next) => {
 
     await t.commit();
 
-    // Log the successful creation
-    await AuditService.log({
-      action: 'CREATE_VOUCHER',
-      tableName: 'Vouchers',
-      recordId: voucher.id,
-      newData: voucher,
-      companyId: companyId,
-      userId: req.user?.id,
-      req
-    });
+    // The Sequelize afterCreate hook in models/index.js automatically handles AuditLog creation.
 
     res.status(201).json({ message: 'Voucher posted successfully.', voucher });
   } catch (err) {
@@ -88,15 +79,7 @@ exports.updateVoucher = async (req, res, next) => {
 
     await t.commit();
 
-    await AuditService.log({
-      action: 'UPDATE_VOUCHER',
-      tableName: 'Vouchers',
-      recordId: voucher.id,
-      newData: voucher,
-      companyId: companyId,
-      userId: req.user?.id,
-      req
-    });
+    // The Sequelize afterUpdate hook in models/index.js automatically handles AuditLog creation.
 
     res.json({ message: 'Voucher updated successfully.', voucher });
   } catch (err) {

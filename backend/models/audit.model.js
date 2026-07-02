@@ -63,6 +63,11 @@ module.exports = (sequelize, DataTypes) => {
     CompanyId: {
       type: DataTypes.UUID,
       allowNull: true
+    },
+    status: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      defaultValue: 'COMPLETED'
     }
   });
 

@@ -36,12 +36,14 @@ const CreateItemModal = ({ isOpen, onClose, onSuccess, companyId }) => {
   const [formError, setFormError] = useState('');
   const { addNotification } = useNotificationStore();
   
-  const [newItem, setNewItem] = useState({
-    name: '', type: 'Goods', unit: '',
-    salesInformation: true, sellingPrice: '', salesAccount: 'Sales', salesDescription: '',
-    purchaseInformation: true, costPrice: '', purchaseAccount: 'Cost of Goods Sold', purchaseDescription: '',
-    preferredVendor: '', imageUrl: '',
-    hsnCode: '', gstRate: 18, itemCode: ''
+  const [newItem, setNewItem] = useState(() => {
+    return {
+      name: '', type: 'Goods', unit: '',
+      salesInformation: true, sellingPrice: '', salesAccount: 'Sales', salesDescription: '',
+      purchaseInformation: true, costPrice: '', purchaseAccount: 'Cost of Goods Sold', purchaseDescription: '',
+      preferredVendor: '', imageUrl: '', hsnCode: '', gstRate: 18, itemCode: '',
+      openingStock: '', reorderLevel: ''
+    };
   });
 
   const [isUnitOpen, setIsUnitOpen] = useState(false);
@@ -273,6 +275,29 @@ const CreateItemModal = ({ isOpen, onClose, onSuccess, companyId }) => {
                       </div>
                     </div>
                   )}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-[11px] font-bold text-slate-400 uppercase tracking-[0.2em] ml-1">Opening Stock</label>
+                  <input
+                    type="number"
+                    value={newItem.openingStock || ''}
+                    onChange={e => setNewItem({...newItem, openingStock: e.target.value})}
+                    placeholder="0.00"
+                    className="w-full bg-white border border-slate-200 rounded-2xl px-4 py-3 text-sm font-bold text-slate-800 outline-none focus:border-blue-500 transition-all shadow-sm"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[11px] font-bold text-slate-400 uppercase tracking-[0.2em] ml-1">Reorder Level (Alerts)</label>
+                  <input
+                    type="number"
+                    value={newItem.reorderLevel || ''}
+                    onChange={e => setNewItem({...newItem, reorderLevel: e.target.value})}
+                    placeholder="0.00"
+                    className="w-full bg-white border border-slate-200 rounded-2xl px-4 py-3 text-sm font-bold text-slate-800 outline-none focus:border-blue-500 transition-all shadow-sm"
+                  />
                 </div>
               </div>
             </div>

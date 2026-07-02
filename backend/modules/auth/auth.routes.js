@@ -41,6 +41,12 @@ router.post('/register',      strictLimiter, authController.register);
 router.post('/login',         strictLimiter, authController.login);
 router.post('/google-login',  strictLimiter, authController.googleLogin);
 
+// ── Forgot Password & Verification ────────────────────────────────────────────
+router.post('/forgot-password', strictLimiter, authController.forgotPassword);
+router.post('/reset-password', strictLimiter, authController.resetPassword);
+router.post('/resend-verification', strictLimiter, authController.resendVerification);
+router.get('/verify-email-signup', looseLimiter, authController.verifyEmailSignup);
+
 // ── Token Lifecycle ───────────────────────────────────────────────────────────
 router.post('/refresh',  looseLimiter, authController.refresh);
 router.post('/logout',   verifyToken,  authController.logout);
