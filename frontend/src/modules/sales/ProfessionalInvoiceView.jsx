@@ -502,6 +502,10 @@ export default function ProfessionalInvoiceView() {
             if (source.adjustment) setAdjustment(source.adjustment);
             if (source.subject) setSubject(source.subject);
             if (source.customerNotes) setNotes(source.customerNotes);
+            if (source.taxPercent !== undefined) setGstPercent(source.taxPercent);
+            else if (source.gstPercent !== undefined) setGstPercent(source.gstPercent);
+            if (source.tcsApplicable) setTcsApplicable(source.tcsApplicable);
+            if (source.tcsRate) setTcsRate(source.tcsRate);
           } else if (location.state.customerId) {
             setCustomerId(location.state.customerId);
           }
@@ -1185,9 +1189,10 @@ export default function ProfessionalInvoiceView() {
                  <span className="font-bold text-slate-700">GST</span>
                  <div className="flex items-center gap-2">
                     <select
+                      disabled={!!orderNo || !!location.state?.orderData || !!location.state?.quoteData || !!location.state?.challanData}
                       value={gstPercent === 0 ? '' : String(gstPercent)}
                       onChange={e => setGstPercent(e.target.value === '' ? 0 : parseFloat(e.target.value))}
-                      className="h-9 px-3 bg-white border border-slate-200 rounded-lg text-[13px] font-medium text-slate-500 outline-none min-w-[140px] focus:border-blue-500 transition-all cursor-pointer"
+                      className={`h-9 px-3 bg-white border border-slate-200 rounded-lg text-[13px] font-medium text-slate-500 outline-none min-w-[140px] transition-all ${(!!orderNo || !!location.state?.orderData || !!location.state?.quoteData || !!location.state?.challanData) ? 'opacity-60 cursor-not-allowed bg-slate-50' : 'focus:border-blue-500 cursor-pointer'}`}
                     >
                       <option value="">Select a Tax</option>
                       <option value="5">GST @ 5%</option>

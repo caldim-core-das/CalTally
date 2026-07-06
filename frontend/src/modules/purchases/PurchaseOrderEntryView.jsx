@@ -980,9 +980,15 @@ const PurchaseOrderEntryView = ({ companyId }) => {
                    <select 
                      value={formData.shipmentPreference}
                      onChange={(e) => setFormData({ ...formData, shipmentPreference: e.target.value })}
-                     className="w-full h-9 px-3 pr-8 border border-slate-300 rounded text-slate-400 focus:border-blue-500 outline-none appearance-none"
+                     className="w-full h-9 px-3 pr-8 border border-slate-300 rounded text-slate-700 focus:border-blue-500 outline-none appearance-none"
                    >
                       <option value="" disabled>Choose the shipment preference</option>
+                      <option value="By Road">By Road</option>
+                      <option value="By Air">By Air</option>
+                      <option value="By Sea">By Sea</option>
+                      <option value="By Rail">By Rail</option>
+                      <option value="By Courier">By Courier</option>
+                      <option value="Hand Delivery">Hand Delivery</option>
                    </select>
                    <ChevronDown size={14} className="absolute right-3 top-2.5 text-slate-400 pointer-events-none" />
                 </div>

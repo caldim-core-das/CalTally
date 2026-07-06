@@ -6,8 +6,8 @@ const { verifyToken, authorizeRoles, tenantAccess } = require('../../middleware/
 // All company routes require authentication
 router.use(verifyToken);
 
-// Create a new company (SUPER_ADMIN only)
-router.post('/', authorizeRoles('SUPER_ADMIN'), companyController.createCompany);
+// Create a new company (SUPER_ADMIN and ADMIN allowed)
+router.post('/', authorizeRoles('SUPER_ADMIN', 'ADMIN'), companyController.createCompany);
 // List companies the user belongs to
 router.get('/', companyController.getCompanies);
 // Get a specific company (must belong to it)

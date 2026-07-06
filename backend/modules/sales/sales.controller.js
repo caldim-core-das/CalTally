@@ -33,8 +33,8 @@ exports.createOrder = async (req, res, next) => {
       adjustment,
       totalAmount,
       tcsApplicable,
-      tcsRate,
-      tcsAmount,
+      tcsRate: tcsRate === '' ? null : parseFloat(tcsRate),
+      tcsAmount: tcsAmount === '' ? null : parseFloat(tcsAmount),
       status: status || 'Draft',
       attachments,
       ProjectId: projectId || null
@@ -70,7 +70,7 @@ exports.getOrders = async (req, res, next) => {
     const orders = await SalesOrder.findAll({
       where: { CompanyId: companyId },
       include: [
-        { model: Ledger, as: 'Customer', attributes: ['name', 'currency', 'state', 'gstNumber', 'billingAddress', 'shippingAddress'] },
+        { model: Ledger, as: 'Customer', attributes: ['name', 'currency', 'state', 'gstNumber', 'billingAddress', 'shippingAddress', 'email'] },
         { model: SalesOrderItem, as: 'Items' }
       ],
       order: [['date', 'DESC'], ['createdAt', 'DESC']]
@@ -119,8 +119,8 @@ exports.updateOrder = async (req, res, next) => {
       adjustment,
       totalAmount,
       tcsApplicable,
-      tcsRate,
-      tcsAmount,
+      tcsRate: tcsRate === '' ? null : parseFloat(tcsRate),
+      tcsAmount: tcsAmount === '' ? null : parseFloat(tcsAmount),
       status: status || order.status,
       attachments,
       ProjectId: projectId || null
@@ -167,7 +167,9 @@ exports.createInvoice = async (req, res, next) => {
       CompanyId: companyId, customerLedgerId, invoiceNumber, date, dueDate,
       orderNumber, terms, salesperson, subject, subTotal, 
       discountAmount, discountPercent, gstAmount, adjustment, totalAmount,
-      tcsApplicable, tcsRate, tcsAmount,
+      tcsApplicable, 
+      tcsRate: tcsRate === '' ? null : parseFloat(tcsRate), 
+      tcsAmount: tcsAmount === '' ? null : parseFloat(tcsAmount),
       customerNotes, termsConditions, status: status || 'Draft',
       deliveryAddress,
       balance: totalAmount, // Initialize balance
