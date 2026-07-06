@@ -19,11 +19,6 @@ const corsOptions = {
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-const corsOptions = {
-  origin: process.env.CLIENT_URL || 'http://localhost:5173',
-  credentials: true,
-};
-
 // 2. Middleware Strategy
 app.use(cors(corsOptions));
 app.use(express.json({
@@ -120,7 +115,7 @@ app.get('/api/debug-logs', async (req, res) => {
 
 // 6. DB Sync & Boot Strategy
 const dialect = process.env.DB_DIALECT || 'sqlite';
-const syncOptions = {}; // Disabled alter to avoid Postgres Enum cast crashes
+const syncOptions = dialect === 'sqlite' ? { alter: true } : {}; // Disabled alter for Postgres to avoid Enum cast crashes
 
 sequelize.sync(syncOptions).then(async () => {
   console.log(`✅ Ledger Database Synced [${dialect}]`);
