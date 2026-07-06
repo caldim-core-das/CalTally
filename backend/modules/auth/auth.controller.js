@@ -28,7 +28,7 @@ const hashToken = (token) =>
  */
 const getCompanyRole = async (userId, globalRole, companyId) => {
   if (globalRole === 'SUPER_ADMIN') return 'SUPER_ADMIN';
-  if (!companyId) return 'VIEWER';
+  if (!companyId) return globalRole === 'ADMIN' ? 'ADMIN' : 'VIEWER';
   try {
     const { UserCompany } = require('../../models');
     const relation = await UserCompany.findOne({
