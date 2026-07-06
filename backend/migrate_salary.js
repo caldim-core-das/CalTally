@@ -10,6 +10,8 @@ const {
 
 async function runMigration() {
   console.log('--- STARTING SALARY STRUCTURES SCHEMA MIGRATION ---');
+
+  
   
   try {
     // Drop existing tables and indexes in reverse order of foreign key dependencies
