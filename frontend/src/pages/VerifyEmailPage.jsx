@@ -50,7 +50,7 @@ const VerifyEmailPage = () => {
       <div className="flex items-center gap-2 mb-8">
         <ShieldCheck size={28} className="text-blue-500" />
         <span className={`text-xl font-bold tracking-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>
-          CalTally ERP
+          CalBooks ERP
         </span>
       </div>
 
@@ -125,7 +125,7 @@ const VerifyEmailPage = () => {
 
       {/* Footer note */}
       <p className={`mt-6 text-xs ${isDark ? 'text-slate-600' : 'text-slate-400'}`}>
-        CalTally ERP · Secure Email Verification
+        CalBooks ERP · Secure Email Verification
       </p>
     </div>
   );

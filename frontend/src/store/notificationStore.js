@@ -60,7 +60,7 @@ const useNotificationStore = create(
       clearActivity: () => set({ activityLog: [] }),
     }),
     {
-      name: 'caltally-activity-log',
+      name: 'calbooks-activity-log',
       // Only persist the activityLog, not transient notifications
       partialize: (state) => ({ activityLog: state.activityLog }),
     }

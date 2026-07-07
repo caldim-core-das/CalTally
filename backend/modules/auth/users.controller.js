@@ -78,16 +78,16 @@ exports.inviteUser = async (req, res, next) => {
       const companyName = company?.name || 'our organization';
       MailService.sendMail({
         to: user.email,
-        subject: `You have been added to ${companyName} on CalTally`,
+        subject: `You have been added to ${companyName} on CalBooks`,
         html: `
           <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px;">
             <h2 style="color: #2563eb; margin-top: 0;">Workspace Invitation</h2>
             <p>Hi <strong>${user.name || 'User'}</strong>,</p>
-            <p>You have been granted access to the <strong>${companyName}</strong> workspace on the CalTally ERP platform with the role of <strong>${user.role}</strong>.</p>
-            <p>Since you already have a CalTally account, simply log in with your existing password. You will now be able to switch to this new workspace from your dashboard.</p>
-            <a href="${process.env.CLIENT_URL || 'http://localhost:5173'}/login" style="display:inline-block; background:#2563eb; color:#fff; text-decoration:none; padding:10px 20px; border-radius:6px; font-weight:bold; margin: 15px 0;">Log In to CalTally</a>
+            <p>You have been granted access to the <strong>${companyName}</strong> workspace on the CalBooks ERP platform with the role of <strong>${user.role}</strong>.</p>
+            <p>Since you already have a CalBooks account, simply log in with your existing password. You will now be able to switch to this new workspace from your dashboard.</p>
+            <a href="${process.env.CLIENT_URL || 'http://localhost:5173'}/login" style="display:inline-block; background:#2563eb; color:#fff; text-decoration:none; padding:10px 20px; border-radius:6px; font-weight:bold; margin: 15px 0;">Log In to CalBooks</a>
             <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 20px 0;">
-            <p style="margin-bottom: 0; font-size: 12px; color: #64748b;">Regards,<br><strong>CalTally Operations Team</strong></p>
+            <p style="margin-bottom: 0; font-size: 12px; color: #64748b;">Regards,<br><strong>CalBooks Operations Team</strong></p>
           </div>
         `
       }).catch(mailErr => console.error('✉️ Failed to send workspace addition email:', mailErr));
@@ -130,12 +130,12 @@ exports.inviteUser = async (req, res, next) => {
     const companyName = company?.name || 'our organization';
     MailService.sendMail({
       to: email,
-      subject: `Invitation to join ${companyName} on CalTally`,
+      subject: `Invitation to join ${companyName} on CalBooks`,
       html: `
         <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px;">
-          <h2 style="color: #2563eb; margin-top: 0;">Welcome to CalTally ERP!</h2>
+          <h2 style="color: #2563eb; margin-top: 0;">Welcome to CalBooks ERP!</h2>
           <p>Hi <strong>${name}</strong>,</p>
-          <p>You have been invited by the Administrator to join <strong>${companyName}</strong> on the CalTally ERP platform with the role of <strong>${role || 'Viewer'}</strong>.</p>
+          <p>You have been invited by the Administrator to join <strong>${companyName}</strong> on the CalBooks ERP platform with the role of <strong>${role || 'Viewer'}</strong>.</p>
           <p>Here are your login credentials:</p>
           <div style="background-color: #f8fafc; padding: 15px; border-radius: 8px; margin: 15px 0;">
             <ul style="margin: 0; padding-left: 20px; line-height: 1.6;">
@@ -146,7 +146,7 @@ exports.inviteUser = async (req, res, next) => {
           </div>
           <p style="color: #64748b; font-size: 12px; line-height: 1.5;">For security reasons, please log in and change your password in the "My Profile & Security" settings tab immediately upon your first login.</p>
           <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 20px 0;">
-          <p style="margin-bottom: 0;">Regards,<br><strong>CalTally Operations Team</strong></p>
+          <p style="margin-bottom: 0;">Regards,<br><strong>CalBooks Operations Team</strong></p>
         </div>
       `
     }).catch(mailErr => console.error('✉️ Failed to send onboarding email:', mailErr));
@@ -270,19 +270,19 @@ exports.requestEmailChange = async (req, res, next) => {
 
     await MailService.sendMail({
       to: newEmail,
-      subject: 'Verify your new email address – CalTally',
+      subject: 'Verify your new email address – CalBooks',
       html: `
         <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 12px;">
           <h2 style="color: #2563eb; margin-top: 0;">Confirm Your New Email Address</h2>
           <p>Hi <strong>${user.name || 'User'}</strong>,</p>
-          <p>A request was made to change the email address for your CalTally account to <strong>${newEmail}</strong>.</p>
+          <p>A request was made to change the email address for your CalBooks account to <strong>${newEmail}</strong>.</p>
           <p>Click the button below to confirm. This link expires in <strong>1 hour</strong>.</p>
           <a href="${verifyLink}" style="display:inline-block; background:#2563eb; color:#fff; text-decoration:none; padding:12px 24px; border-radius:8px; font-weight:bold; margin: 16px 0;">
             Confirm New Email
           </a>
           <p style="color:#64748b; font-size:12px;">If you did not request this change, you can safely ignore this email. Your current email address will remain unchanged.</p>
           <hr style="border:0; border-top:1px solid #e2e8f0; margin:20px 0;">
-          <p style="margin-bottom:0;">Regards,<br><strong>CalTally Security Team</strong></p>
+          <p style="margin-bottom:0;">Regards,<br><strong>CalBooks Security Team</strong></p>
         </div>
       `
     });

@@ -17,7 +17,7 @@ const BackupSettings = ({ companyId }) => {
       // Bundle company settings, metadata, and export as JSON file
       const backupData = {
         exportedAt: new Date().toISOString(),
-        software: 'CalTally ERP',
+        software: 'CalBooks ERP',
         version: '1.2.0',
         companyProfile: company,
         notes: 'Backup containing organization parameters, subscription state, and workspace structure.'
@@ -30,7 +30,7 @@ const BackupSettings = ({ companyId }) => {
       downloadAnchor.setAttribute('href', url);
       downloadAnchor.setAttribute(
         'download',
-        `caltally_backup_${(company.name || 'company').toLowerCase().replace(/\s+/g, '_')}_${Date.now()}.json`
+        `calbooks_backup_${(company.name || 'company').toLowerCase().replace(/\s+/g, '_')}_${Date.now()}.json`
       );
       document.body.appendChild(downloadAnchor);
       downloadAnchor.click();
@@ -110,7 +110,7 @@ const BackupSettings = ({ companyId }) => {
                 <input
                   type="text"
                   disabled
-                  value="Default CalTally Backup Storage"
+                  value="Default CalBooks Backup Storage"
                   className="w-full h-10 border border-slate-150 bg-slate-50 rounded-lg px-3 text-[13px] text-slate-400 cursor-not-allowed outline-none font-sans"
                 />
               </div>

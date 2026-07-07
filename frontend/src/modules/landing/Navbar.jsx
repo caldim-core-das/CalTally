@@ -24,9 +24,9 @@ export default function Navbar() {
           {/* Logo */}
           <div className="flex items-center gap-2.5 cursor-pointer" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
             <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-teal-400 to-indigo-500 flex items-center justify-center shadow-md shadow-teal-200">
-              <span className="text-white font-black text-sm tracking-tight">CT</span>
+              <span className="text-white font-black text-sm tracking-tight">CB</span>
             </div>
-            <span className="text-slate-800 font-bold text-lg tracking-tight">Cal<span className="text-teal-500">Tally</span></span>
+            <span className="text-slate-800 font-bold text-lg tracking-tight">Cal<span className="text-teal-500">Books</span></span>
           </div>
 
           {/* Desktop Nav */}

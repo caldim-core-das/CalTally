@@ -191,7 +191,7 @@ exports.sendEmail = async (req, res, next) => {
 
     // Fetch company data so the PDF and email show the correct sender details
     const company = await Company.findByPk(challan.CompanyId);
-    const companyName = company?.name || 'CalTally';
+    const companyName = company?.name || 'CalBooks';
 
     const items = await DeliveryChallanItem.findAll({ 
         where: { DeliveryChallanId: id },

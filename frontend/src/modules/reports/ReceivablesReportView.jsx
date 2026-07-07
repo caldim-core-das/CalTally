@@ -36,7 +36,7 @@ const ReceivablesReportView = () => {
 
   const handleDownloadPDF = () => {
     const doc = new jsPDF();
-    const companyName = sessionStorage.getItem('companyName') || 'CalTally Company';
+    const companyName = sessionStorage.getItem('companyName') || 'CalBooks Company';
     
     // Title
     doc.setFontSize(20);

@@ -703,43 +703,15 @@ const LedgersView = ({ showNew }) => {
                             )}
 
                             <div className="space-y-6">
-                                {/* RECORD TYPE SELECTOR - CARD STYLE */}
-                                {!editingId && (
-                                    <div className="space-y-3">
-                                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Record Type</label>
-                                        <div className="grid grid-cols-2 gap-4">
-                                            <div 
-                                                onClick={() => setFormData({ ...formData, type: 'Ledger' })}
-                                                className={`p-4 rounded-2xl border-2 cursor-pointer transition-all duration-200 text-center flex flex-col items-center gap-2 font-sans
-                                                    ${formData.type === 'Ledger' 
-                                                        ? 'border-[#1e61f0] bg-blue-50/20 text-[#1e61f0]' 
-                                                        : 'border-slate-200 bg-slate-50/50 hover:border-slate-300 text-slate-500'}`}
-                                            >
-                                                <FileText size={20} className={formData.type === 'Ledger' ? 'text-[#1e61f0]' : 'text-slate-400'} />
-                                                <span className="text-[11px] font-extrabold uppercase tracking-wider">Ledger Account</span>
-                                            </div>
-                                            <div 
-                                                onClick={() => setFormData({ ...formData, type: 'Group' })}
-                                                className={`p-4 rounded-2xl border-2 cursor-pointer transition-all duration-200 text-center flex flex-col items-center gap-2 font-sans
-                                                    ${formData.type === 'Group' 
-                                                        ? 'border-[#1e61f0] bg-blue-50/20 text-[#1e61f0]' 
-                                                        : 'border-slate-200 bg-slate-50/50 hover:border-slate-300 text-slate-500'}`}
-                                            >
-                                                <Folder size={20} className={formData.type === 'Group' ? 'text-[#1e61f0]' : 'text-slate-400'} />
-                                                <span className="text-[11px] font-extrabold uppercase tracking-wider">Account Group</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                )}
 
                                 {/* NAME INPUT */}
                                 <div className="space-y-3">
-                                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">{formData.type === 'Ledger' ? 'Ledger Name' : 'Group Name'}</label>
+                                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Ledger Name</label>
                                     <input 
                                         type="text"
                                         required
                                         className="w-full p-4 bg-slate-50 border-none rounded-xl font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-600 transition-all font-sans"
-                                        placeholder={formData.type === 'Ledger' ? 'e.g. Petty Cash, Office Supplies...' : 'e.g. Administration, Factory Overheads...'}
+                                        placeholder="e.g. Petty Cash, Office Supplies..."
                                         value={formData.name}
                                         onChange={e => setFormData({ ...formData, name: e.target.value })}
                                     />

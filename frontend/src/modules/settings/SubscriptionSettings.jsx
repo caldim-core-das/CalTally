@@ -336,9 +336,9 @@ const SubscriptionSettings = ({ companyId }) => {
                 <p className="text-sm text-slate-500 dark:text-slate-400 font-medium mt-1">Transaction ID: TXN-{Math.random().toString(36).substring(2, 10).toUpperCase()}</p>
               </div>
               <div className="text-right">
-                <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100">CalTally Solutions</h2>
-                <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">contact@caltally.com</p>
-                <p className="text-sm text-slate-500 dark:text-slate-400">www.caltally.com</p>
+                <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100">CalBooks Solutions</h2>
+                <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">contact@calbooks.com</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400">www.calbooks.com</p>
               </div>
             </div>
 

@@ -162,14 +162,14 @@ exports.sendEmail = async (req, res, next) => {
 
     // Fetch company so PDF and email use real company details
     const company = await Company.findByPk(quote.CompanyId);
-    const companyName = company?.name || 'CalTally';
+    const companyName = company?.name || 'CalBooks';
 
     const items = JSON.parse(quote.itemsJson || '[]');
     const pdfBuffer = await PDFService.generateQuote(quote, items, company ? company.toJSON() : {});
 
     const userEmail = process.env.SMTP_USER || process.env.MAIL_USER;
     const userPass = process.env.SMTP_PASS || process.env.MAIL_PASS;
-    const fromEmail = userEmail || process.env.MAIL_USER || 'noreply@caltally.com';
+    const fromEmail = userEmail || process.env.MAIL_USER || 'noreply@calbooks.com';
 
     const bodyText = typeof body === 'string' ? body : String(body || '');
 

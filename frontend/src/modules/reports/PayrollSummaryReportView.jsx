@@ -66,7 +66,7 @@ export default function PayrollSummaryReport({ companyId }) {
 
   const handleDownloadPDF = () => {
     const doc = new jsPDF();
-    const companyName = sessionStorage.getItem('companyName') || 'CalTally Company';
+    const companyName = sessionStorage.getItem('companyName') || 'CalBooks Company';
 
     doc.setFontSize(20);
     doc.setFont('helvetica', 'bold');

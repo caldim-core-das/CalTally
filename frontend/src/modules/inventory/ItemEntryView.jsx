@@ -211,6 +211,16 @@ const ItemEntryView = ({ onSaveSuccess, onCancel }) => {
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
+    if (!newItem.unit || !newItem.unit.trim()) {
+      setFormError('Unit is required. Please select or enter a unit.');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+    if (!newItem.itemCode || !newItem.itemCode.trim()) {
+      setFormError('SKU / Item Code is required. Please provide a valid code before saving.');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
     if (newItem.salesInformation && (!newItem.sellingPrice || parseFloat(newItem.sellingPrice) <= 0)) {
        setFormError('Selling Price is required. Please provide a value in Sales Information.');
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -448,10 +458,12 @@ const ItemEntryView = ({ onSaveSuccess, onCancel }) => {
                 </div>
 
                 <div className="space-y-2 relative" ref={unitDropdownRef}>
-                  <label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest ml-1">Unit</label>
+                  <label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest ml-1">Unit <span className="text-rose-500">*</span></label>
                   <div 
                     onClick={() => setIsUnitOpen(!isUnitOpen)}
-                    className="flex items-center justify-between bg-slate-50/50 border border-slate-200 rounded-xl px-4 py-3 text-[13px] font-bold text-slate-700 cursor-pointer hover:border-blue-300 transition-all"
+                    className={`flex items-center justify-between bg-slate-50/50 border rounded-xl px-4 py-3 text-[13px] font-bold text-slate-700 cursor-pointer transition-all ${
+                      formError && (!newItem.unit || !newItem.unit.trim()) ? 'border-rose-500 ring-4 ring-rose-500/10' : 'border-slate-200 hover:border-blue-300'
+                    }`}
                   >
                     <span className={!newItem.unit ? 'text-slate-400 font-medium' : 'text-slate-900'}>
                       {newItem.unit || 'Select or type to add'}
@@ -494,12 +506,17 @@ const ItemEntryView = ({ onSaveSuccess, onCancel }) => {
               {/* Advanced Inventory Details */}
               <div className="grid grid-cols-3 gap-6 pt-4 border-t border-slate-100">
                 <div className="space-y-2">
-                  <label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest ml-1">SKU / Item Code</label>
+                  <label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest ml-1">SKU / Item Code <span className="text-rose-500">*</span></label>
                   <input 
                     value={newItem.itemCode} 
-                    onChange={e => setNewItem({...newItem, itemCode: e.target.value})}
+                    onChange={e => {
+                      setNewItem({...newItem, itemCode: e.target.value});
+                      if (formError) setFormError('');
+                    }}
                     placeholder="e.g. TSHIRT-BLU-L"
-                    className="w-full bg-slate-50/50 border border-slate-200 rounded-xl px-4 py-3 text-[13px] font-bold text-slate-800 outline-none focus:bg-white focus:border-blue-500 transition-all" 
+                    className={`w-full bg-slate-50/50 border rounded-xl px-4 py-3 text-[13px] font-bold text-slate-800 outline-none focus:bg-white transition-all ${
+                      formError && (!newItem.itemCode || !newItem.itemCode.trim()) ? 'border-rose-500 focus:ring-4 focus:ring-rose-500/10' : 'border-slate-200 focus:border-blue-500'
+                    }`}
                   />
                 </div>
                 <div className="space-y-2">

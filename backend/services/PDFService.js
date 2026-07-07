@@ -1195,7 +1195,7 @@ class PDFService {
             doc.fillColor('#4f46e5').fontSize(5).font('Helvetica-Bold')
                .text('SECURED', stampX + 11, stampY + 15, { align: 'center', width: 28 })
                .text('VERIFIED', stampX + 11, stampY + 24, { align: 'center', width: 28 })
-               .text('CALTALLY', stampX + 11, stampY + 33, { align: 'center', width: 28 });
+               .text('CALBOOKS', stampX + 11, stampY + 33, { align: 'center', width: 28 });
 
             // Signature
             const sigX = 420;

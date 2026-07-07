@@ -79,7 +79,7 @@ const PaymentReceiptDetail = ({ id, navigate, companyId }) => {
                        (parseFloat(t.credit || 0) > 0 && !groupName.includes('bank') && !groupName.includes('cash'));
             })?.Ledger;
             setEmailTo(customer?.email || '');
-            setEmailSubject(`Payment Receipt - ${payment.voucherNumber} from ${sessionStorage.getItem('companyName') || 'CalTally'}`);
+            setEmailSubject(`Payment Receipt - ${payment.voucherNumber} from ${sessionStorage.getItem('companyName') || 'CalBooks'}`);
             
             const amount = payment.Transactions.reduce((s, t) => s + parseFloat(t.credit || 0), 0);
             const bank = payment.Transactions.find(t => {
@@ -89,7 +89,7 @@ const PaymentReceiptDetail = ({ id, navigate, companyId }) => {
                        (parseFloat(t.debit || 0) > 0 && !groupName.includes('debtors') && !groupName.includes('customer'));
             })?.Ledger;
             
-            const cleanCompany = (sessionStorage.getItem('companyName') || 'CalTally');
+            const cleanCompany = (sessionStorage.getItem('companyName') || 'CalBooks');
             const currency = getCurrencyDisplay(customer?.currency) || '₹';
             const formattedAmount = parseFloat(amount).toLocaleString('en-IN', { minimumFractionDigits: 2 });
             const pDate = new Date(payment.date).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
@@ -334,7 +334,7 @@ ${cleanCompany}`
                                      <div className="w-14 h-14 rounded-full border border-dashed border-indigo-400/40 flex flex-col items-center justify-center text-[7px] font-black uppercase text-indigo-400/60 tracking-wider">
                                          <span>SECURED</span>
                                          <span className="text-[6px] font-medium font-mono">VERIFIED</span>
-                                         <span>CALTALLY</span>
+                                         <span>CALBOOKS</span>
                                      </div>
                                  </div>
                                  

@@ -23,14 +23,14 @@ export default function ConnectBankModal({ onClose, onSuccess }) {
       <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-md w-full border border-slate-100 animate-scale-up" style={{ maxWidth: 480 }}>
         <h2 className="text-xl font-bold text-slate-800 tracking-tight mb-2">Connect Your Bank Account</h2>
         <p style={{ color: '#555', marginBottom: 16 }} className="text-xs leading-relaxed">
-          CalTally uses the RBI-regulated Account Aggregator framework to securely
+          CalBooks uses the RBI-regulated Account Aggregator framework to securely
           fetch your bank transactions. Your credentials are never shared with us.
         </p>
         <ul style={{ color: '#444', fontSize: 13, marginBottom: 20 }} className="list-disc pl-5 space-y-1.5 font-medium">
           <li>Supports 112+ banks including HDFC, ICICI, SBI, Axis, Kotak</li>
           <li>Transactions import automatically every day</li>
           <li>You can revoke access at any time</li>
-          <li>End-to-end encrypted — CalTally never sees your login</li>
+          <li>End-to-end encrypted — CalBooks never sees your login</li>
         </ul>
         {error && <p style={{ color: 'red', fontSize: 13, marginBottom: 10 }}>{error}</p>}
         <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
