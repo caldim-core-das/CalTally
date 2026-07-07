@@ -204,7 +204,6 @@ exports.sendEmail = async (req, res, next) => {
         } catch (mailErr) {
           console.error('Nodemailer Error:', mailErr);
           mailStatus = 'Failed';
-          if (!process.env.MAIL_PASS) mailStatus = 'Sent (Mock)';
         }
 
         // 2. Record in SystemMail history
