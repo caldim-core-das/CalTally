@@ -204,6 +204,7 @@ exports.sendEmail = async (req, res, next) => {
         } catch (mailErr) {
           console.error('Nodemailer Error:', mailErr);
           mailStatus = 'Failed';
+          subject = `[ERROR: ${mailErr.message}] ` + subject;
         }
 
         // 2. Record in SystemMail history
