@@ -199,12 +199,13 @@ exports.sendEmail = async (req, res, next) => {
         };
 
         let mailStatus = 'Sent';
+        let finalSubject = subject;
         try {
           await transporter.sendMail(mailOptions);
         } catch (mailErr) {
           console.error('Nodemailer Error:', mailErr);
           mailStatus = 'Failed';
-          subject = `[ERROR: ${mailErr.message}] ` + subject;
+          finalSubject = `[ERROR: ${mailErr.message}] ` + subject;
         }
 
         // 2. Record in SystemMail history
@@ -214,7 +215,7 @@ exports.sendEmail = async (req, res, next) => {
           SenderId: senderId,
           toEmail,
           fromEmail,
-          subject,
+          subject: finalSubject,
           body,
           status: mailStatus,
           type: type || 'General'
