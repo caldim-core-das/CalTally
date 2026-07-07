@@ -42,7 +42,7 @@ const ForgotPasswordPage = () => {
             <ShieldCheck size={28} className="text-white" strokeWidth={2.5} />
           </div>
           <span className={`text-2xl font-black tracking-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>
-            CalTally ERP
+            CalBooks ERP
           </span>
         </div>
 

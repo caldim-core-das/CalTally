@@ -21,8 +21,7 @@ const PaymentsMadeEntryView = ({ companyId }) => {
     ? String(location.state.vendorId) 
     : (queryParams.get('vendorId') || '');
   const initialVendorName = location.state?.vendorName || queryParams.get('vendorName') || '';
-  
-  const [activeTab, setActiveTab] = useState('Bill Payment');
+  const activeTab = 'Bill Payment';
   
   // Data
   const [vendors, setVendors] = useState([]);
@@ -283,7 +282,7 @@ const PaymentsMadeEntryView = ({ companyId }) => {
     } else {
       setOutstandingBills([]);
     }
-  }, [formData.vendorId, activeTab, companyId, isEditMode, id]);
+  }, [formData.vendorId, companyId, isEditMode, id]);
 
   const handleAllocationChange = (billId, value) => {
     const amount = value === '' ? '' : parseFloat(value) || 0;
@@ -432,29 +431,14 @@ const PaymentsMadeEntryView = ({ companyId }) => {
 
       {/* --- TOP HEADER --- */}
       <div className="flex items-center justify-between border-b border-slate-200 px-8 h-12 shrink-0 bg-white z-10 w-full shadow-[0_1px_4px_rgba(0,0,0,0.02)]">
-         {isEditMode ? (
-           <div className="flex items-center gap-4 h-full">
-             <button onClick={() => window.history.back()} className="text-slate-500 hover:text-slate-700 p-1 rounded hover:bg-slate-100 transition-colors">
-               <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>
-             </button>
-             <span className="font-bold text-slate-900 text-[15px]">Edit Bill Payment</span>
-           </div>
-         ) : (
-           <div className="flex items-center gap-6 h-full">
-             <button
-               className={`h-full border-b-[2px] font-semibold text-[13.5px] px-2 flex items-center transition-all ${activeTab === 'Bill Payment' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-500 hover:text-blue-600'}`}
-               onClick={() => setActiveTab('Bill Payment')}
-             >
-                Bill Payment
-             </button>
-             <button
-               className={`h-full border-b-[2px] font-semibold text-[13.5px] px-2 flex items-center transition-all ${activeTab === 'Vendor Advance' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-500 hover:text-blue-600'}`}
-               onClick={() => setActiveTab('Vendor Advance')}
-             >
-                Vendor Advance
-             </button>
-           </div>
-         )}
+         <div className="flex items-center gap-4 h-full">
+           <button onClick={() => window.history.back()} className="text-slate-500 hover:text-slate-700 p-1 rounded hover:bg-slate-100 transition-colors">
+             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>
+           </button>
+           <span className="font-bold text-slate-900 text-[15px]">
+             {isEditMode ? 'Edit Bill Payment' : 'New Bill Payment'}
+           </span>
+         </div>
          <button onClick={() => window.history.back()} className="text-slate-400 hover:text-slate-600 p-1.5 rounded-full hover:bg-slate-100 transition-all">
             <X size={18} strokeWidth={2.5} />
          </button>
@@ -782,7 +766,12 @@ const PaymentsMadeEntryView = ({ companyId }) => {
                                              </div>
                                           )}
                                        </td>
-                                       <td className="py-3 px-5 text-[13px] font-bold text-blue-600 hover:underline cursor-pointer">{bill.billNumber}</td>
+                                       <td 
+                                          className="py-3 px-5 text-[13px] font-bold text-blue-600 hover:underline cursor-pointer"
+                                          onClick={() => window.open(`/bills?selected=${bill.id}`, '_blank')}
+                                       >
+                                          {bill.billNumber}
+                                       </td>
                                        <td className="py-3 px-5 text-[12.5px] text-slate-500 font-medium">{bill.reference || '---'}</td>
                                        <td className="py-3 px-5 text-[13px] text-right font-medium">₹ {parseFloat(bill.totalAmount || 0).toLocaleString('en-IN', {minimumFractionDigits: 2})}</td>
                                        <td className="py-3 px-5 text-[13px] text-right font-bold text-slate-700">₹ {parseFloat(bill.balanceDue || 0).toLocaleString('en-IN', {minimumFractionDigits: 2})}</td>
@@ -907,8 +896,11 @@ const PaymentsMadeEntryView = ({ companyId }) => {
                  <div className="bg-[#f8fafc] border border-slate-100 rounded-xl p-4.5 space-y-3.5 shadow-sm">
                     <div>
                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Vendor Balance</span>
-                       <p className="text-[18px] font-black text-slate-900 tracking-tight mt-0.5">
-                          ₹{parseFloat(activeVendor.currentBalance || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                       <p className="text-[18px] font-black text-slate-900 tracking-tight mt-0.5 flex items-baseline gap-1">
+                          ₹{Math.abs(parseFloat(activeVendor.currentBalance || 0)).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                          <span className="text-[12px] text-slate-500 font-bold">
+                             {parseFloat(activeVendor.currentBalance || 0) < 0 ? 'Cr' : parseFloat(activeVendor.currentBalance || 0) > 0 ? 'Dr' : ''}
+                          </span>
                        </p>
                     </div>
                     <div className="h-px bg-slate-200/80"></div>

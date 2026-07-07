@@ -49,7 +49,7 @@ exports.sendEmail = async (req, res, next) => {
     if (!finalToEmail) return res.status(400).json({ error: 'Recipient email is required' });
 
     const mailOptions = {
-      from: `"${company?.name || 'CalTally'}" <${fromEmail}>`,
+      from: `"${company?.name || 'CalBooks'}" <${fromEmail}>`,
       to: finalToEmail,
       subject: subject || `Retainer Invoice ${retainer.invoiceNumber}`,
       text: body || `Dear Customer,\n\nPlease find attached Retainer Invoice ${retainer.invoiceNumber}.`,

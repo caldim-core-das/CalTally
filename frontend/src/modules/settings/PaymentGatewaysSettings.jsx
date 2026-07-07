@@ -140,7 +140,7 @@ const PaymentGatewaysSettings = ({ companyId }) => {
           <CreditCard className="text-blue-600" size={24} />
           <h1 className="text-xl font-bold text-slate-800">Online Payment Gateways</h1>
         </div>
-        <p className="text-[12px] text-slate-400 mt-1">Configure credentials for your payment gateways. CalTally routes customer checkouts via these providers.</p>
+        <p className="text-[12px] text-slate-400 mt-1">Configure credentials for your payment gateways. CalBooks routes customer checkouts via these providers.</p>
       </header>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -286,7 +286,7 @@ const PaymentGatewaysSettings = ({ companyId }) => {
               <ShieldAlert size={16} className="text-amber-600" /> Security Notice
             </h3>
             <p className="text-[12px] text-amber-900/80 leading-relaxed font-medium">
-              We encrypt your credentials using AES-256-GCM. We never expose secrets to the browser or store card details within CalTally.
+              We encrypt your credentials using AES-256-GCM. We never expose secrets to the browser or store card details within CalBooks.
             </p>
           </div>
 

@@ -113,16 +113,16 @@ const AuthPage = ({ onLogin }) => {
             <div className="p-2 bg-blue-600 rounded-lg text-white">
               <Building2 size={24} strokeWidth={2.5}/>
             </div>
-            <span className="text-2xl font-bold text-slate-800 tracking-tight">CalTally</span>
+            <span className="text-2xl font-bold text-slate-800 tracking-tight">CalBooks</span>
           </div>
 
           <h1 className="text-5xl lg:text-6xl font-bold text-[#1F314F] leading-[1.1] tracking-tight">
             {isLogin ? 'Welcome back to' : 'Wave hello to'} <br/>
-            <span className="text-blue-600">CalTally!</span>
+            <span className="text-blue-600">CalBooks!</span>
           </h1>
 
           <p className="text-lg text-slate-600 max-w-md leading-relaxed">
-            CalTally is your trusted financial partner. Our platform is 
+            CalBooks is your trusted financial partner. Our platform is 
             equipped with powerful features that will take care of your 
             business finances. Welcome to the future of accounting!
           </p>
@@ -286,7 +286,7 @@ const AuthPage = ({ onLogin }) => {
             </div>
 
             <p className="mt-10 text-[9px] text-center text-slate-300 font-bold uppercase tracking-[0.1em]">
-              *This offer is applicable only for CalTally users
+              *This offer is applicable only for CalBooks users
             </p>
           </div>
 
@@ -364,16 +364,16 @@ const AuthPage = ({ onLogin }) => {
             <h3 className="text-lg font-bold text-[#1F314F] border-b pb-3 mb-4">Terms of Service</h3>
             <div className="text-xs text-slate-600 space-y-4 max-h-[300px] overflow-y-auto pr-2">
               <p className="font-semibold">1. Acceptance of Terms</p>
-              <p>Welcome to CalTally. By creating an account, you agree to be bound by these Terms of Service. If you do not agree, please do not use our services.</p>
+              <p>Welcome to CalBooks. By creating an account, you agree to be bound by these Terms of Service. If you do not agree, please do not use our services.</p>
               
               <p className="font-semibold">2. Account Registration</p>
               <p>You must provide accurate and complete information when registering. You are solely responsible for maintaining the confidentiality of your credentials (including passwords and multi-factor authentication secrets).</p>
               
               <p className="font-semibold">3. Permitted Use</p>
-              <p>CalTally is provided for financial tracking and cloud accounting replication. You agree not to misuse the platform or conduct any unauthorized activities that could disrupt server security.</p>
+              <p>CalBooks is provided for financial tracking and cloud accounting replication. You agree not to misuse the platform or conduct any unauthorized activities that could disrupt server security.</p>
               
               <p className="font-semibold">4. Limitation of Liability</p>
-              <p>The application is provided "as is". CalTally and its developers make no warranties and shall not be held liable for any data loss, financial discrepancy, or server unavailability.</p>
+              <p>The application is provided "as is". CalBooks and its developers make no warranties and shall not be held liable for any data loss, financial discrepancy, or server unavailability.</p>
             </div>
             <div className="mt-6 flex justify-end">
               <button 

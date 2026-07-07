@@ -95,7 +95,7 @@ class SetuService {
     const mockFeed = [
       {
         date: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000), // 1 day ago
-        description: 'UPI/9920199/Merchant Payment to CalTally Customer',
+        description: 'UPI/9920199/Merchant Payment to CalBooks Customer',
         amount: 15400.00,
         type: 'Credit'
       },

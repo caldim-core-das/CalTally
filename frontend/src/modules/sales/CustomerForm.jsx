@@ -202,7 +202,7 @@ const CustomerForm = ({ onSaveSuccess, onCancel, customerToEdit = null, standalo
         website,
         pan,
         tcsApplicable,
-        tcsRate,
+        tcsRate: tcsRate === '' ? null : parseFloat(tcsRate),
         gstNumber: gstNumber.trim(),
         companyId,
         groupName: 'Sundry Debtors',
@@ -225,7 +225,9 @@ const CustomerForm = ({ onSaveSuccess, onCancel, customerToEdit = null, standalo
       
       if (onSaveSuccess) onSaveSuccess(res.data);
     } catch (err) {
-      addNotification('Failed to save customer', 'error');
+      console.error('Customer save error:', err);
+      const errorMsg = err.response?.data?.error || err.message || 'Failed to save customer';
+      addNotification(errorMsg, 'error');
     } finally {
       setLoading(false);
     }

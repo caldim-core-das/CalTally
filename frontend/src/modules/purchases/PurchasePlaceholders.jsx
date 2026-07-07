@@ -26,7 +26,7 @@ const PlaceholderView = ({ title, newPath }) => {
                  <ShoppingBag size={32} />
               </div>
               <h2 className="text-xl font-bold text-slate-900 mb-2">{title} Module</h2>
-              <p className="text-slate-500">This module is coming soon to your CalTally ecosystem.</p>
+              <p className="text-slate-500">This module is coming soon to your CalBooks ecosystem.</p>
            </div>
         </div>
     );

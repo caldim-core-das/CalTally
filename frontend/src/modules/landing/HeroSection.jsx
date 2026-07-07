@@ -42,7 +42,7 @@ export default function HeroSection() {
         </h1>
 
         <p className="mt-6 text-base md:text-lg text-slate-500 max-w-xl text-center leading-relaxed font-light">
-          CalTally is a double-entry accounting and billing application — managing invoices, items, vouchers, payroll, and reporting.
+          CalBooks is a double-entry accounting and billing application — managing invoices, items, vouchers, payroll, and reporting.
         </p>
 
         {/* CTAs */}
@@ -70,7 +70,7 @@ export default function HeroSection() {
               <div className="w-3 h-3 rounded-full bg-emerald-400/80" />
             </div>
             <div className="flex-1 mx-4 h-5 rounded-md bg-white border border-slate-200 flex items-center justify-center">
-              <span className="text-[10px] text-slate-400 font-mono">app.caltally.com/dashboard</span>
+              <span className="text-[10px] text-slate-400 font-mono">app.calbooks.com/dashboard</span>
             </div>
           </div>
 

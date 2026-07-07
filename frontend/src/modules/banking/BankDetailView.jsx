@@ -768,7 +768,7 @@ const BankDetailView = () => {
                       <span className="bg-amber-100 text-amber-850 text-[9px] font-bold px-1.5 py-0.5 rounded">SANDBOX MODE</span>
                     </div>
                     <div className="space-y-2 text-[11px] text-slate-600">
-                      <p><strong>FIU:</strong> CalTally (Tally replica)</p>
+                      <p><strong>FIU:</strong> CalBooks (Tally replica)</p>
                       <p><strong>Purpose:</strong> Account Management</p>
                       <p><strong>Data requested:</strong> All deposits (savings, current)</p>
                       <p><strong>Requested Range:</strong> Last 12 months</p>

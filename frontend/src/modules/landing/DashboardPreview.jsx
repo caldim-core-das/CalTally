@@ -19,7 +19,7 @@ export default function DashboardPreview() {
             <div className="w-3 h-3 rounded-full bg-green-500"></div>
           </div>
           <div className="mx-auto bg-slate-800 rounded-md h-6 w-1/3 flex items-center justify-center px-3">
-            <span className="text-[10px] text-slate-400 font-mono">app.caltally.com/dashboard</span>
+            <span className="text-[10px] text-slate-400 font-mono">app.calbooks.com/dashboard</span>
           </div>
         </div>
 
@@ -31,7 +31,7 @@ export default function DashboardPreview() {
               <div className="w-7 h-7 rounded bg-slate-900 flex items-center justify-center shrink-0">
                 <Building2 size={14} color="#fff" />
               </div>
-              <span className="text-[13px] font-black text-slate-900 tracking-tight uppercase">CALTALLY</span>
+              <span className="text-[13px] font-black text-slate-900 tracking-tight uppercase">CALBOOKS</span>
             </div>
             
             <div className="flex-1 py-4 px-3 space-y-6 overflow-y-auto">

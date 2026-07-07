@@ -16,7 +16,7 @@ export default function ProductShowcase() {
               Complete visibility into your financial health
             </h2>
             <p className="text-lg text-slate-600 mb-8 leading-relaxed">
-              Don't wait until the end of the month to know where your business stands. CalTally provides real-time dashboards and aging reports so you can make informed decisions instantly.
+              Don't wait until the end of the month to know where your business stands. CalBooks provides real-time dashboards and aging reports so you can make informed decisions instantly.
             </p>
             
             <ul className="space-y-4">

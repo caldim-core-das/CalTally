@@ -99,7 +99,7 @@ const SharedInvoiceView = () => {
       <header className="h-16 bg-white border-b border-slate-200 flex items-center px-8 sticky top-0 z-40 shadow-sm justify-between">
         <div className="flex items-center gap-2">
           <Receipt className="text-blue-600" size={24} />
-          <span className="text-base font-bold text-slate-800 tracking-tight">CalTally Invoice Portal</span>
+          <span className="text-base font-bold text-slate-800 tracking-tight">CalBooks Invoice Portal</span>
         </div>
         <div className="flex items-center gap-1.5 text-xs text-slate-400 font-bold uppercase tracking-wider">
           <ShieldCheck className="text-emerald-500" size={14} /> Secured Checkout

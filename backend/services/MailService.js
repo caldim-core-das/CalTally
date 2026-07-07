@@ -25,7 +25,7 @@ exports.sendMail = async ({ to, subject, html, text }) => {
   }
 
   const mailOptions = {
-    from: `"CalTally Admin" <${userEmail}>`,
+    from: `"CalBooks Admin" <${userEmail}>`,
     to,
     subject,
     text: text || html.replace(/<[^>]*>/g, ''),

@@ -113,13 +113,13 @@ exports.sendEmail = async (req, res, next) => {
             if (documentId) {
                 const order = await SalesOrder.findByPk(documentId, {
                     include: [
-                        { model: Ledger, as: 'CustomerLedger' },
+                        { model: Ledger, as: 'Customer' },
                         { model: Company },
-                        { model: SalesOrderItem, as: 'items', include: [{ model: Item }] }
+                        { model: SalesOrderItem, as: 'Items', include: [{ model: Item }] }
                     ]
                 });
                 if (order) {
-                    const pdfBuffer = await PDFService.generateSalesOrder(order, order.items, order.Company);
+                    const pdfBuffer = await PDFService.generateSalesOrder(order, order.Items, order.Company);
                     attachments.push({
                         filename: `SalesOrder_${order.orderNumber}.pdf`,
                         content: pdfBuffer

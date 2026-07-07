@@ -807,290 +807,274 @@ class PDFService {
             doc.on('end', () => resolve(Buffer.concat(buffers)));
             doc.on('error', reject);
 
-            const companyName = company.name || order.companyName || 'Your Company';
-            const customerName = order.customerName || order.Customer?.displayName || order.Customer?.name || 'Customer';
-            const customerAddress = (() => {
-                try {
-                    const raw = order.Customer?.billingAddress || order.billingAddress;
-                    if (!raw) return '';
-                    const p = typeof raw === 'string' ? JSON.parse(raw) : raw;
-                    return [p.street1, p.street2, p.city, p.state, p.pinCode, p.country].filter(Boolean).join(', ');
-                } catch (e) { return ''; }
-            })();
-            const customerGST = order.Customer?.gstNumber || '';
-            const customerState = order.Customer?.state || '';
+            const currency = order.Customer?.currency || company?.baseCurrency || 'INR';
+            const currencySymbol = getCurrencySymbol(currency);
+            const format = (val) => formatAmount(val, currency);
 
-            const formatDate = (d) => {
-                if (!d) return '—';
+            const companyName = company?.name || order.companyName || 'Our Company';
+            const customerName = order.customerName || order.Customer?.displayName || order.Customer?.name || 'Customer';
+
+            // ── Date formatter ──────────────────
+            const formatDate = (dateVal) => {
+                if (!dateVal) return '—';
                 try {
-                    const m = String(d).match(/^(\d{4})-(\d{2})-(\d{2})/);
-                    if (m) return `${m[3]}/${m[2]}/${m[1]}`;
-                    return new Date(d).toLocaleDateString('en-IN');
+                    const match = String(dateVal).match(/^(\d{4})-(\d{2})-(\d{2})/);
+                    if (match) return `${match[3]}/${match[2]}/${match[1]}`;
+                    const d = new Date(dateVal);
+                    if (isNaN(d.getTime())) return '—';
+                    return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
                 } catch (e) { return '—'; }
             };
 
-            // ─── TOP OUTER BORDER ───────────────────────────────────────────
-            const pageW = 555; // usable width (595 - 2*40)
-            const startY = 40;
+            const primaryColor = '#0f172a'; // dark slate
+            const accentColor = '#2563eb'; // blue
+            const labelColor = '#3b82f6'; // light blue for labels
+            const textColor = '#334155'; // gray-700
+            const lightText = '#64748b'; // gray-500
 
-            // ─── HEADER BOX: Company (left) | SALES ORDER info (right) ─────
-            const headerH = 70;
-            doc.rect(40, startY, pageW, headerH).stroke('#000000');
-            // vertical divider at midpoint
-            doc.moveTo(40 + pageW / 2, startY).lineTo(40 + pageW / 2, startY + headerH).stroke('#000000');
-
-            // Left: Company name
-            doc.fillColor('#000000').fontSize(13).font('Helvetica-Bold')
-               .text(companyName, 46, startY + 8, { width: pageW / 2 - 12 });
-            doc.fontSize(8).font('Helvetica').fillColor('#444444')
-               .text(company.state || '', 46, startY + 26, { width: pageW / 2 - 12 })
-               .text(company.email || '', 46, startY + 37, { width: pageW / 2 - 12 });
-            if (company.gstNumber) {
-                doc.text(`GSTIN: ${company.gstNumber}`, 46, startY + 48, { width: pageW / 2 - 12 });
+            // ─── HEADER ──────────────────────────────────────────────────
+            doc.fillColor(primaryColor).fontSize(16).font('Helvetica-Bold')
+               .text(companyName, 40, 40);
+            
+            let companyInfoY = 60;
+            doc.fontSize(9).font('Helvetica').fillColor(lightText);
+            if (company?.state) {
+                doc.text(company.state, 40, companyInfoY);
+                companyInfoY += 14;
+            }
+            if (company?.location) {
+                doc.text(company.location, 40, companyInfoY);
+                companyInfoY += 14;
+            }
+            if (company?.email) {
+                doc.text(company.email, 40, companyInfoY);
+            }
+            if (company?.gstNumber) {
+                doc.text(`GSTIN: ${company.gstNumber}`, 40, companyInfoY + 14);
             }
 
-            // Right: SALES ORDER title + meta
-            const rightX = 40 + pageW / 2 + 6;
-            doc.fillColor('#000000').fontSize(14).font('Helvetica-Bold')
-               .text('SALES ORDER', rightX, startY + 6, { width: pageW / 2 - 12, align: 'center' });
-            doc.fontSize(9).font('Helvetica')
-               .text(`Order No: ${order.orderNumber || '—'}`, rightX, startY + 26, { width: pageW / 2 - 12 })
-               .text(`Date: ${formatDate(order.date)}`, rightX, startY + 38, { width: pageW / 2 - 12 });
-            if (order.referenceNumber) {
-                doc.text(`Ref: ${order.referenceNumber}`, rightX, startY + 50, { width: pageW / 2 - 12 });
+            // Right side: TITLE
+            doc.fontSize(24).font('Times-Bold').fillColor(primaryColor)
+               .text('SALES ORDER', 250, 40, { width: 305, align: 'right' });
+
+            doc.fontSize(10).font('Helvetica-Bold').fillColor('#333333')
+               .text(`# ${order.orderNumber || '—'}`, 250, 68, { width: 305, align: 'right' });
+
+            // ─── BILL TO / SHIP TO ───────────────────────────────────────
+            const addressY = 130;
+
+            // BILL TO Address
+            doc.fillColor(labelColor).fontSize(8).font('Helvetica-Bold')
+               .text('BILL TO', 40, addressY);
+            
+            doc.fillColor(primaryColor).fontSize(10).font('Helvetica-Bold')
+               .text(customerName, 40, addressY + 15);
+
+            const customerLines = [];
+            const rawAddr = order.Customer?.billingAddress || order.billingAddress;
+            if (rawAddr) {
+                try {
+                    const parsed = typeof rawAddr === 'string' && (rawAddr.startsWith('{') || rawAddr.startsWith('[')) ? JSON.parse(rawAddr) : rawAddr;
+                    if (parsed && typeof parsed === 'object') {
+                        if (parsed.attention) customerLines.push(parsed.attention);
+                        const street = [parsed.street1 || parsed.address1, parsed.street2 || parsed.address2].filter(Boolean).join(', ');
+                        if (street) customerLines.push(street);
+                        const cityStatePin = [parsed.city, parsed.state, parsed.pinCode || parsed.zip || parsed.zipCode || parsed.pincode].filter(Boolean).join(', ');
+                        if (cityStatePin) customerLines.push(cityStatePin);
+                        if (parsed.country) customerLines.push(parsed.country);
+                        if (parsed.phone) customerLines.push(parsed.phone);
+                    } else if (typeof rawAddr === 'string') {
+                        customerLines.push(rawAddr);
+                    }
+                } catch (e) {
+                    if (typeof rawAddr === 'string') customerLines.push(rawAddr);
+                }
             }
-            if (order.expectedShipmentDate) {
-                doc.text(`Shipment Date: ${formatDate(order.expectedShipmentDate)}`, rightX, startY + 60, { width: pageW / 2 - 12 });
+            if (order.Customer?.gstNumber) {
+                customerLines.push(`GSTIN: ${order.Customer.gstNumber}`);
             }
-
-            // ─── BUYER / CONSIGNEE BOX ──────────────────────────────────────
-            const billY = startY + headerH;
-            const billH = 72;
-            doc.rect(40, billY, pageW, billH).stroke('#000000');
-            doc.moveTo(40 + pageW / 2, billY).lineTo(40 + pageW / 2, billY + billH).stroke('#000000');
-
-            // Left: Buyer (Bill To)
-            doc.fillColor('#000000').fontSize(9).font('Helvetica-Bold')
-               .text('Buyer (Bill To):', 46, billY + 6);
-            doc.fontSize(10).font('Helvetica-Bold')
-               .text(customerName, 46, billY + 18, { width: pageW / 2 - 12 });
-            doc.fontSize(8).font('Helvetica').fillColor('#333333')
-               .text(customerAddress, 46, billY + 31, { width: pageW / 2 - 12 });
-            if (customerGST) doc.text(`GSTIN/UIN: ${customerGST}`, 46, billY + 54, { width: pageW / 2 - 12 });
-            if (customerState) doc.text(`State: ${customerState}`, 46, billY + 63, { width: pageW / 2 - 12 });
-
-            // Right: Consignee (Ship To) — same as buyer by default
-            doc.fillColor('#000000').fontSize(9).font('Helvetica-Bold')
-               .text('Consignee (Ship To):', rightX, billY + 6, { width: pageW / 2 - 12 });
-            doc.fontSize(10).font('Helvetica-Bold')
-               .text(customerName, rightX, billY + 18, { width: pageW / 2 - 12 });
-            doc.fontSize(8).font('Helvetica').fillColor('#333333')
-               .text(customerAddress, rightX, billY + 31, { width: pageW / 2 - 12 });
-            if (customerGST) doc.text(`GSTIN/UIN: ${customerGST}`, rightX, billY + 54, { width: pageW / 2 - 12 });
-            if (customerState) doc.text(`State: ${customerState}`, rightX, billY + 63, { width: pageW / 2 - 12 });
-
-            // ─── ITEMS TABLE ────────────────────────────────────────────────
-            const tableY = billY + billH;
-
-            // Column widths
-            const cols = { no: 30, desc: 155, hsn: 60, dueon: 65, qty: 50, rate: 70, per: 40, amount: 85 };
-            const colX = {
-                no: 40,
-                desc: 40 + cols.no,
-                hsn: 40 + cols.no + cols.desc,
-                dueon: 40 + cols.no + cols.desc + cols.hsn,
-                qty: 40 + cols.no + cols.desc + cols.hsn + cols.dueon,
-                rate: 40 + cols.no + cols.desc + cols.hsn + cols.dueon + cols.qty,
-                per: 40 + cols.no + cols.desc + cols.hsn + cols.dueon + cols.qty + cols.rate,
-                amount: 40 + cols.no + cols.desc + cols.hsn + cols.dueon + cols.qty + cols.rate + cols.per,
-            };
-            const rowH = 22;
-
-            // Header row
-            doc.rect(40, tableY, pageW, rowH).fillAndStroke('#eeeeee', '#000000');
-            const headers = ['Sl.\nNo.', 'Description of Goods', 'HSN/\nSAC', 'Due on', 'Qty', 'Rate', 'per', 'Amount'];
-            const colKeys = ['no', 'desc', 'hsn', 'dueon', 'qty', 'rate', 'per', 'amount'];
-            const colAligns = ['center', 'left', 'center', 'center', 'center', 'right', 'center', 'right'];
-
-            doc.fillColor('#000000').fontSize(8).font('Helvetica-Bold');
-            colKeys.forEach((key, i) => {
-                doc.text(headers[i], colX[key] + 2, tableY + 4, { width: cols[key] - 4, align: colAligns[i] });
-                // vertical border
-                doc.moveTo(colX[key], tableY).lineTo(colX[key], tableY + rowH).stroke('#000000');
+            
+            doc.font('Helvetica').fontSize(9).fillColor(textColor);
+            doc.x = 40;
+            doc.y = addressY + 30;
+            customerLines.forEach(line => {
+                doc.text(line, { width: 220, lineGap: 2 });
             });
-            // right border
-            doc.moveTo(40 + pageW, tableY).lineTo(40 + pageW, tableY + rowH).stroke('#000000');
-            // bottom border of header
-            doc.moveTo(40, tableY + rowH).lineTo(40 + pageW, tableY + rowH).stroke('#000000');
+            let currentCustomerY = doc.y;
 
-            // Data rows
+            // SHIP TO Address
+            doc.fillColor(labelColor).fontSize(8).font('Helvetica-Bold')
+               .text('SHIP TO', 280, addressY);
+            
+            doc.fillColor(primaryColor).fontSize(10).font('Helvetica-Bold')
+               .text(customerName, 280, addressY + 15);
+
+            const deliveryLines = [];
+            let parsedDelivery = null;
+            try {
+                if (order.shippingAddress) {
+                    parsedDelivery = typeof order.shippingAddress === 'string' ? JSON.parse(order.shippingAddress) : order.shippingAddress;
+                } else if (order.Customer?.shippingAddress) {
+                    parsedDelivery = typeof order.Customer.shippingAddress === 'string' ? JSON.parse(order.Customer.shippingAddress) : order.Customer.shippingAddress;
+                }
+            } catch (e) {}
+
+            if (parsedDelivery && typeof parsedDelivery === 'object') {
+                if (parsedDelivery.attention) deliveryLines.push(parsedDelivery.attention);
+                const street = [parsedDelivery.street1, parsedDelivery.street2].filter(Boolean).join(', ');
+                if (street) deliveryLines.push(street);
+                const cityStateZip = [parsedDelivery.city, parsedDelivery.state, parsedDelivery.pinCode || parsedDelivery.zip || parsedDelivery.zipCode].filter(Boolean).join(', ');
+                if (cityStateZip) deliveryLines.push(cityStateZip);
+                if (parsedDelivery.country) deliveryLines.push(parsedDelivery.country);
+                if (parsedDelivery.phone) deliveryLines.push(parsedDelivery.phone);
+            } else if (order.shippingAddress) {
+                deliveryLines.push(order.shippingAddress);
+            }
+
+            doc.font('Helvetica').fontSize(9).fillColor(textColor);
+            doc.x = 280;
+            doc.y = addressY + 30;
+            deliveryLines.forEach(line => {
+                doc.text(line, { width: 220, lineGap: 2 });
+            });
+            let currentDeliveryY = doc.y;
+
+            // ─── HORIZONTAL DIVIDER ───────────────────────────────────────
+            let dateDividerY = Math.max(currentCustomerY, currentDeliveryY) + 20;
+            doc.moveTo(40, dateDividerY).lineTo(555, dateDividerY).strokeColor('#e2e8f0').lineWidth(1).stroke();
+
+            // 3. Date / Order Info
+            const orderDate = formatDate(order.date);
+            const deliveryDate = formatDate(order.expectedShipmentDate);
+            
+            let dateY = dateDividerY + 15;
+            
+            doc.fillColor('#94a3b8').fontSize(8).font('Helvetica-Bold');
+            doc.text('DATE', 40, dateY);
+            doc.text('SHIPMENT DATE', 160, dateY);
+            doc.text('PAYMENT TERMS', 280, dateY);
+            
+            doc.fillColor(textColor).fontSize(9).font('Helvetica');
+            doc.text(orderDate, 40, dateY + 12);
+            doc.text(deliveryDate, 160, dateY + 12);
+            doc.text(order.paymentTerms || '—', 280, dateY + 12);
+            
+            const maxAddressEnd = dateY + 35;
+            doc.moveTo(40, maxAddressEnd).lineTo(555, maxAddressEnd).strokeColor('#e2e8f0').lineWidth(1).stroke();
+
+            // ─── TABLE HEADER ─────────────────────────────────────────────
+            const tableTop = maxAddressEnd + 20;
+            doc.rect(40, tableTop, 515, 25).fill(primaryColor);
+            doc.fillColor('#ffffff').fontSize(9).font('Helvetica-Bold')
+               .text('#', 50, tableTop + 8)
+               .text('ITEM & DESCRIPTION', 80, tableTop + 8)
+               .text('QTY', 340, tableTop + 8, { width: 50, align: 'center' })
+               .text('RATE', 400, tableTop + 8, { width: 70, align: 'right' })
+               .text('AMOUNT', 480, tableTop + 8, { width: 70, align: 'right' });
+
+            // ─── TABLE ROWS ───────────────────────────────────────────────
+            let currentY = tableTop + 25;
             let parsedItems = items;
             if (!Array.isArray(items)) {
                 try { parsedItems = JSON.parse(items || '[]'); } catch (e) { parsedItems = []; }
             }
 
-            let curY = tableY + rowH;
-            const minRows = Math.max(parsedItems.length, 8);
+            doc.font('Helvetica');
 
-            for (let i = 0; i < minRows; i++) {
-                const it = parsedItems[i];
-                const rowY = curY;
+            parsedItems.forEach((item, idx) => {
+                const itemName = item.detail || item.itemName || item.name || item.description || 'Item';
+                const qty = parseFloat(item.quantity || item.qty || 0);
+                const rate = parseFloat(item.rate || item.unitPrice || 0);
+                const amount = parseFloat(item.amount || item.total || (qty * rate) || 0);
 
-                // draw row background (alternating)
-                if (it) {
-                    doc.rect(40, rowY, pageW, rowH).stroke('#cccccc');
-                } else {
-                    doc.rect(40, rowY, pageW, rowH).stroke('#cccccc');
-                }
+                // Estimate row height
+                const textHeight = Math.max(30, Math.ceil(itemName.length / 45) * 12 + 10);
+                
+                doc.fillColor(primaryColor).fontSize(9).font('Helvetica-Bold')
+                   .text(idx + 1, 50, currentY + 10)
+                   .text(itemName, 80, currentY + 10, { width: 250 });
+                   
+                doc.fillColor(textColor).fontSize(9).font('Helvetica')
+                   .text(qty.toFixed(2), 340, currentY + 10, { width: 50, align: 'center' })
+                   .text(format(rate), 400, currentY + 10, { width: 70, align: 'right' });
+                   
+                doc.fillColor(primaryColor).font('Helvetica-Bold')
+                   .text(format(amount), 480, currentY + 10, { width: 70, align: 'right' });
 
-                if (it) {
-                    const qty = parseFloat(it.quantity || 0);
-                    const rate = parseFloat(it.rate || 0);
-                    const amount = parseFloat(it.amount || qty * rate || 0);
-                    const itemName = it.detail || it.name || it.description || '—';
-                    const dueOn = order.expectedShipmentDate
-                        ? formatDate(order.expectedShipmentDate)
-                        : (order.paymentTerms || '');
-
-                    doc.fillColor('#000000').fontSize(8).font('Helvetica');
-                    doc.text(String(i + 1), colX.no + 2, rowY + 6, { width: cols.no - 4, align: 'center' });
-                    doc.text(itemName, colX.desc + 2, rowY + 6, { width: cols.desc - 4, align: 'left' });
-                    doc.text(it.hsnCode || '', colX.hsn + 2, rowY + 6, { width: cols.hsn - 4, align: 'center' });
-                    doc.text(dueOn, colX.dueon + 2, rowY + 6, { width: cols.dueon - 4, align: 'center' });
-                    doc.text(qty.toString(), colX.qty + 2, rowY + 6, { width: cols.qty - 4, align: 'center' });
-                    doc.text(rate.toLocaleString('en-IN', { minimumFractionDigits: 2 }), colX.rate + 2, rowY + 6, { width: cols.rate - 4, align: 'right' });
-                    doc.text('Nos', colX.per + 2, rowY + 6, { width: cols.per - 4, align: 'center' });
-                    doc.font('Helvetica-Bold').text(amount.toLocaleString('en-IN', { minimumFractionDigits: 2 }), colX.amount + 2, rowY + 6, { width: cols.amount - 4, align: 'right' });
-                }
-
-                // column dividers
-                colKeys.forEach(key => {
-                    doc.moveTo(colX[key], rowY).lineTo(colX[key], rowY + rowH).stroke('#000000');
-                });
-                doc.moveTo(40 + pageW, rowY).lineTo(40 + pageW, rowY + rowH).stroke('#000000');
-
-                curY += rowH;
-            }
-
-            // ─── TOTALS ROW ────────────────────────────────────────────────
-            const subTotal = parseFloat(order.subTotal || 0);
-            const taxAmt = parseFloat(order.tax || order.taxAmount || 0);
-            const taxPct = order.taxPercent || 18;
-            const discountAmt = order.discountAmount !== undefined ? parseFloat(order.discountAmount || 0) : (subTotal * parseFloat(order.discount || 0) / 100);
-            const adjustment = parseFloat(order.adjustment || 0);
-            const tcsAmount = parseFloat(order.tcsAmount || 0);
-            const grandTotal = parseFloat(order.totalAmount || 0);
-            const totalQty = parsedItems.reduce((s, it) => s + parseFloat(it?.quantity || 0), 0);
-
-            // Total label row
-            doc.rect(40, curY, pageW, rowH).fillAndStroke('#f5f5f5', '#000000');
-            doc.fillColor('#000000').fontSize(8).font('Helvetica-Bold')
-               .text('Total', colX.no + 2, curY + 6, { width: cols.no + cols.desc + cols.hsn + cols.dueon - 4, align: 'right' });
-            doc.text(totalQty.toString(), colX.qty + 2, curY + 6, { width: cols.qty - 4, align: 'center' });
-            doc.text('', colX.rate + 2, curY + 6, { width: cols.rate - 4 });
-            doc.text('', colX.per + 2, curY + 6, { width: cols.per - 4 });
-            doc.text(subTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 }), colX.amount + 2, curY + 6, { width: cols.amount - 4, align: 'right' });
-            colKeys.forEach(key => {
-                doc.moveTo(colX[key], curY).lineTo(colX[key], curY + rowH).stroke('#000000');
+                currentY += textHeight;
+                doc.moveTo(40, currentY).lineTo(555, currentY).strokeColor('#f1f5f9').lineWidth(1).stroke();
             });
-            doc.moveTo(40 + pageW, curY).lineTo(40 + pageW, curY + rowH).stroke('#000000');
-            curY += rowH;
 
-            // Discount row (if applicable)
+            if (parsedItems.length === 0) {
+                doc.fillColor(lightText).fontSize(9).font('Helvetica-Oblique')
+                   .text('No items found.', 80, currentY + 10);
+                currentY += 30;
+            }
+
+            // ─── TOTALS ───────────────────────────────────────────────────
+            const totalStart = currentY + 20;
+            const subtotal = parseFloat(order.subtotal || order.subTotal || 0);
+            const discountAmt = parseFloat(order.discountAmount || 0);
+            const taxAmt = parseFloat(order.taxAmount || order.tax || 0);
+            const taxPercent = parseFloat(order.taxPercent || 0);
+            const tcsAmount = parseFloat(order.tcsAmount || 0);
+            const adjustment = parseFloat(order.adjustment || 0);
+            const total = parseFloat(order.totalAmount || 0);
+
+            let totY = totalStart;
+            
+            // Sub Total
+            doc.fillColor(primaryColor).fontSize(9).font('Helvetica-Bold')
+               .text('Sub Total', 350, totY)
+               .fillColor(primaryColor).font('Helvetica-Bold')
+               .text(format(subtotal), 450, totY, { width: 100, align: 'right' });
+            totY += 20;
+
             if (discountAmt > 0) {
-                doc.rect(40, curY, pageW, rowH).stroke('#000000');
-                doc.fillColor('#000000').fontSize(8).font('Helvetica')
-                   .text(`Discount`, colX.no + 2, curY + 6, { width: pageW - cols.amount - 4, align: 'right' });
-                doc.font('Helvetica-Bold')
-                   .text(`- ${discountAmt.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, colX.amount + 2, curY + 6, { width: cols.amount - 4, align: 'right' });
-                colKeys.forEach(key => doc.moveTo(colX[key], curY).lineTo(colX[key], curY + rowH).stroke('#000000'));
-                doc.moveTo(40 + pageW, curY).lineTo(40 + pageW, curY + rowH).stroke('#000000');
-                curY += rowH;
+                doc.fillColor(primaryColor).font('Helvetica-Bold').text(`Discount`, 350, totY);
+                doc.fillColor(primaryColor).text(`- ${format(discountAmt)}`, 450, totY, { width: 100, align: 'right' });
+                totY += 20;
             }
 
-            // GST row (if applicable)
             if (taxAmt > 0) {
-                doc.rect(40, curY, pageW, rowH).stroke('#000000');
-                doc.fillColor('#000000').fontSize(8).font('Helvetica')
-                   .text(`GST (${taxPct}%)`, colX.no + 2, curY + 6, { width: pageW - cols.amount - 4, align: 'right' });
-                doc.font('Helvetica-Bold')
-                   .text(taxAmt.toLocaleString('en-IN', { minimumFractionDigits: 2 }), colX.amount + 2, curY + 6, { width: cols.amount - 4, align: 'right' });
-                colKeys.forEach(key => {
-                    doc.moveTo(colX[key], curY).lineTo(colX[key], curY + rowH).stroke('#000000');
-                });
-                doc.moveTo(40 + pageW, curY).lineTo(40 + pageW, curY + rowH).stroke('#000000');
-                curY += rowH;
+                doc.fillColor(primaryColor).font('Helvetica-Bold').text(`GST (${taxPercent}%)`, 350, totY);
+                doc.fillColor(primaryColor).text(`+ ${format(taxAmt)}`, 450, totY, { width: 100, align: 'right' });
+                totY += 20;
             }
 
-            // Adjustment row (if applicable)
-            if (adjustment !== 0) {
-                doc.rect(40, curY, pageW, rowH).stroke('#000000');
-                doc.fillColor('#000000').fontSize(8).font('Helvetica')
-                   .text(`Adjustment`, colX.no + 2, curY + 6, { width: pageW - cols.amount - 4, align: 'right' });
-                doc.font('Helvetica-Bold')
-                   .text(`${adjustment >= 0 ? '+' : '-'} ${Math.abs(adjustment).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, colX.amount + 2, curY + 6, { width: cols.amount - 4, align: 'right' });
-                colKeys.forEach(key => doc.moveTo(colX[key], curY).lineTo(colX[key], curY + rowH).stroke('#000000'));
-                doc.moveTo(40 + pageW, curY).lineTo(40 + pageW, curY + rowH).stroke('#000000');
-                curY += rowH;
-            }
-
-            // TCS row (if applicable)
             if (tcsAmount > 0) {
-                doc.rect(40, curY, pageW, rowH).stroke('#000000');
-                doc.fillColor('#000000').fontSize(8).font('Helvetica')
-                   .text(`TCS`, colX.no + 2, curY + 6, { width: pageW - cols.amount - 4, align: 'right' });
-                doc.font('Helvetica-Bold')
-                   .text(tcsAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 }), colX.amount + 2, curY + 6, { width: cols.amount - 4, align: 'right' });
-                colKeys.forEach(key => doc.moveTo(colX[key], curY).lineTo(colX[key], curY + rowH).stroke('#000000'));
-                doc.moveTo(40 + pageW, curY).lineTo(40 + pageW, curY + rowH).stroke('#000000');
-                curY += rowH;
+                doc.fillColor(primaryColor).font('Helvetica-Bold').text(`TCS`, 350, totY);
+                doc.fillColor(primaryColor).text(`+ ${format(tcsAmount)}`, 450, totY, { width: 100, align: 'right' });
+                totY += 20;
             }
 
-            // Grand Total row
-            const gtRowH = 26;
-            doc.rect(40, curY, pageW, gtRowH).fillAndStroke('#e0e0e0', '#000000');
-            doc.fillColor('#000000').fontSize(10).font('Helvetica-Bold')
-               .text('Grand Total', colX.no + 2, curY + 7, { width: pageW - cols.amount - 4, align: 'right' });
-            doc.text(`Rs. ${grandTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, colX.amount + 2, curY + 7, { width: cols.amount - 4, align: 'right' });
-            doc.moveTo(colX.amount, curY).lineTo(colX.amount, curY + gtRowH).stroke('#000000');
-            doc.moveTo(40 + pageW, curY).lineTo(40 + pageW, curY + gtRowH).stroke('#000000');
-            curY += gtRowH;
-
-            // ─── NOTES / TERMS ──────────────────────────────────────────────
-            if (order.customerNotes || order.termsConditions) {
-                const notesH = 50;
-                doc.rect(40, curY, pageW, notesH).stroke('#000000');
-                if (order.customerNotes && order.termsConditions) {
-                    doc.moveTo(40 + pageW / 2, curY).lineTo(40 + pageW / 2, curY + notesH).stroke('#000000');
-                    doc.fillColor('#000000').fontSize(8).font('Helvetica-Bold').text('Customer Notes:', 46, curY + 4);
-                    doc.font('Helvetica').fontSize(7).text(order.customerNotes, 46, curY + 14, { width: pageW / 2 - 12, lineGap: 1 });
-                    doc.font('Helvetica-Bold').fontSize(8).text('Terms & Conditions:', rightX, curY + 4, { width: pageW / 2 - 12 });
-                    doc.font('Helvetica').fontSize(7).text(order.termsConditions, rightX, curY + 14, { width: pageW / 2 - 12, lineGap: 1 });
-                } else {
-                    const note = order.customerNotes || order.termsConditions;
-                    const label = order.customerNotes ? 'Customer Notes:' : 'Terms & Conditions:';
-                    doc.fillColor('#000000').fontSize(8).font('Helvetica-Bold').text(label, 46, curY + 4);
-                    doc.font('Helvetica').fontSize(7).text(note, 46, curY + 14, { width: pageW - 12, lineGap: 1 });
-                }
-                curY += notesH;
+            if (adjustment !== 0) {
+                doc.fillColor(primaryColor).font('Helvetica-Bold').text('Adjustment', 350, totY);
+                doc.fillColor(primaryColor).text(format(adjustment), 450, totY, { width: 100, align: 'right' });
+                totY += 20;
             }
 
-            // ─── SIGNATURE BLOCK ────────────────────────────────────────────
-            const sigH = 60;
-            doc.rect(40, curY, pageW, sigH).stroke('#000000');
-            doc.moveTo(40 + pageW / 2, curY).lineTo(40 + pageW / 2, curY + sigH).stroke('#000000');
+            doc.moveTo(350, totY + 5).lineTo(550, totY + 5).strokeColor('#e2e8f0').lineWidth(1).stroke();
 
-            doc.fillColor('#555555').fontSize(8).font('Helvetica')
-               .text("Receiver's Signature & Stamp", 46, curY + 6);
-            doc.moveTo(46, curY + sigH - 12).lineTo(46 + pageW / 2 - 30, curY + sigH - 12).stroke('#000000');
+            // Total
+            doc.fillColor(primaryColor).fontSize(11).font('Helvetica-Bold').text('Total', 350, totY + 15);
+            doc.fillColor(accentColor).fontSize(11).font('Helvetica-Bold')
+               .text(`${currencySymbol} ${format(total)}`, 450, totY + 15, { width: 100, align: 'right' });
 
-            doc.fillColor('#555555').fontSize(8).font('Helvetica')
-               .text('For Authorized Signatory', rightX, curY + 6, { width: pageW / 2 - 12, align: 'right' });
-            const sigLineStart = rightX + pageW / 2 - 12 - 100;
-            doc.moveTo(sigLineStart, curY + sigH - 12).lineTo(rightX + pageW / 2 - 12, curY + sigH - 12).stroke('#000000');
-            doc.fillColor('#000000').font('Helvetica-Bold').fontSize(8)
-               .text(order.salesperson || 'Authorized Signatory', rightX, curY + sigH - 10, { width: pageW / 2 - 12, align: 'right' });
+            // ─── TERMS AND CUSTOMER NOTES ──────────────────────────────
+            let bottomY = totY + 50;
 
+            if (order.customerNotes) {
+                doc.fillColor(labelColor).fontSize(8).font('Helvetica-Bold').text('NOTES', 40, bottomY);
+                doc.fillColor(lightText).fontSize(9).font('Helvetica').text(order.customerNotes, 40, bottomY + 12, { width: 280 });
+                bottomY += Math.max(30, (order.customerNotes.length / 50) * 12 + 20);
+            }
+
+            if (order.termsConditions) {
+                doc.fillColor(labelColor).fontSize(8).font('Helvetica-Bold').text('TERMS & CONDITIONS', 40, bottomY);
+                doc.fillColor(lightText).fontSize(9).font('Helvetica').text(order.termsConditions, 40, bottomY + 12, { width: 280 });
+            }
+            
             doc.end();
         });
     }
@@ -1211,7 +1195,7 @@ class PDFService {
             doc.fillColor('#4f46e5').fontSize(5).font('Helvetica-Bold')
                .text('SECURED', stampX + 11, stampY + 15, { align: 'center', width: 28 })
                .text('VERIFIED', stampX + 11, stampY + 24, { align: 'center', width: 28 })
-               .text('CALTALLY', stampX + 11, stampY + 33, { align: 'center', width: 28 });
+               .text('CALBOOKS', stampX + 11, stampY + 33, { align: 'center', width: 28 });
 
             // Signature
             const sigX = 420;

@@ -102,11 +102,14 @@ const BillsView = ({ companyId }) => {
   const [selectedBills, setSelectedBills] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   
+  const queryParams = new URLSearchParams(location.search);
+  const initialSelected = queryParams.get('selected');
+  
   // UI Layout State
-  const [layoutMode, setLayoutMode] = useState('table'); // 'table' or 'split'
+  const [layoutMode, setLayoutMode] = useState(initialSelected ? 'split' : 'table'); // 'table' or 'split'
   
   // Master-Detail State
-  const [selectedBillId, setSelectedBillId] = useState(null);
+  const [selectedBillId, setSelectedBillId] = useState(initialSelected ? Number(initialSelected) : null);
   const [billDetail, setBillDetail] = useState(null);
   const [companyDetail, setCompanyDetail] = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);

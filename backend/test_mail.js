@@ -30,9 +30,9 @@ const transporter = nodemailer.createTransport({
 });
 
 const mailOptions = {
-  from: `"CalTally Test" <${userEmail}>`,
+  from: `"CalBooks Test" <${userEmail}>`,
   to: 'calbuy160@gmail.com', // test sending to oneself
-  subject: 'Test Email from CalTally Server',
+  subject: 'Test Email from CalBooks Server',
   text: 'This is a test email to verify SMTP credentials.'
 };
 

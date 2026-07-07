@@ -125,10 +125,10 @@ const NAV = [
     ]
   },
   {
-    group: 'Items',
+    group: 'Inventory',
     icon: Package,
     items: [
-      { label: 'Items',             path: '/inventory', icon: Package, showPlus: true, plusPath: '/inventory/new' },
+      { label: 'Inventory',         path: '/inventory', icon: Package, showPlus: true, plusPath: '/inventory/new' },
     ]
   },
   {
@@ -163,7 +163,6 @@ const NAV = [
     group: 'Accounting',
     icon: BookOpen,
     items: [
-      { label: 'Chart of Accounts', path: '/ledgers/chart-of-accounts', icon: BookOpen },
       { label: 'Ledgers',           path: '/ledgers', icon: Folder },
       { label: 'Vouchers',          path: '/vouchers', icon: FileText, showPlus: true, plusPath: '/vouchers/new' },
     ]
@@ -500,7 +499,7 @@ const AppShell = ({ children, onLogout, companies = [], currentCompanyId, onComp
 
   return (
     <div 
-      className="caltally-app"
+      className="calbooks-app"
       style={{ 
         display: 'flex', 
         height: '100vh', 
@@ -526,7 +525,7 @@ const AppShell = ({ children, onLogout, companies = [], currentCompanyId, onComp
           </div>
           {!collapsed && (
             <div className="flex flex-col items-start leading-[1.1] animate-fade-in">
-              <div className="text-[15px] font-black text-slate-900 dark:text-white tracking-tight uppercase">CalTally</div>
+              <div className="text-[15px] font-black text-slate-900 dark:text-white tracking-tight uppercase">CalBooks</div>
             </div>
           )}
         </div>

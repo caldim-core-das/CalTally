@@ -140,6 +140,7 @@ const CompanyInfoView = ({ firstTime = false, onCompanyCreated }) => {
     logoUrl: '',
     gstNumber: '',
     panNumber: '',
+    isGstRegistered: 'No',
     additionalFields: [],
   });
 
@@ -161,6 +162,7 @@ const CompanyInfoView = ({ firstTime = false, onCompanyCreated }) => {
     booksBeginningFrom: new Date().getFullYear() + '-04-01',
     gstNumber: '',
     panNumber: '',
+    isGstRegistered: 'No',
   });
 
   const fetchCompanyUsers = async () => {
@@ -250,6 +252,7 @@ const CompanyInfoView = ({ firstTime = false, onCompanyCreated }) => {
             ...d,
             financialYearStart: d.financialYearStart ? d.financialYearStart.split('T')[0] : prev.financialYearStart,
             booksBeginningFrom: d.booksBeginningFrom ? d.booksBeginningFrom.split('T')[0] : prev.booksBeginningFrom,
+            isGstRegistered: d.gstNumber ? 'Yes' : 'No',
             additionalFields: Array.isArray(d.additionalFields) ? d.additionalFields : [],
           }));
         }
@@ -275,6 +278,7 @@ const CompanyInfoView = ({ firstTime = false, onCompanyCreated }) => {
           ...d,
           financialYearStart: d.financialYearStart ? d.financialYearStart.split('T')[0] : '',
           booksBeginningFrom: d.booksBeginningFrom ? d.booksBeginningFrom.split('T')[0] : new Date().getFullYear() + '-04-01',
+          isGstRegistered: d.gstNumber ? 'Yes' : 'No',
           additionalFields: Array.isArray(d.additionalFields) ? d.additionalFields : [],
         });
         setEditingCompanyId(company.id);
@@ -354,8 +358,13 @@ const CompanyInfoView = ({ firstTime = false, onCompanyCreated }) => {
       setStatus('error');
       return;
     }
-    if (formData.gstNumber && !validateGSTIN(formData.gstNumber)) {
-      setErrorMsg('Invalid GSTIN format. Expected format: 33AAAAA1111A1Z1');
+    if (!formData.state) {
+      setErrorMsg('State is required.');
+      setStatus('error');
+      return;
+    }
+    if (!formData.panNumber) {
+      setErrorMsg('PAN is required.');
       setStatus('error');
       return;
     }
@@ -364,11 +373,30 @@ const CompanyInfoView = ({ firstTime = false, onCompanyCreated }) => {
       setStatus('error');
       return;
     }
+    if (formData.isGstRegistered === 'Yes') {
+      if (!formData.gstNumber) {
+        setErrorMsg('GSTIN is required since you are GST Registered.');
+        setStatus('error');
+        return;
+      }
+      if (!validateGSTIN(formData.gstNumber)) {
+        setErrorMsg('Invalid GSTIN format. Expected format: 33AAAAA1111A1Z1');
+        setStatus('error');
+        return;
+      }
+    }
+    
+    // Clear GST number if not registered before saving
+    const dataToSave = { ...formData };
+    if (dataToSave.isGstRegistered === 'No') {
+      dataToSave.gstNumber = '';
+    }
+    
     setLoading(true);
     setStatus(null);
     try {
       const targetId = editingCompanyId || activeCompanyId;
-      await companyAPI.update(targetId, formData);
+      await companyAPI.update(targetId, dataToSave);
       setSuccessMsg('Changes saved successfully!');
       setStatus('success');
       if (targetId === activeCompanyId) {
@@ -401,8 +429,13 @@ const CompanyInfoView = ({ firstTime = false, onCompanyCreated }) => {
       setStatus('error');
       return;
     }
-    if (createData.gstNumber && !validateGSTIN(createData.gstNumber)) {
-      setErrorMsg('Invalid GSTIN format. Expected format: 33AAAAA1111A1Z1');
+    if (!createData.state) {
+      setErrorMsg('State is required.');
+      setStatus('error');
+      return;
+    }
+    if (!createData.panNumber) {
+      setErrorMsg('PAN is required.');
       setStatus('error');
       return;
     }
@@ -411,10 +444,29 @@ const CompanyInfoView = ({ firstTime = false, onCompanyCreated }) => {
       setStatus('error');
       return;
     }
+    if (createData.isGstRegistered === 'Yes') {
+      if (!createData.gstNumber) {
+        setErrorMsg('GSTIN is required since you are GST Registered.');
+        setStatus('error');
+        return;
+      }
+      if (!validateGSTIN(createData.gstNumber)) {
+        setErrorMsg('Invalid GSTIN format. Expected format: 33AAAAA1111A1Z1');
+        setStatus('error');
+        return;
+      }
+    }
+    
+    // Clear GST number if not registered before saving
+    const dataToSave = { ...createData };
+    if (dataToSave.isGstRegistered === 'No') {
+      dataToSave.gstNumber = '';
+    }
+
     setLoading(true);
     setStatus(null);
     try {
-      const res = await companyAPI.create(createData);
+      const res = await companyAPI.create(dataToSave);
       if (res.data?.id) {
         sessionStorage.setItem('companyId', res.data.id);
         sessionStorage.setItem('companyName', res.data.name);
@@ -441,6 +493,7 @@ const CompanyInfoView = ({ firstTime = false, onCompanyCreated }) => {
           booksBeginningFrom: new Date().getFullYear() + '-04-01',
           gstNumber: '',
           panNumber: '',
+          isGstRegistered: 'No',
         });
         
         // Refresh companies list and activate it
@@ -678,7 +731,7 @@ const CompanyInfoView = ({ firstTime = false, onCompanyCreated }) => {
             <div className="space-y-2">
               <InputRow label="Organization Name" keyName="name" value={createData.name} onChange={handleCreateField} required={true} placeholder="e.g. Acme Corp Pvt Ltd" />
               <SelectRow label="Industry" keyName="industry" value={createData.industry} onChange={handleCreateField} options={INDUSTRY_OPTIONS} />
-              <SelectRow label="State" keyName="state" value={createData.state} onChange={handleCreateField} options={INDIAN_STATES} />
+              <SelectRow label="State" keyName="state" value={createData.state} onChange={handleCreateField} options={INDIAN_STATES} required={true} />
               <SelectRow label="Organization Location" keyName="location" value={createData.location} onChange={handleCreateField} options={["India", "USA", "UK", "UAE", "Singapore"]} required={true} />
               
               <div className="flex flex-col gap-1.5 py-4 border-b border-slate-100 lg:flex-row lg:items-start">
@@ -693,8 +746,11 @@ const CompanyInfoView = ({ firstTime = false, onCompanyCreated }) => {
                 </div>
               </div>
 
-              <InputRow label="GSTIN (GST Number)" keyName="gstNumber" value={createData.gstNumber} onChange={handleCreateField} placeholder="e.g. 33AAAAA1111A1Z1" maxLength={15} />
-              <InputRow label="PAN" keyName="panNumber" value={createData.panNumber} onChange={handleCreateField} placeholder="e.g. ABCDE1234F" maxLength={10} />
+              <SelectRow label="GST Registered?" keyName="isGstRegistered" value={createData.isGstRegistered} onChange={handleCreateField} options={['Yes', 'No']} required={true} />
+              {createData.isGstRegistered === 'Yes' && (
+                <InputRow label="GSTIN (GST Number)" keyName="gstNumber" value={createData.gstNumber} onChange={handleCreateField} placeholder="e.g. 33AAAAA1111A1Z1" maxLength={15} required={true} />
+              )}
+              <InputRow label="PAN" keyName="panNumber" value={createData.panNumber} onChange={handleCreateField} placeholder="e.g. ABCDE1234F" maxLength={10} required={true} />
 
               <div className="bg-slate-50 rounded-xl p-6 mt-6 border border-slate-100 space-y-4">
                 <h3 className="text-xs font-bold text-slate-800 uppercase tracking-widest flex items-center gap-1.5">
@@ -756,7 +812,7 @@ const CompanyInfoView = ({ firstTime = false, onCompanyCreated }) => {
             <div className="space-y-2">
               <InputRow label="Organization Name" keyName="name" value={formData.name} onChange={handleUpdateField} required={true} placeholder="e.g. Acme Corp Pvt Ltd" />
               <SelectRow label="Industry" keyName="industry" value={formData.industry} onChange={handleUpdateField} options={INDUSTRY_OPTIONS} />
-              <SelectRow label="State" keyName="state" value={formData.state} onChange={handleUpdateField} options={INDIAN_STATES} />
+              <SelectRow label="State" keyName="state" value={formData.state} onChange={handleUpdateField} options={INDIAN_STATES} required={true} />
               <SelectRow label="Organization Location" keyName="location" value={formData.location} onChange={handleUpdateField} options={["India", "USA", "UK", "UAE", "Singapore"]} required={true} />
               
               <div className="flex flex-col gap-1.5 py-4 border-b border-slate-100 lg:flex-row lg:items-start">
@@ -771,8 +827,11 @@ const CompanyInfoView = ({ firstTime = false, onCompanyCreated }) => {
                 </div>
               </div>
 
-              <InputRow label="GSTIN (GST Number)" keyName="gstNumber" value={formData.gstNumber} onChange={handleUpdateField} placeholder="e.g. 33AAAAA1111A1Z1" maxLength={15} />
-              <InputRow label="PAN" keyName="panNumber" value={formData.panNumber} onChange={handleUpdateField} placeholder="e.g. ABCDE1234F" maxLength={10} />
+              <SelectRow label="GST Registered?" keyName="isGstRegistered" value={formData.isGstRegistered} onChange={handleUpdateField} options={['Yes', 'No']} required={true} />
+              {formData.isGstRegistered === 'Yes' && (
+                <InputRow label="GSTIN (GST Number)" keyName="gstNumber" value={formData.gstNumber} onChange={handleUpdateField} placeholder="e.g. 33AAAAA1111A1Z1" maxLength={15} required={true} />
+              )}
+              <InputRow label="PAN" keyName="panNumber" value={formData.panNumber} onChange={handleUpdateField} placeholder="e.g. ABCDE1234F" maxLength={10} required={true} />
 
               <div className="bg-slate-50 rounded-xl p-6 mt-6 border border-slate-100 space-y-4">
                 <h3 className="text-xs font-bold text-slate-800 uppercase tracking-widest flex items-center gap-1.5">

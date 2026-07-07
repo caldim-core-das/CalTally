@@ -36,7 +36,7 @@ export default function CTASection() {
         </h2>
 
         <p className="text-slate-400 text-base mt-4 mb-10 max-w-md mx-auto leading-relaxed">
-          Join growing businesses who've replaced spreadsheets and manual ledgers with CalTally.
+          Join growing businesses who've replaced spreadsheets and manual ledgers with CalBooks.
         </p>
 
         <div className="flex justify-center">
