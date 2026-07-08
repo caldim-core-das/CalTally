@@ -119,6 +119,41 @@ export default function VoucherEntryView({ onSaveSuccess, onCancel }) {
   }, []);
 
   useEffect(() => {
+    if (!id) return;
+    voucherAPI.getById(id)
+      .then(res => {
+        const v = res.data;
+        if (v) {
+          setVType(v.voucherType || 'Journal');
+          setDate(new Date(v.date || v.createdAt).toISOString().split('T')[0]);
+          setNarration(v.narration || '');
+          if (v.voucherNumber) setRefNo(v.voucherNumber);
+          
+          if (v.Transactions && v.Transactions.length > 0) {
+            const loadedRows = v.Transactions.map(tx => ({
+              _id: _uid++,
+              ledgerId: tx.LedgerId || '',
+              costCenterId: tx.CostCenterAllocations?.[0]?.CostCenterId || '',
+              allocations: tx.CostCenterAllocations || [],
+              type: tx.debit > 0 ? 'Dr' : 'Cr',
+              amount: tx.debit > 0 ? tx.debit : tx.credit,
+              note: tx.narration || ''
+            }));
+            
+            while (loadedRows.length < 2) {
+              loadedRows.push(newRow('Cr'));
+            }
+            setRows(loadedRows);
+          }
+        }
+      })
+      .catch(err => {
+        console.error("Failed to load voucher", err);
+        setPostErr("Failed to load voucher details.");
+      });
+  }, [id]);
+
+  useEffect(() => {
     const cid = sessionStorage.getItem('companyId');
     if (!cid) return;
     ledgerAPI.getByCompany(cid)
@@ -173,7 +208,7 @@ export default function VoucherEntryView({ onSaveSuccess, onCancel }) {
 
     setSaving(true);
     try {
-      await voucherAPI.create({
+      const payload = {
         companyId: cid,
         voucherType: vType,
         date: new Date(date).toISOString(),
@@ -185,7 +220,13 @@ export default function VoucherEntryView({ onSaveSuccess, onCancel }) {
           debit:  r.type === 'Dr' ? parseFloat(r.amount) : 0,
           credit: r.type === 'Cr' ? parseFloat(r.amount) : 0,
         })),
-      });
+      };
+
+      if (id) {
+        await voucherAPI.update(id, payload);
+      } else {
+        await voucherAPI.create(payload);
+      }
       setSaved(true);
       setTimeout(() => { if (onSaveSuccess) onSaveSuccess(); else navigate('/vouchers'); }, 900);
     } catch (err) {
