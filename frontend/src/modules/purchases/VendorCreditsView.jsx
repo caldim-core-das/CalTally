@@ -626,9 +626,11 @@ const VendorCreditDetail = ({ id, navigate, companyId }) => {
                     </div>
                     
                     <div className="mt-24 pt-16 border-t border-slate-100 flex justify-between items-end">
-                        <div className="space-y-4">
+                        <div className="space-y-2">
+                            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">For {sessionStorage.getItem('companyName') || 'Authorized Signatory'}</p>
                             <div className="w-40 h-px bg-slate-300"></div>
                             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.3em]">Authorized Signature</p>
+                            <p className="text-[10px] font-extrabold text-slate-900 uppercase tracking-wider">{sessionStorage.getItem('companyName') || ''}</p>
                         </div>
                         <p className="text-[11px] font-bold text-slate-300 tracking-tight italic">Document generated for financial record purposes.</p>
                     </div>

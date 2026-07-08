@@ -973,9 +973,11 @@ const PurchaseOrdersView = ({ companyId }) => {
                       </>
                     )}
                   </div>
-                  <div className="text-right space-y-6">
+                  <div className="text-right space-y-2">
+                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">For {currentCompany?.name || sessionStorage.getItem('companyName') || 'Authorized Signatory'}</p>
                     <p className="text-slate-700">Authorized Signature</p>
                     <div className="w-48 h-px bg-slate-300 ml-auto"></div>
+                    <p className="text-[11px] font-extrabold text-slate-900 uppercase tracking-wider">{currentCompany?.name || sessionStorage.getItem('companyName') || ''}</p>
                   </div>
                 </div>
               </div>

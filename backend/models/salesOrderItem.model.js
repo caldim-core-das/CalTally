@@ -29,6 +29,11 @@ module.exports = (sequelize, DataTypes) => {
     amount: {
       type: DataTypes.DOUBLE,
       defaultValue: 0
+    },
+    gstRate: {
+      type: DataTypes.DOUBLE,
+      allowNull: true,
+      defaultValue: 0
     }
   });
 

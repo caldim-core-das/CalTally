@@ -11,6 +11,54 @@ import { INDIAN_STATES } from '../../utils/indianStates';
 import useNotificationStore from '../../store/notificationStore';
 import { CURRENCIES } from '../../utils/currencies';
 
+// Country-specific phone digit limits
+const PHONE_MAX_LENGTHS = {
+  '+91': 10,   // India
+  '+1': 10,    // US / Canada
+  '+44': 10,   // UK
+  '+61': 9,    // Australia
+  '+81': 11,   // Japan
+  '+86': 11,   // China
+  '+49': 11,   // Germany
+  '+33': 9,    // France
+  '+39': 10,   // Italy
+  '+34': 9,    // Spain
+  '+55': 11,   // Brazil
+  '+7': 10,    // Russia
+  '+92': 10,   // Pakistan
+  '+880': 10,  // Bangladesh
+  '+94': 9,    // Sri Lanka
+  '+977': 10,  // Nepal
+  '+971': 9,   // UAE
+  '+966': 9,   // Saudi Arabia
+  '+65': 8,    // Singapore
+  '+60': 10,   // Malaysia
+  '+62': 12,   // Indonesia
+  '+63': 10,   // Philippines
+  '+66': 9,    // Thailand
+  '+82': 10,   // South Korea
+  '+27': 9,    // South Africa
+  '+20': 10,   // Egypt
+  '+234': 10,  // Nigeria
+  '+254': 9,   // Kenya
+};
+const getPhoneMaxLength = (code) => PHONE_MAX_LENGTHS[code] ?? 15;
+
+const parsePhone = (phoneStr) => {
+  if (!phoneStr) return { code: '+91', number: '' };
+  const cleanStr = phoneStr.trim();
+  if (cleanStr.startsWith('+')) {
+    const sortedCodes = [...COUNTRY_CODES].sort((a, b) => b.code.length - a.code.length);
+    for (const c of sortedCodes) {
+      if (cleanStr.startsWith(c.code)) {
+        const number = cleanStr.substring(c.code.length).trim().replace(/\D/g, '');
+        return { code: c.code, number };
+      }
+    }
+  }
+  return { code: '+91', number: cleanStr.replace(/\D/g, '') };
+};
+
 const CustomerForm = ({ onSaveSuccess, onCancel, customerToEdit = null, standalone = true, companyId: propCompanyId }) => {
   const [loading, setLoading] = useState(false);
   const companyId = propCompanyId || sessionStorage.getItem('companyId');
@@ -23,8 +71,10 @@ const CustomerForm = ({ onSaveSuccess, onCancel, customerToEdit = null, standalo
   const [lastName, setLastName] = useState('');
   const [companyName, setCompanyName] = useState('');
   const [email, setEmail] = useState('');
-  const [workPhone, setWorkPhone] = useState('');
-  const [mobile, setMobile] = useState('');
+  const [workPhoneCode, setWorkPhoneCode] = useState('+91');
+  const [workPhoneNo, setWorkPhoneNo] = useState('');
+  const [mobileCode, setMobileCode] = useState('+91');
+  const [mobileNo, setMobileNo] = useState('');
   const [website, setWebsite] = useState('');
   const [displayName, setDisplayName] = useState('');
 
@@ -97,8 +147,13 @@ const CustomerForm = ({ onSaveSuccess, onCancel, customerToEdit = null, standalo
        setLastName(customerToEdit.lastName || '');
        setCustomerType(customerToEdit.customerType || 'Business');
        setEmail(customerToEdit.email || '');
-       setWorkPhone(customerToEdit.workPhone || customerToEdit.phone || '');
-       setMobile(customerToEdit.mobile || '');
+       const parsedWork = parsePhone(customerToEdit.workPhone || customerToEdit.phone);
+       setWorkPhoneCode(parsedWork.code);
+       setWorkPhoneNo(parsedWork.number);
+        
+       const parsedMobile = parsePhone(customerToEdit.mobile);
+       setMobileCode(parsedMobile.code);
+       setMobileNo(parsedMobile.number);
        setWebsite(customerToEdit.website || '');
        setPan(customerToEdit.pan || '');
        setTcsApplicable(customerToEdit.tcsApplicable || false);
@@ -197,8 +252,8 @@ const CustomerForm = ({ onSaveSuccess, onCancel, customerToEdit = null, standalo
         customerType,
         companyName,
         email,
-        workPhone,
-        mobile,
+        workPhone: workPhoneNo ? `${workPhoneCode} ${workPhoneNo}`.trim() : '',
+        mobile: mobileNo ? `${mobileCode} ${mobileNo}`.trim() : '',
         website,
         pan,
         tcsApplicable,
@@ -398,20 +453,50 @@ const CustomerForm = ({ onSaveSuccess, onCancel, customerToEdit = null, standalo
                         <div className="flex items-center">
                             <label className="w-48 text-[11px] font-bold text-slate-500 uppercase tracking-widest">Customer Phone</label>
                             <div className="flex flex-1 max-w-lg gap-4">
-                                <input 
-                                    placeholder="Work Phone"
-                                    value={workPhone} 
-                                    onChange={e => setWorkPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
-                                    maxLength={10}
-                                    className="flex-1 h-9 px-3 border border-slate-200 rounded text-[13px] outline-none focus:border-blue-400 font-medium" 
-                                />
-                                <input 
-                                    placeholder="Mobile"
-                                    value={mobile} 
-                                    onChange={e => setMobile(e.target.value.replace(/\D/g, '').slice(0, 10))}
-                                    maxLength={10}
-                                    className="flex-1 h-9 px-3 border border-slate-200 rounded text-[13px] outline-none focus:border-blue-400 font-medium" 
-                                />
+                                <div className="flex-1 flex h-9 border border-slate-200 rounded overflow-hidden focus-within:border-blue-400 bg-white shadow-sm">
+                                    <div className="flex-shrink-0 flex items-center bg-slate-50 border-r border-slate-200 px-2 gap-1 select-none w-[100px]">
+                                        <span className="text-[14px] leading-none">{COUNTRY_CODES.find(c => c.code === workPhoneCode)?.flag || '🌐'}</span>
+                                        <select 
+                                            value={workPhoneCode} 
+                                            onChange={e => setWorkPhoneCode(e.target.value)}
+                                            className="bg-transparent text-[12px] outline-none font-bold text-slate-700 cursor-pointer appearance-none w-full"
+                                        >
+                                            {COUNTRY_CODES.map((c, i) => (
+                                                <option key={i} value={c.code}>{c.flag} {c.code} ({c.country})</option>
+                                            ))}
+                                        </select>
+                                        <ChevronDown size={9} className="text-slate-400 pointer-events-none flex-shrink-0" />
+                                    </div>
+                                    <input 
+                                        placeholder="Work Phone"
+                                        value={workPhoneNo} 
+                                        onChange={e => setWorkPhoneNo(e.target.value.replace(/\D/g, '').slice(0, getPhoneMaxLength(workPhoneCode)))}
+                                        maxLength={getPhoneMaxLength(workPhoneCode)}
+                                        className="flex-1 min-w-0 h-full px-3 text-[13px] outline-none font-medium text-slate-700 bg-transparent" 
+                                    />
+                                </div>
+                                <div className="flex-1 flex h-9 border border-slate-200 rounded overflow-hidden focus-within:border-blue-400 bg-white shadow-sm">
+                                    <div className="flex-shrink-0 flex items-center bg-slate-50 border-r border-slate-200 px-2 gap-1 select-none w-[100px]">
+                                        <span className="text-[14px] leading-none">{COUNTRY_CODES.find(c => c.code === mobileCode)?.flag || '🌐'}</span>
+                                        <select 
+                                            value={mobileCode} 
+                                            onChange={e => setMobileCode(e.target.value)}
+                                            className="bg-transparent text-[12px] outline-none font-bold text-slate-700 cursor-pointer appearance-none w-full"
+                                        >
+                                            {COUNTRY_CODES.map((c, i) => (
+                                                <option key={i} value={c.code}>{c.flag} {c.code} ({c.country})</option>
+                                            ))}
+                                        </select>
+                                        <ChevronDown size={9} className="text-slate-400 pointer-events-none flex-shrink-0" />
+                                    </div>
+                                    <input 
+                                        placeholder="Mobile"
+                                        value={mobileNo} 
+                                        onChange={e => setMobileNo(e.target.value.replace(/\D/g, '').slice(0, getPhoneMaxLength(mobileCode)))}
+                                        maxLength={getPhoneMaxLength(mobileCode)}
+                                        className="flex-1 h-full px-3 text-[13px] outline-none font-medium text-slate-700 bg-transparent" 
+                                    />
+                                </div>
                             </div>
                         </div>
 

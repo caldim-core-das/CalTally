@@ -89,6 +89,27 @@ const SharedInvoiceView = () => {
   const company = invoice.Company || {};
   const customer = invoice.CustomerLedger || {};
   const items = invoice.items || [];
+
+  // Calculate dynamic GST breakdown for display in PDF/Checkout paper
+  const subTotal = parseFloat(invoice.subTotal) || 0;
+  const discountAmount = parseFloat(invoice.discountAmount) || 0;
+  const discountRatio = subTotal > 0 ? ((subTotal - discountAmount) / subTotal) : 1;
+
+  const breakdown = {};
+  items.forEach(item => {
+    const qty = parseFloat(item.quantity) || 0;
+    const rate = parseFloat(item.rate) || 0;
+    const discount = parseFloat(item.discount) || 0;
+    const lineBase = qty * rate;
+    const disc = item.discountType === '%' ? (lineBase * (discount / 100)) : discount;
+    const taxable = lineBase - disc;
+    const rateGst = parseFloat(item.gstRate) || 0;
+    const itemTax = taxable * discountRatio * (rateGst / 100);
+    breakdown[rateGst] = (breakdown[rateGst] || 0) + itemTax;
+  });
+
+  const totalBreakdownTax = Object.values(breakdown).reduce((sum, v) => sum + v, 0);
+  const hasBreakdown = totalBreakdownTax > 0.01;
   const currencySymbol = getCurrencyDisplay(customer.currency);
   const outstandingBalance = parseFloat(invoice.balance || invoice.totalAmount || 0);
 
@@ -197,11 +218,31 @@ const SharedInvoiceView = () => {
                   {parseFloat(invoice.subTotal || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                 </td>
               </tr>
-              {parseFloat(invoice.gstAmount || 0) > 0 && (
+              {parseFloat(invoice.gstAmount || 0) > 0 ? (
+                hasBreakdown ? (
+                  Object.entries(breakdown)
+                    .sort(([rateA], [rateB]) => parseFloat(rateA) - parseFloat(rateB))
+                    .map(([rate, amount]) => (
+                      <tr key={rate}>
+                        <td colSpan="5" className="px-6 py-3 text-right border-r border-slate-200">GST @ {rate}%</td>
+                        <td className="px-6 py-3 text-right font-bold text-slate-800 font-mono">
+                          {amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                        </td>
+                      </tr>
+                    ))
+                ) : (
+                  <tr>
+                    <td colSpan="5" className="px-6 py-3 text-right border-r border-slate-200">GST</td>
+                    <td className="px-6 py-3 text-right font-bold text-slate-800 font-mono">
+                      {parseFloat(invoice.gstAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                    </td>
+                  </tr>
+                )
+              ) : (
                 <tr>
-                  <td colSpan="5" className="px-6 py-3 text-right border-r border-slate-200">GST (18%)</td>
+                  <td colSpan="5" className="px-6 py-3 text-right border-r border-slate-200">GST @ 0%</td>
                   <td className="px-6 py-3 text-right font-bold text-slate-800 font-mono">
-                    {parseFloat(invoice.gstAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                    0.00
                   </td>
                 </tr>
               )}

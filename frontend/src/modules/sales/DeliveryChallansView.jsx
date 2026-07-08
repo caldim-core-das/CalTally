@@ -1046,8 +1046,10 @@ const DeliveryChallanDetail = ({ id, navigate, companyId }) => {
                          </div>
                          <div className="text-center">
                              <div className="w-64 ml-auto">
+                                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-4">For {sessionStorage.getItem('companyName') || 'Authorized Signatory'}</p>
                                 <div className="h-10 border-b border-slate-200 border-dashed mb-4"></div>
                                 <p className="text-[10px] font-bold text-slate-900 uppercase tracking-[0.3em] opacity-90">Authorized Signature</p>
+                                <p className="text-[10px] font-extrabold text-slate-900 uppercase tracking-wider mt-1">{sessionStorage.getItem('companyName') || ''}</p>
                              </div>
                          </div>
                     </div>

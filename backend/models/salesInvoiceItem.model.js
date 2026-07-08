@@ -28,7 +28,12 @@ module.exports = (sequelize, DataTypes) => {
     },
     itemId: DataTypes.UUID,
     SalesInvoiceId: DataTypes.UUID,
-    projectId: DataTypes.UUID
+    projectId: DataTypes.UUID,
+    gstRate: {
+      type: DataTypes.FLOAT,
+      allowNull: true,
+      defaultValue: 0
+    }
   });
 
   SalesInvoiceItem.associate = (models) => {

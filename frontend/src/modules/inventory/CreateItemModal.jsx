@@ -58,6 +58,30 @@ const CreateItemModal = ({ isOpen, onClose, onSuccess, companyId }) => {
   const purchaseAccountDropdownRef = useRef(null);
   const fileInputRef = useRef(null);
 
+  const handleNameChange = (name) => {
+    setNewItem(prev => {
+      const lowerName = name.toLowerCase();
+      const foodKeywords = ['rice', 'wheat', 'flour', 'grain', 'sugar', 'salt', 'pulse', 'cereal', 'food', 'milk', 'vegetable', 'fruit', 'grocery', 'groceries', 'mango', 'spices', 'oil', 'tea', 'coffee', 'pulses', 'dhal', 'dal', 'atta', 'maida', 'suji', 'rawa', 'paneer', 'curd', 'yoghurt', 'honey'];
+      const gadgetKeywords = ['laptop', 'mobile', 'phone', 'tablet', 'gadget', 'watch', 'computer', 'printer', 'electronics', 'charger', 'cable', 'software', 'camera', 'headphone', 'tv', 'television', 'monitor', 'keyboard', 'mouse', 'router', 'modem'];
+      
+      let suggestedGst = prev.gstRate !== undefined ? prev.gstRate : 18;
+      if (!prev.gstRateManuallyEdited) {
+        if (foodKeywords.some(keyword => lowerName.includes(keyword))) {
+          suggestedGst = 5;
+        } else if (gadgetKeywords.some(keyword => lowerName.includes(keyword))) {
+          suggestedGst = 18;
+        } else {
+          suggestedGst = 18;
+        }
+      }
+      return {
+        ...prev,
+        name,
+        gstRate: suggestedGst
+      };
+    });
+  };
+
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (unitDropdownRef.current && !unitDropdownRef.current.contains(event.target)) setIsUnitOpen(false);
@@ -169,7 +193,7 @@ const CreateItemModal = ({ isOpen, onClose, onSuccess, companyId }) => {
                   <input 
                     autoFocus
                     value={newItem.name} 
-                    onChange={e => setNewItem({...newItem, name: e.target.value})}
+                    onChange={e => handleNameChange(e.target.value)}
                     placeholder="Enter item name..."
                     className="w-full bg-white border border-slate-200 rounded-2xl pl-12 pr-4 py-3 text-sm font-bold text-slate-800 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/5 transition-all shadow-sm"
                   />
@@ -213,7 +237,7 @@ const CreateItemModal = ({ isOpen, onClose, onSuccess, companyId }) => {
                   <label className="text-[11px] font-bold text-slate-400 uppercase tracking-[0.2em] ml-1">GST Rate</label>
                   <select
                     value={newItem.gstRate !== undefined ? newItem.gstRate : 18}
-                    onChange={e => setNewItem({...newItem, gstRate: parseFloat(e.target.value)})}
+                    onChange={e => setNewItem({...newItem, gstRate: parseFloat(e.target.value), gstRateManuallyEdited: true})}
                     className="w-full bg-white border border-slate-200 rounded-2xl px-4 py-3 text-sm font-bold text-slate-800 outline-none appearance-none focus:border-blue-500 transition-all bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22currentColor%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C/polyline%3E%3C/svg%3E')] bg-[length:14px] bg-[right_15px_center] bg-no-repeat cursor-pointer shadow-sm"
                   >
                     <option value="0">0%</option>
