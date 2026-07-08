@@ -292,20 +292,107 @@ const BillsView = ({ companyId }) => {
     const finalY = doc.lastAutoTable.finalY + 15;
     const totalsX = 130;
     
+    let currentFinalY = finalY;
+
+    let taxAmount = parseFloat(billDetail.taxAmount || 0);
+    let tdsAmount = parseFloat(billDetail.tdsAmount || 0);
+    let taxRate = parseFloat(billDetail.taxRate || 0);
+    let tdsRate = parseFloat(billDetail.tdsRate || 0);
+    let tdsName = billDetail.tdsName || 'TDS';
+    let discountAmount = parseFloat(billDetail.discountAmount || 0);
+    let discount = parseFloat(billDetail.discount || 0);
+    let adjustment = parseFloat(billDetail.adjustment || 0);
+    const derivedTotalAmount = parseFloat(derivedTotal);
+    let subtotalAmount = parseFloat(billDetail.subtotal || billDetail.totalAmount || derivedTotalAmount || 0);
+
+    try {
+      if (billDetail?.narration && billDetail.narration.startsWith('{')) {
+        const p = JSON.parse(billDetail.narration);
+        if (!taxRate) taxRate = parseFloat(p.taxRate || 0);
+        if (!tdsRate) tdsRate = parseFloat(p.tdsRate || 0);
+        if (!tdsName && p.tdsName) tdsName = p.tdsName;
+        if (!discount) discount = parseFloat(p.discount || 0);
+        if (!adjustment) adjustment = parseFloat(p.adjustment || 0);
+
+        let calcSubtotal = 0;
+        if (p.items && Array.isArray(p.items)) {
+          calcSubtotal = p.items.reduce((sum, item) => sum + (parseFloat(item.amount || item.total || 0)), 0);
+        }
+
+        if (!taxAmount) taxAmount = parseFloat(p.taxAmount) || (calcSubtotal * (taxRate / 100));
+        if (!tdsAmount) tdsAmount = parseFloat(p.tdsAmount) || (calcSubtotal * (tdsRate / 100));
+        if (!discountAmount) discountAmount = parseFloat(p.discountAmount) || (calcSubtotal * (discount / 100));
+        if (p.subtotal) subtotalAmount = parseFloat(p.subtotal);
+        else if (calcSubtotal > 0) subtotalAmount = calcSubtotal;
+      }
+    } catch (e) {}
+    
     doc.setFontSize(10);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(100, 116, 139);
-    doc.text('Sub Total', totalsX, finalY);
+    doc.text('Sub Total', totalsX, currentFinalY);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(15, 23, 42);
-    doc.text(`Rs ${parseFloat(derivedTotal).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, 190, finalY, { align: 'right' });
-    
-    doc.setFillColor(15, 23, 42); // slate-900
-    doc.rect(totalsX - 5, finalY + 5, 65, 12, 'F');
+    doc.text(`Rs ${subtotalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, 190, currentFinalY, { align: 'right' });
+
+    if (discountAmount > 0) {
+      currentFinalY += 7;
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(100, 116, 139);
+      doc.text(`Discount (${discount || 0}%)`, totalsX, currentFinalY);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(239, 68, 68);
+      doc.text(`- Rs ${discountAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, 190, currentFinalY, { align: 'right' });
+    }
+
+    if (taxAmount > 0) {
+      currentFinalY += 7;
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(100, 116, 139);
+      doc.text(`Tax (${taxRate || 0}%)`, totalsX, currentFinalY);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(15, 23, 42);
+      doc.text(`+ Rs ${taxAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, 190, currentFinalY, { align: 'right' });
+    }
+
+    if (tdsAmount > 0) {
+      currentFinalY += 7;
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(100, 116, 139);
+      let tdsLabel = `TDS (${tdsName || 'TDS'} - ${tdsRate || 0}%)`;
+      if (tdsLabel.length > 22) {
+        tdsLabel = tdsLabel.substring(0, 19) + '...)';
+      }
+      doc.text(tdsLabel, totalsX, currentFinalY);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(239, 68, 68);
+      doc.text(`- Rs ${tdsAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, 190, currentFinalY, { align: 'right' });
+    }
+
+    if (adjustment !== 0) {
+      currentFinalY += 7;
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(100, 116, 139);
+      doc.text('Adjustment', totalsX, currentFinalY);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(15, 23, 42);
+      doc.text(`${adjustment > 0 ? '+' : ''} Rs ${adjustment.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, 190, currentFinalY, { align: 'right' });
+    }
+
+    currentFinalY += 10;
     doc.setFont('helvetica', 'bold');
-    doc.setTextColor(255, 255, 255);
-    doc.text('Total Amount', totalsX, finalY + 13);
-    doc.text(`Rs ${parseFloat(derivedTotal).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, 190, finalY + 13, { align: 'right' });
+    doc.setTextColor(100, 116, 139);
+    doc.text('Total', totalsX, currentFinalY);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(37, 99, 235);
+    doc.text(`Rs ${derivedTotalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, 190, currentFinalY, { align: 'right' });
+    
+    doc.setFillColor(248, 250, 252);
+    doc.rect(totalsX - 5, currentFinalY + 5, 75, 12, 'F');
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(15, 23, 42);
+    doc.text('BALANCE DUE', totalsX, currentFinalY + 13);
+    doc.text(`Rs ${parseFloat(billDetail.balanceDue ?? derivedTotal).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, 190, currentFinalY + 13, { align: 'right' });
     
     // Save/Download PDF
     doc.save(`${billDetail.voucherNumber || 'BILL'}.pdf`);
@@ -968,18 +1055,80 @@ const BillsView = ({ companyId }) => {
                                                 <div className="flex justify-end mb-10">
                                                     <div className="w-[280px] space-y-0">
                                                         {(() => {
+                                                            let taxAmount = parseFloat(billDetail?.taxAmount || 0);
+                                                            let tdsAmount = parseFloat(billDetail?.tdsAmount || 0);
+                                                            let taxRate = parseFloat(billDetail?.taxRate || 0);
+                                                            let tdsRate = parseFloat(billDetail?.tdsRate || 0);
+                                                            let tdsName = billDetail?.tdsName || 'TDS';
+                                                            let discountAmount = parseFloat(billDetail?.discountAmount || 0);
+                                                            let discount = parseFloat(billDetail?.discount || 0);
+                                                            let adjustment = parseFloat(billDetail?.adjustment || 0);
                                                             const derivedTotal = getDerivedTotal(billDetail);
+                                                            let subtotal = parseFloat(billDetail?.subtotal || billDetail?.totalAmount || derivedTotal || 0);
+
+                                                            try {
+                                                              if (billDetail?.narration && billDetail.narration.startsWith('{')) {
+                                                                const p = JSON.parse(billDetail.narration);
+                                                                if (!taxRate) taxRate = parseFloat(p.taxRate || 0);
+                                                                if (!tdsRate) tdsRate = parseFloat(p.tdsRate || 0);
+                                                                if (!tdsName && p.tdsName) tdsName = p.tdsName;
+                                                                if (!discount) discount = parseFloat(p.discount || 0);
+                                                                if (!adjustment) adjustment = parseFloat(p.adjustment || 0);
+
+                                                                let calcSubtotal = 0;
+                                                                if (p.items && Array.isArray(p.items)) {
+                                                                  calcSubtotal = p.items.reduce((sum, item) => sum + (parseFloat(item.amount || item.total || 0)), 0);
+                                                                }
+
+                                                                if (!taxAmount) taxAmount = parseFloat(p.taxAmount) || (calcSubtotal * (taxRate / 100));
+                                                                if (!tdsAmount) tdsAmount = parseFloat(p.tdsAmount) || (calcSubtotal * (tdsRate / 100));
+                                                                if (!discountAmount) discountAmount = parseFloat(p.discountAmount) || (calcSubtotal * (discount / 100));
+                                                                if (p.subtotal) subtotal = parseFloat(p.subtotal);
+                                                                else if (calcSubtotal > 0) subtotal = calcSubtotal;
+                                                              }
+                                                            } catch (e) {}
+
                                                             const balanceDue = parseFloat(billDetail?.balanceDue ?? derivedTotal);
                                                             return (
                                                                 <>
                                                                     <div className="flex justify-between text-[13px] py-2 border-b border-slate-100">
                                                                         <span className="text-slate-500 font-medium">Sub Total</span>
-                                                                        <span className="font-bold text-slate-800 tabular-nums">₹{parseFloat(derivedTotal).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                                                                        <span className="font-bold text-slate-800 tabular-nums">₹{subtotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                                                                     </div>
+                                                                    
+                                                                    {discountAmount > 0 && (
+                                                                        <div className="flex justify-between text-[13px] py-2 border-b border-slate-100">
+                                                                            <span className="text-slate-500 font-medium">Discount ({discount}%)</span>
+                                                                            <span className="font-bold text-red-500 tabular-nums">- ₹{discountAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                                                                        </div>
+                                                                    )}
+
+                                                                    {taxAmount > 0 && (
+                                                                        <div className="flex justify-between text-[13px] py-2 border-b border-slate-100">
+                                                                            <span className="text-slate-500 font-medium">Tax ({taxRate}%)</span>
+                                                                            <span className="font-bold text-slate-800 tabular-nums">+ ₹{taxAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                                                                        </div>
+                                                                    )}
+
+                                                                    {tdsAmount > 0 && (
+                                                                        <div className="flex justify-between text-[13px] py-2 border-b border-slate-100">
+                                                                            <span className="text-slate-500 font-medium uppercase text-[11px]">TDS ({tdsName} - {tdsRate}%)</span>
+                                                                            <span className="font-bold text-red-500 tabular-nums">- ₹{tdsAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                                                                        </div>
+                                                                    )}
+
+                                                                    {adjustment !== 0 && (
+                                                                        <div className="flex justify-between text-[13px] py-2 border-b border-slate-100">
+                                                                            <span className="text-slate-500 font-medium">Adjustment</span>
+                                                                            <span className="font-bold text-slate-800 tabular-nums">{adjustment > 0 ? '+' : ''} ₹{adjustment.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                                                                        </div>
+                                                                    )}
+
                                                                     <div className="flex justify-between text-[13px] py-2 border-b border-slate-100">
-                                                                        <span className="text-slate-500 font-medium">Total</span>
-                                                                        <span className="font-bold text-slate-800 tabular-nums">₹{parseFloat(derivedTotal).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                                                                        <span className="text-slate-800 font-bold">Total</span>
+                                                                        <span className="font-bold text-blue-600 tabular-nums">₹{parseFloat(derivedTotal).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                                                                     </div>
+                                                                    
                                                                     <div className="flex justify-between text-[14px] py-3 bg-slate-100 px-4 rounded-lg mt-2 items-center">
                                                                         <span className="font-bold text-slate-700 uppercase text-[11px] tracking-wider">Balance Due</span>
                                                                         <span className="font-bold text-slate-900 tabular-nums text-[16px]">₹{balanceDue.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>

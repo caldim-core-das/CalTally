@@ -163,19 +163,26 @@ const BillEntryView = ({ companyId }) => {
         const order = (ordersRes.data || []).find(o => String(o.id) === String(id));
         if (order) {
           const co = companyRes.data;
+          let parsedNarration = {};
+          try {
+            if (order.narration && order.narration.startsWith('{')) {
+              parsedNarration = JSON.parse(order.narration);
+            }
+          } catch(e) {}
+
           let deliveryAddressData = {
             attention: '', street1: '', street2: '', city: '', state: '', zip: '', country: '', phone: ''
           };
-          try {
-            if (order.deliveryAddressDataJson) {
-              deliveryAddressData = JSON.parse(order.deliveryAddressDataJson);
-            }
-          } catch (e) {}
+          if (parsedNarration.deliveryAddressData && Object.keys(parsedNarration.deliveryAddressData).length > 0) {
+            deliveryAddressData = parsedNarration.deliveryAddressData;
+          }
 
+          const resolvedDeliveryAddressType = parsedNarration.deliveryAddress || 'Organization';
           const isEmptyAddress = !deliveryAddressData.street1 && !deliveryAddressData.city && !deliveryAddressData.attention;
-          if (order.deliveryAddress === 'Organization' && isEmptyAddress && co) {
+          
+          if (resolvedDeliveryAddressType === 'Organization' && isEmptyAddress && co) {
             deliveryAddressData = {
-              attention: co.name || '',
+              attention: '',
               street1: co.street1 || '',
               street2: co.street2 || '',
               city: co.city || '',
@@ -187,43 +194,46 @@ const BillEntryView = ({ companyId }) => {
           }
 
           let orderItems = [{ id: Date.now(), itemName: '', account: '', qty: 1, rate: 0, amount: 0 }];
-          try {
-            if (order.itemsJson) {
-              orderItems = JSON.parse(order.itemsJson);
-            }
-          } catch (e) {}
+          if (parsedNarration.items && Array.isArray(parsedNarration.items) && parsedNarration.items.length > 0) {
+            orderItems = parsedNarration.items;
+          }
+
+          let vendorLedgerId = order.LedgerId;
+          let vendorName = order.Ledger?.name || '';
+          
+          if (!vendorLedgerId && order.Transactions) {
+             const vTx = order.Transactions.find(t => parseFloat(t.credit || 0) > 0);
+             if (vTx) {
+               vendorLedgerId = vTx.LedgerId;
+               vendorName = vTx.Ledger?.name || '';
+             }
+          }
 
           setFormData({
-            vendorName: order.Ledger?.name || '',
-            vendorId: order.LedgerId || '',
-            deliveryAddress: order.deliveryAddress || 'Organization',
-            deliveryAddressText: order.deliveryAddressText || '',
-            billNumber: order.billNumber || '',
-            reference: order.reference || '',
+            vendorName: vendorName,
+            vendorId: vendorLedgerId || '',
+            deliveryAddress: parsedNarration.deliveryAddress || 'Organization',
+            deliveryAddressText: parsedNarration.deliveryAddressText || '',
+            billNumber: order.voucherNumber || '',
+            reference: parsedNarration.reference || '',
             date: order.date || '',
-            deliveryDate: order.deliveryDate || '',
-            paymentTerms: order.paymentTerms || 'Due on Receipt',
-            shipmentPreference: order.shipmentPreference || '',
-            deliveryAddressData,
-            notes: order.notes || '',
-            terms: order.terms || '',
-            discount: parseFloat(order.discount || 0),
-            adjustment: parseFloat(order.adjustment || 0),
-            taxRate: parseFloat(order.taxRate || 0),
-            tdsRate: parseFloat(order.tdsRate || 0),
-            tdsName: order.tdsName || '',
+            deliveryDate: parsedNarration.dueDate || '',
+            paymentTerms: parsedNarration.paymentTerms || 'Due on Receipt',
+            shipmentPreference: '',
+            deliveryAddressData: deliveryAddressData,
+            notes: parsedNarration.notes || '',
+            terms: '',
+            discount: parseFloat(parsedNarration.discount || 0),
+            adjustment: parseFloat(parsedNarration.adjustment || 0),
+            taxRate: parseFloat(parsedNarration.taxRate || 0),
+            tdsRate: parseFloat(parsedNarration.tdsRate || 0),
+            tdsName: parsedNarration.tdsName || '',
             status: order.status || 'Draft',
             tags: [],
-            projectId: order.ProjectId || ''
+            projectId: order.ProjectId || parsedNarration.projectId || ''
           });
 
-          let loadedEmailContacts = [];
-          try {
-            if (order.emailContactsJson) {
-              loadedEmailContacts = JSON.parse(order.emailContactsJson);
-            }
-          } catch(e) {}
-          setSelectedEmailContacts(loadedEmailContacts);
+          setSelectedEmailContacts([]);
 
           setItems(orderItems);
         }
@@ -413,7 +423,7 @@ const BillEntryView = ({ companyId }) => {
   const previousVendorIdRef = useRef('');
   useEffect(() => {
      if (formData.vendorId && formData.vendorId !== previousVendorIdRef.current) {
-        if (!id && emailContacts.length > 0) {
+        if (emailContacts.length > 0) {
            setSelectedEmailContacts(emailContacts.map(c => c.id));
         }
         previousVendorIdRef.current = formData.vendorId;
@@ -476,6 +486,9 @@ const BillEntryView = ({ companyId }) => {
         companyId,
         items: items,
         projectId: formData.projectId || null,
+        deliveryAddress: formData.deliveryAddress,
+        deliveryAddressText: formData.deliveryAddressText,
+        deliveryAddressData: formData.deliveryAddressData,
         taxAmount: parseFloat(totals.taxAmount || 0),
         tdsAmount: parseFloat(totals.tdsAmount || 0),
         discountAmount: parseFloat(totals.discountAmount || 0),
@@ -498,7 +511,7 @@ const BillEntryView = ({ companyId }) => {
       setSavedBill(savedData);
       
       if (sendEmail) {
-        navigate(`/bills/${savedData.id || id}/email`);
+        setIsEmailModalOpen(true);
       } else {
         addNotification('Bill saved successfully', 'success');
         navigate(`/bills`);
@@ -520,7 +533,7 @@ const BillEntryView = ({ companyId }) => {
              <h1 className="text-[18px] text-slate-800">{id ? 'Edit Bill' : 'New Bill'}</h1>
           </div>
           <button 
-            onClick={() => window.history.back()}
+            onClick={() => navigate('/bills')}
             className="text-slate-400 hover:text-slate-600 transition-colors"
           >
              <X size={20} />
@@ -706,7 +719,7 @@ const BillEntryView = ({ companyId }) => {
                                    let nextAddr = prev.deliveryAddressData;
                                    if (nextType === 'Organization' && currentCompany) {
                                      nextAddr = {
-                                       attention: currentCompany.name || '',
+                                       attention: '',
                                        street1: currentCompany.street1 || '',
                                        street2: currentCompany.street2 || '',
                                        city: currentCompany.city || '',
@@ -827,28 +840,22 @@ const BillEntryView = ({ companyId }) => {
                        </div>
                     ) : (
                        <div className="max-w-[400px]">
-                          <input 
-                             type="text" 
-                             value={formData.deliveryAddressData.attention}
-                             onChange={(e) => setFormData({ ...formData, deliveryAddressData: { ...formData.deliveryAddressData, attention: e.target.value } })}
-                             className="w-full max-w-[280px] h-8 px-3 border border-blue-400 rounded-[4px] text-[13px] text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500 mb-3 shadow-sm"
+                          <textarea 
+                             value={[
+                               formData.deliveryAddressData?.attention,
+                               formData.deliveryAddressData?.street1,
+                               formData.deliveryAddressData?.street2,
+                               [formData.deliveryAddressData?.city, formData.deliveryAddressData?.state, formData.deliveryAddressData?.zip].filter(Boolean).join(', '),
+                               [formData.deliveryAddressData?.country, formData.deliveryAddressData?.phone].filter(Boolean).join(', ')
+                             ].filter(Boolean).join('\n')}
+                             readOnly
+                             className="w-full max-w-[320px] px-3 py-2 border border-slate-300 bg-slate-50 rounded-[4px] text-[13px] text-slate-800 focus:outline-none mb-3 shadow-sm resize-none"
+                             rows={5}
                           />
-                          <div className="text-[13px] text-slate-600 leading-relaxed mb-4">
-                             {formData.deliveryAddressData.street1 && <div>{formData.deliveryAddressData.street1}</div>}
-                             {formData.deliveryAddressData.street2 && <div>{formData.deliveryAddressData.street2}</div>}
-                             {(formData.deliveryAddressData.city || formData.deliveryAddressData.state || formData.deliveryAddressData.zip) && (
-                                <div>
-                                   {formData.deliveryAddressData.city}{formData.deliveryAddressData.city && (formData.deliveryAddressData.state || formData.deliveryAddressData.zip) ? ', ' : ''}
-                                   {formData.deliveryAddressData.state} {formData.deliveryAddressData.zip}
-                                </div>
-                             )}
-                             {formData.deliveryAddressData.country && <div>{formData.deliveryAddressData.country}{formData.deliveryAddressData.country && formData.deliveryAddressData.phone ? ' ,' : ''}</div>}
-                             {formData.deliveryAddressData.phone && <div>{formData.deliveryAddressData.phone}</div>}
-                          </div>
                           <button 
                              type="button" 
                              onClick={() => setIsEditingDeliveryAddress(true)} 
-                             className="text-[13px] text-blue-500 hover:text-blue-700 cursor-pointer"
+                             className="text-[13px] text-blue-500 hover:text-blue-700 cursor-pointer block"
                           >
                              Change destination to deliver
                           </button>
@@ -1471,7 +1478,7 @@ const BillEntryView = ({ companyId }) => {
                 Save and Send
              </button>
              <button 
-               onClick={() => window.history.back()} 
+               onClick={() => navigate('/bills')} 
                className="px-4 h-8 bg-slate-50 hover:bg-slate-100 text-slate-700 font-medium rounded border border-slate-200 transition-colors text-[13px]"
              >
                 Cancel
@@ -1568,7 +1575,7 @@ const BillEntryView = ({ companyId }) => {
             isOpen={isEmailModalOpen}
             onClose={() => {
               setIsEmailModalOpen(false);
-              window.history.back();
+              navigate('/bills');
             }}
             vendor={vendors.find(v => v.id === formData.vendorId)}
             poData={{...formData, id: savedBill?.id, billNumber: formData.billNumber, companyId}}
@@ -1578,7 +1585,7 @@ const BillEntryView = ({ companyId }) => {
             companyName={currentCompany?.name || ''}
             onSent={() => {
               addNotification('Email sent successfully', 'success');
-              window.history.back();
+              navigate('/bills');
             }}
           />
         )}

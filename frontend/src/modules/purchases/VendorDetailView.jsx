@@ -248,6 +248,14 @@ const VendorDetailView = ({ companyId }) => {
       addNotification('First Name is required', 'error');
       return;
     }
+    if (!contactForm.email) {
+      addNotification('Email Address is required', 'error');
+      return;
+    }
+    if (!contactForm.workPhone && !contactForm.mobile) {
+      addNotification('Phone Number is required', 'error');
+      return;
+    }
     try {
       setLoading(true);
       const newContact = {
@@ -1742,7 +1750,7 @@ const VendorDetailView = ({ companyId }) => {
             
             <div className="p-6 space-y-6 overflow-y-auto flex-1">
                <div className="flex items-start gap-4">
-                  <label className="w-32 text-[13px] font-medium text-slate-600 mt-2">Name</label>
+                  <label className="w-32 text-[13px] font-medium text-slate-600 mt-2">Name <span className="text-red-500">*</span></label>
                   <div className="flex-1 grid grid-cols-12 gap-3">
                      <div className="col-span-3">
                         <select 
@@ -1774,7 +1782,7 @@ const VendorDetailView = ({ companyId }) => {
                </div>
 
                <div className="flex items-center gap-4">
-                  <label className="w-32 text-[13px] font-medium text-slate-600">Email Address</label>
+                  <label className="w-32 text-[13px] font-medium text-slate-600">Email Address <span className="text-red-500">*</span></label>
                   <div className="flex-1">
                      <input 
                         type="email"
@@ -1786,7 +1794,7 @@ const VendorDetailView = ({ companyId }) => {
                </div>
 
                <div className="flex items-start gap-4">
-                  <label className="w-32 text-[13px] font-medium text-slate-600 mt-2">Phone</label>
+                  <label className="w-32 text-[13px] font-medium text-slate-600 mt-2">Phone <span className="text-red-500">*</span></label>
                   <div className="flex-1 space-y-3">
                      <div className="flex gap-3">
                         <select 
