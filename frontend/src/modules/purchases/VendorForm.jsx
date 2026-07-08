@@ -69,6 +69,7 @@ const VendorForm = ({ editId, standalone = true, onSaveSuccess, onCancel, compan
   const [paymentTerms, setPaymentTerms] = useState('Due on Receipt');
   const [gstNumber, setGstNumber] = useState('');
   const [gstError, setGstError] = useState('');
+  const [isGstRegistered, setIsGstRegistered] = useState('No');
   const [tdsTax, setTdsTax] = useState('');
   const [tdsConfigs, setTdsConfigs] = useState([]);
   
@@ -246,6 +247,7 @@ const VendorForm = ({ editId, standalone = true, onSaveSuccess, onCancel, compan
              if (c.gstNumber) {
                  const cleanedGst = c.gstNumber.replace(/\s+/g, '').toUpperCase();
                  setGstNumber(cleanedGst);
+                 setIsGstRegistered('Yes');
                  // Trigger validation on load
                  const gstRegex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
                  if (cleanedGst.length !== 15) {
@@ -297,7 +299,26 @@ const VendorForm = ({ editId, standalone = true, onSaveSuccess, onCancel, compan
       }
     }
 
-    if (gstNumber) {
+    if (!email) {
+      addNotification('Vendor Email is compulsory.', 'error');
+      return;
+    }
+
+    if (!workPhone && !mobile) {
+      addNotification('Vendor Phone is compulsory.', 'error');
+      return;
+    }
+
+    if (!pan) {
+      addNotification('PAN Number is compulsory.', 'error');
+      return;
+    }
+
+    if (isGstRegistered === 'Yes') {
+      if (!gstNumber) {
+        addNotification('GSTIN Number is compulsory.', 'error');
+        return;
+      }
       const cleanedGst = gstNumber.replace(/\s+/g, '').toUpperCase();
       if (cleanedGst.length !== 15) {
         addNotification('GSTIN must be exactly 15 characters', 'error');
@@ -347,6 +368,7 @@ const VendorForm = ({ editId, standalone = true, onSaveSuccess, onCancel, compan
 
       let result;
       if (isEditMode) {
+        // ... (don't change the block below, we just update the outer if)
         result = await ledgerAPI.update(editId, payload);
       } else {
         result = await ledgerAPI.create(payload);
@@ -436,7 +458,7 @@ const VendorForm = ({ editId, standalone = true, onSaveSuccess, onCancel, compan
                                 />
                             </div>
                             <div className="flex items-center">
-                                <label className="w-48 text-[13px] font-medium text-slate-500 shrink-0">Display Name*</label>
+                                <label className="w-48 text-[13px] font-medium text-slate-500 shrink-0">Display Name<span className="text-red-500">*</span></label>
                                 <div className="flex-1 relative">
                                     <select 
                                         value={displayName} 
@@ -458,7 +480,7 @@ const VendorForm = ({ editId, standalone = true, onSaveSuccess, onCancel, compan
 
                 {/* Email */}
                 <div className="flex items-center">
-                    <label className="w-48 text-[13px] font-medium text-slate-500">Vendor Email</label>
+                    <label className="w-48 text-[13px] font-medium text-slate-500">Vendor Email<span className="text-red-500">*</span></label>
                     <input 
                         type="email" value={email} onChange={e => setEmail(e.target.value)}
                         className="flex-1 max-w-lg h-9 px-3 border border-slate-200 rounded text-[13px] outline-none focus:border-blue-400" 
@@ -467,7 +489,7 @@ const VendorForm = ({ editId, standalone = true, onSaveSuccess, onCancel, compan
 
                 {/* Phone */}
                 <div className="flex items-center">
-                    <label className="w-48 text-[13px] font-medium text-slate-500">Vendor Phone</label>
+                    <label className="w-48 text-[13px] font-medium text-slate-500">Vendor Phone<span className="text-red-500">*</span></label>
                     <div className="flex flex-1 max-w-lg gap-4">
                         <div className="flex-1 flex h-9 border border-slate-200 rounded overflow-hidden focus-within:border-blue-400 bg-white shadow-sm">
                             <div className="flex-shrink-0 flex items-center bg-slate-50 border-r border-slate-200 px-2 gap-1 select-none w-[100px]">
@@ -516,14 +538,6 @@ const VendorForm = ({ editId, standalone = true, onSaveSuccess, onCancel, compan
                     </div>
                 </div>
 
-                {/* Website */}
-                <div className="flex items-center">
-                    <label className="w-48 text-[13px] font-medium text-slate-500">Website</label>
-                    <input 
-                        type="text" value={website} onChange={e => setWebsite(e.target.value)}
-                        className="flex-1 max-w-lg h-9 px-3 border border-slate-200 rounded text-[13px] outline-none focus:border-blue-400" 
-                    />
-                </div>
             </div>
         </section>
 
@@ -874,7 +888,7 @@ const VendorForm = ({ editId, standalone = true, onSaveSuccess, onCancel, compan
                 </div>
 
                 <div className="flex items-center">
-                    <label className="w-48 text-[13px] font-medium text-slate-500 text-red-500">PAN Number</label>
+                    <label className="w-48 text-[13px] font-medium text-slate-500">PAN Number<span className="text-red-500">*</span></label>
                     <input 
                         value={pan} onChange={e => setPan(e.target.value.toUpperCase())}
                         className="flex-1 max-w-lg h-9 px-3 border border-slate-200 rounded text-[13px] outline-none focus:border-blue-400 capitalize" 
@@ -882,8 +896,17 @@ const VendorForm = ({ editId, standalone = true, onSaveSuccess, onCancel, compan
                     />
                 </div>
 
+                <div className="flex items-center">
+                    <label className="w-48 text-[13px] font-medium text-slate-500">GST Registered?</label>
+                    <select value={isGstRegistered} onChange={e => { setIsGstRegistered(e.target.value); if(e.target.value==='No'){setGstNumber(''); setGstError('');} }} className="flex-1 max-w-lg h-9 px-3 border border-slate-200 rounded text-[13px] outline-none bg-white">
+                        <option value="Yes">Yes</option>
+                        <option value="No">No</option>
+                    </select>
+                </div>
+
+                {isGstRegistered === 'Yes' && (
                 <div className="flex items-start">
-                    <label className="w-48 text-[13px] font-medium text-slate-500 mt-2">GSTIN Number</label>
+                    <label className="w-48 text-[13px] font-medium text-slate-500 mt-2">GSTIN Number<span className="text-red-500">*</span></label>
                     <div className="flex-1 max-w-lg space-y-1">
                         <div className="relative flex items-center">
                             <input 
@@ -920,6 +943,7 @@ const VendorForm = ({ editId, standalone = true, onSaveSuccess, onCancel, compan
                         )}
                     </div>
                 </div>
+                )}
 
                 <div className="flex items-start pt-2" ref={tdsDropdownRef}>
                     <label className="w-48 text-[13px] font-medium text-slate-500 mt-2">TDS</label>
@@ -955,24 +979,24 @@ const VendorForm = ({ editId, standalone = true, onSaveSuccess, onCancel, compan
 
                         {/* Dropdown Panel */}
                         {isTdsDropdownOpen && (
-                            <div className="absolute top-full left-0 mt-1 w-full bg-white border border-slate-200 rounded shadow-lg z-50 overflow-hidden">
+                            <div className="absolute top-full mt-1 left-0 w-full bg-white border border-slate-100 rounded-lg shadow-xl shadow-slate-200/50 z-[80] overflow-hidden">
                                 {/* Search Box */}
-                                <div className="p-2 border-b border-slate-100">
+                                <div className="p-2 border-b border-slate-100 bg-slate-50/50">
                                     <div className="relative">
-                                        <Search size={14} className="absolute left-2.5 top-2.5 text-slate-400" />
+                                        <Search size={14} className="absolute left-3 top-2.5 text-slate-400" />
                                         <input
                                             type="text"
                                             value={tdsSearch}
                                             onChange={e => setTdsSearch(e.target.value)}
-                                            placeholder="Search"
-                                            className="w-full pl-8 pr-3 py-1.5 border border-slate-300 text-slate-800 rounded focus:outline-none focus:border-blue-500 text-[13px]"
+                                            placeholder="Search tax sections..."
+                                            className="w-full pl-9 pr-3 py-1.5 border border-slate-200 text-slate-800 rounded bg-white focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-50 text-[13px] transition-all"
                                             autoFocus
                                         />
                                     </div>
                                 </div>
 
                                 {/* Options */}
-                                <div className="max-h-52 overflow-y-auto py-1">
+                                <div className="max-h-60 overflow-y-auto py-1" style={{ scrollbarWidth: 'thin' }}>
                                     {defaultTdsOptions
                                     .filter(o => o.fullLabel.toLowerCase().includes(tdsSearch.toLowerCase()))
                                     .map(o => {
@@ -983,11 +1007,12 @@ const VendorForm = ({ editId, standalone = true, onSaveSuccess, onCancel, compan
                                                 key={o.key}
                                                 type="button"
                                                 onClick={() => { setTdsTax(val); setIsTdsDropdownOpen(false); }}
-                                                className={`w-full text-left px-4 py-2 text-[13px] transition-colors ${
-                                                    isSelected ? 'bg-blue-600 text-white font-medium' : 'text-slate-700 hover:bg-slate-50'
+                                                className={`w-full text-left px-4 py-2.5 text-[13px] transition-colors flex items-center justify-between group ${
+                                                    isSelected ? 'bg-blue-50 text-blue-700 font-semibold' : 'text-slate-700 hover:bg-slate-50'
                                                 }`}
                                             >
-                                                {o.fullLabel}
+                                                <span>{o.fullLabel}</span>
+                                                {isSelected && <CheckCircle2 size={14} className="text-blue-600" />}
                                             </button>
                                         );
                                     })}
@@ -995,7 +1020,10 @@ const VendorForm = ({ editId, standalone = true, onSaveSuccess, onCancel, compan
                                         ? tdsConfigs.filter(c => `${c.vendor_type} - [${c.tds_rate} %]`.toLowerCase().includes(tdsSearch.toLowerCase()))
                                         : defaultTdsOptions.filter(o => o.fullLabel.toLowerCase().includes(tdsSearch.toLowerCase()))
                                     ).length === 0 && (
-                                        <div className="text-[13px] text-slate-400 px-4 py-3 text-center">No options found</div>
+                                        <div className="text-[13px] text-slate-500 px-4 py-6 text-center flex flex-col items-center gap-2">
+                                            <AlertCircle size={20} className="text-slate-300" />
+                                            No matching tax sections found
+                                        </div>
                                     )}
                                 </div>
                             </div>
@@ -1055,8 +1083,7 @@ const VendorForm = ({ editId, standalone = true, onSaveSuccess, onCancel, compan
 
         {/* Action Bar */}
         <div className="fixed bottom-0 right-0 bg-white border-t border-slate-100 shadow-[0_-4px_20px_rgba(0,0,0,0.03)] z-[60]" style={{ left: 'var(--sidebar-width)' }}>
-            <div className="max-w-6xl mx-auto px-12 py-4 flex justify-between items-center">
-                 <div></div>
+            <div className="px-12 py-4 flex justify-end items-center">
                  <div className="flex items-center gap-3">
                     <button type="button" onClick={handleCancelOrBack} className="px-6 py-2 text-slate-500 text-[13px] font-bold hover:bg-slate-50 rounded cursor-pointer">Discard</button>
                     <button 
@@ -1065,7 +1092,7 @@ const VendorForm = ({ editId, standalone = true, onSaveSuccess, onCancel, compan
                         disabled={loading}
                         className="px-10 py-2 bg-blue-600 text-white rounded font-bold text-[14px] hover:bg-blue-700 shadow-xl shadow-blue-500/10 transition-all uppercase tracking-widest disabled:opacity-50"
                     >
-                        {loading ? 'Processing...' : 'Save Vendor Profile'}
+                        {loading ? 'Processing...' : (isEditMode ? 'Update Vendor Profile' : 'Save Vendor Profile')}
                     </button>
                  </div>
             </div>

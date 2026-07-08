@@ -74,6 +74,8 @@ const PurchaseOrderEntryView = ({ companyId }) => {
   const [selectedEmailContacts, setSelectedEmailContacts] = useState([]);
   const [isItemModalOpen, setIsItemModalOpen] = useState(false);
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
+  const [isAddContactModalOpen, setIsAddContactModalOpen] = useState(false);
+  const [contactForm, setContactForm] = useState({ salutation: 'Salutation', firstName: '', lastName: '', email: '', workPhoneCode: '+91', workPhone: '', mobileCode: '+91', mobile: '' });
   const [activeRowForItemModal, setActiveRowForItemModal] = useState(null);
   
   // Custom Payment Terms Dropdown State
@@ -417,7 +419,7 @@ const PurchaseOrderEntryView = ({ companyId }) => {
   const previousVendorIdRef = useRef('');
   useEffect(() => {
      if (formData.vendorId && formData.vendorId !== previousVendorIdRef.current) {
-        if (!id && emailContacts.length > 0) {
+        if (emailContacts.length > 0) {
            setSelectedEmailContacts(emailContacts.map(c => c.id));
         }
         previousVendorIdRef.current = formData.vendorId;
@@ -454,6 +456,66 @@ const PurchaseOrderEntryView = ({ companyId }) => {
       if (filtered.length === 0) setIsAttachmentListOpen(false);
       return filtered;
     });
+  };
+
+  const handleAddContactSubmit = async () => {
+    if (!contactForm.firstName) {
+      addNotification('First Name is required', 'error');
+      return;
+    }
+    if (!contactForm.email) {
+      addNotification('Email Address is required', 'error');
+      return;
+    }
+    if (!contactForm.workPhone && !contactForm.mobile) {
+      addNotification('Phone Number is required', 'error');
+      return;
+    }
+    if (!formData.vendorId) {
+      addNotification('Please select a vendor first', 'error');
+      return;
+    }
+    
+    try {
+      setIsSaving(true);
+      const newContact = {
+        name: `${contactForm.salutation !== 'Salutation' ? contactForm.salutation : ''} ${contactForm.firstName} ${contactForm.lastName}`.trim(),
+        email: contactForm.email,
+        phone: contactForm.workPhone,
+        mobile: contactForm.mobile,
+        firstName: contactForm.firstName,
+        lastName: contactForm.lastName,
+        salutation: contactForm.salutation
+      };
+      
+      let existingContacts = [];
+      const currentVendorObj = vendors.find(v => v.id === formData.vendorId);
+      if (currentVendorObj) {
+         if (currentVendorObj.contacts) {
+            existingContacts = currentVendorObj.contacts;
+         } else if (currentVendorObj.contactPersonsJson) {
+            try { existingContacts = JSON.parse(currentVendorObj.contactPersonsJson); } catch(e) {}
+         }
+      }
+      
+      const updatedContacts = [...existingContacts, newContact];
+      
+      await purchaseAPI.updateVendor(formData.vendorId, {
+        contactPersonsJson: JSON.stringify(updatedContacts)
+      });
+      
+      const vendorsRes = await purchaseAPI.getVendors(companyId);
+      setVendors(vendorsRes.data || []);
+      
+      addNotification('Contact person added successfully', 'success');
+      setIsAddContactModalOpen(false);
+      setContactForm({ salutation: 'Salutation', firstName: '', lastName: '', email: '', workPhoneCode: '+91', workPhone: '', mobileCode: '+91', mobile: '' });
+      
+    } catch (err) {
+      addNotification('Failed to add contact person', 'error');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleSaveOrder = async (sendEmail = false) => {
@@ -531,7 +593,7 @@ const PurchaseOrderEntryView = ({ companyId }) => {
              <h1 className="text-[18px] text-slate-800">{id ? 'Edit Purchase Order' : 'New Purchase Order'}</h1>
           </div>
           <button 
-            onClick={() => window.history.back()}
+            onClick={() => navigate('/purchase-orders')}
             className="text-slate-400 hover:text-slate-600 transition-colors"
           >
              <X size={20} />
@@ -838,23 +900,23 @@ const PurchaseOrderEntryView = ({ companyId }) => {
                        </div>
                     ) : (
                        <div className="max-w-[400px]">
-                          <input 
-                             type="text" 
-                             value={formData.deliveryAddressData.attention}
-                             onChange={(e) => setFormData({ ...formData, deliveryAddressData: { ...formData.deliveryAddressData, attention: e.target.value } })}
-                             className="w-full max-w-[280px] h-8 px-3 border border-blue-400 rounded-[4px] text-[13px] text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500 mb-3 shadow-sm"
+                          <textarea 
+                             value={formData.deliveryAddressData?.attention || ''}
+                             onChange={(e) => setFormData({ ...formData, deliveryAddressData: { ...(formData.deliveryAddressData || {}), attention: e.target.value } })}
+                             className="w-full max-w-[320px] px-3 py-1.5 border border-blue-400 rounded-[4px] text-[13px] text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500 mb-3 shadow-sm resize-y min-h-[32px]"
+                             rows={2}
                           />
                           <div className="text-[13px] text-slate-600 leading-relaxed mb-4">
-                             {formData.deliveryAddressData.street1 && <div>{formData.deliveryAddressData.street1}</div>}
-                             {formData.deliveryAddressData.street2 && <div>{formData.deliveryAddressData.street2}</div>}
-                             {(formData.deliveryAddressData.city || formData.deliveryAddressData.state || formData.deliveryAddressData.zip) && (
+                             {formData.deliveryAddressData?.street1 && <div>{formData.deliveryAddressData.street1}</div>}
+                             {formData.deliveryAddressData?.street2 && <div>{formData.deliveryAddressData.street2}</div>}
+                             {(formData.deliveryAddressData?.city || formData.deliveryAddressData?.state || formData.deliveryAddressData?.zip) && (
                                 <div>
-                                   {formData.deliveryAddressData.city}{formData.deliveryAddressData.city && (formData.deliveryAddressData.state || formData.deliveryAddressData.zip) ? ', ' : ''}
-                                   {formData.deliveryAddressData.state} {formData.deliveryAddressData.zip}
+                                   {formData.deliveryAddressData?.city}{formData.deliveryAddressData?.city && (formData.deliveryAddressData?.state || formData.deliveryAddressData?.zip) ? ', ' : ''}
+                                   {formData.deliveryAddressData?.state} {formData.deliveryAddressData?.zip}
                                 </div>
                              )}
-                             {formData.deliveryAddressData.country && <div>{formData.deliveryAddressData.country}{formData.deliveryAddressData.country && formData.deliveryAddressData.phone ? ' ,' : ''}</div>}
-                             {formData.deliveryAddressData.phone && <div>{formData.deliveryAddressData.phone}</div>}
+                             {formData.deliveryAddressData?.country && <div>{formData.deliveryAddressData.country}{formData.deliveryAddressData.country && formData.deliveryAddressData?.phone ? ' ,' : ''}</div>}
+                             {formData.deliveryAddressData?.phone && <div>{formData.deliveryAddressData.phone}</div>}
                           </div>
                           <button 
                              type="button" 
@@ -1426,7 +1488,7 @@ const PurchaseOrderEntryView = ({ companyId }) => {
                 </div>
                 
                 <div className="flex flex-wrap gap-4 items-center">
-                   <button type="button" className="flex items-center gap-1.5 px-3 py-1.5 border border-slate-300 rounded text-[13px] font-medium text-slate-700 hover:bg-slate-50">
+                   <button type="button" onClick={() => setIsAddContactModalOpen(true)} className="flex items-center gap-1.5 px-3 py-1.5 border border-slate-300 rounded text-[13px] font-medium text-slate-700 hover:bg-slate-50">
                       <PlusCircle size={14} className="text-blue-500" />
                       Add New
                    </button>
@@ -1482,7 +1544,7 @@ const PurchaseOrderEntryView = ({ companyId }) => {
                 Save and Send
              </button>
              <button 
-               onClick={() => window.history.back()} 
+               onClick={() => navigate('/purchase-orders')} 
                className="px-4 h-8 bg-slate-50 hover:bg-slate-100 text-slate-700 font-medium rounded border border-slate-200 transition-colors text-[13px]"
              >
                 Cancel
@@ -1574,12 +1636,132 @@ const PurchaseOrderEntryView = ({ companyId }) => {
           />
         )}
 
+        {/* Add Contact Person Modal */}
+        {isAddContactModalOpen && (
+          <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 animate-fade-in p-4">
+            <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden font-sans border border-slate-100 flex flex-col max-h-[90vh]">
+              <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+                <h2 className="text-[16px] font-bold text-slate-800">Add Contact Person</h2>
+                <button onClick={() => setIsAddContactModalOpen(false)} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors">
+                  <X size={18} />
+                </button>
+              </div>
+              
+              <div className="p-6 space-y-6 overflow-y-auto flex-1">
+                 <div className="flex items-start gap-4">
+                    <label className="w-32 text-[13px] font-medium text-slate-600 mt-2">Name <span className="text-red-500">*</span></label>
+                    <div className="flex-1 grid grid-cols-12 gap-3">
+                       <div className="col-span-3">
+                          <select 
+                             value={contactForm.salutation} 
+                             onChange={e => setContactForm({...contactForm, salutation: e.target.value})}
+                             className="w-full h-9 px-2 border border-slate-200 rounded text-[13px] outline-none focus:border-blue-500 bg-white"
+                          >
+                             <option>Salutation</option>
+                             <option>Mr.</option><option>Mrs.</option><option>Ms.</option><option>Dr.</option>
+                          </select>
+                       </div>
+                       <div className="col-span-4">
+                          <input 
+                             placeholder="First Name" 
+                             value={contactForm.firstName} 
+                             onChange={e => setContactForm({...contactForm, firstName: e.target.value})}
+                             className="w-full h-9 px-3 border border-slate-200 rounded text-[13px] outline-none focus:border-blue-500" 
+                          />
+                       </div>
+                       <div className="col-span-5">
+                          <input 
+                             placeholder="Last Name" 
+                             value={contactForm.lastName} 
+                             onChange={e => setContactForm({...contactForm, lastName: e.target.value})}
+                             className="w-full h-9 px-3 border border-slate-200 rounded text-[13px] outline-none focus:border-blue-500" 
+                          />
+                       </div>
+                    </div>
+                 </div>
+
+                 <div className="flex items-center gap-4">
+                    <label className="w-32 text-[13px] font-medium text-slate-600">Email Address <span className="text-red-500">*</span></label>
+                    <div className="flex-1">
+                       <input 
+                          type="email"
+                          value={contactForm.email} 
+                          onChange={e => setContactForm({...contactForm, email: e.target.value})}
+                          className="w-full h-9 px-3 border border-slate-200 rounded text-[13px] outline-none focus:border-blue-500" 
+                       />
+                    </div>
+                 </div>
+
+                 <div className="flex items-start gap-4">
+                    <label className="w-32 text-[13px] font-medium text-slate-600 mt-2">Phone <span className="text-red-500">*</span></label>
+                    <div className="flex-1 space-y-3">
+                       <div className="flex gap-3">
+                          <select 
+                             value={contactForm.workPhoneCode} 
+                             onChange={e => setContactForm({...contactForm, workPhoneCode: e.target.value})}
+                             className="w-24 h-9 px-2 border border-slate-200 rounded text-[13px] outline-none focus:border-blue-500 bg-white"
+                          >
+                             <option>+91</option>
+                             <option>+1</option>
+                             <option>+44</option>
+                             <option>+61</option>
+                          </select>
+                          <input 
+                             placeholder="Work Phone" 
+                             value={contactForm.workPhone} 
+                             onChange={e => setContactForm({...contactForm, workPhone: e.target.value})}
+                             className="flex-1 h-9 px-3 border border-slate-200 rounded text-[13px] outline-none focus:border-blue-500" 
+                          />
+                       </div>
+                       <div className="flex gap-3">
+                          <select 
+                             value={contactForm.mobileCode} 
+                             onChange={e => setContactForm({...contactForm, mobileCode: e.target.value})}
+                             className="w-24 h-9 px-2 border border-slate-200 rounded text-[13px] outline-none focus:border-blue-500 bg-white"
+                          >
+                             <option>+91</option>
+                             <option>+1</option>
+                             <option>+44</option>
+                             <option>+61</option>
+                          </select>
+                          <input 
+                             placeholder="Mobile" 
+                             value={contactForm.mobile} 
+                             onChange={e => setContactForm({...contactForm, mobile: e.target.value})}
+                             className="flex-1 h-9 px-3 border border-slate-200 rounded text-[13px] outline-none focus:border-blue-500" 
+                          />
+                       </div>
+                    </div>
+                 </div>
+              </div>
+
+              <div className="px-6 py-4 border-t border-slate-100 flex items-center justify-end gap-3 bg-slate-50 mt-auto">
+                 <button 
+                    type="button"
+                    onClick={() => setIsAddContactModalOpen(false)} 
+                    className="px-5 py-2 border border-slate-200 rounded text-[13px] font-medium text-slate-700 bg-white hover:bg-slate-50 transition-colors"
+                 >
+                    Cancel
+                 </button>
+                 <button 
+                    type="button"
+                    onClick={(e) => { e.preventDefault(); handleAddContactSubmit(); }} 
+                    disabled={isSaving}
+                    className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded text-[13px] font-medium shadow-sm transition-colors disabled:opacity-50"
+                 >
+                    Save
+                 </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {isEmailModalOpen && (
           <PurchaseOrderEmailModal 
             isOpen={isEmailModalOpen}
             onClose={() => {
               setIsEmailModalOpen(false);
-              window.history.back();
+              navigate('/purchase-orders');
             }}
             vendor={vendors.find(v => v.id === formData.vendorId)}
             poData={{...formData, id: savedPO?.id, poNumber: formData.poNumber, companyId}}
@@ -1589,7 +1771,7 @@ const PurchaseOrderEntryView = ({ companyId }) => {
             companyName={currentCompany?.name || ''}
             onSent={() => {
               addNotification('Email sent successfully', 'success');
-              window.history.back();
+              navigate('/purchase-orders');
             }}
           />
         )}
