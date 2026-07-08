@@ -24,6 +24,8 @@ files.forEach(file => {
     return;
   }
 
+
+  
   // Find the id field or CompanyId field to insert after
   const insertRegex = /(id:\s*{[\s\S]*?},|CompanyId:\s*{[\s\S]*?},)/;
   

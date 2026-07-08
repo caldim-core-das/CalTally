@@ -358,3 +358,123 @@ Error
     at async model.save (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2547:7)
     at async Ledger.create (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1362:12)
     at async exports.seedDefaultLedgers (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\modules\company\company.controller.js:71:7)
+2026-07-07T12:44:53.216Z - [Create Ledger] insert or update on table "AuditLogs" violates foreign key constraint "AuditLogs_CompanyId_fkey"
+Error
+    at Query.run (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\dialects\postgres\query.js:50:25)
+    at C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\sequelize.js:315:28
+    at async PostgresQueryInterface.insert (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\dialects\abstract\query-interface.js:308:21)
+    at async model.save (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2490:35)
+    at async AuditLog.create (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1362:12)
+    at async Ledger.<anonymous> (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\models\index.js:535:7)
+    at async Ledger.runHooks (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\hooks.js:96:7)
+    at async model.save (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2547:7)
+    at async Ledger.create (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1362:12)
+    at async exports.seedDefaultLedgers (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\modules\company\company.controller.js:71:7)
+2026-07-07T12:44:53.670Z - [Create Ledger] insert or update on table "AuditLogs" violates foreign key constraint "AuditLogs_CompanyId_fkey"
+Error
+    at Query.run (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\dialects\postgres\query.js:50:25)
+    at C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\sequelize.js:315:28
+    at async PostgresQueryInterface.insert (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\dialects\abstract\query-interface.js:308:21)
+    at async model.save (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2490:35)
+    at async AuditLog.create (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1362:12)
+    at async Ledger.<anonymous> (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\models\index.js:535:7)
+    at async Ledger.runHooks (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\hooks.js:96:7)
+    at async model.save (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2547:7)
+    at async Ledger.create (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1362:12)
+    at async exports.seedDefaultLedgers (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\modules\company\company.controller.js:71:7)
+2026-07-07T12:44:54.124Z - [Create Ledger] insert or update on table "AuditLogs" violates foreign key constraint "AuditLogs_CompanyId_fkey"
+Error
+    at Query.run (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\dialects\postgres\query.js:50:25)
+    at C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\sequelize.js:315:28
+    at async PostgresQueryInterface.insert (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\dialects\abstract\query-interface.js:308:21)
+    at async model.save (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2490:35)
+    at async AuditLog.create (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1362:12)
+    at async Ledger.<anonymous> (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\models\index.js:535:7)
+    at async Ledger.runHooks (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\hooks.js:96:7)
+    at async model.save (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2547:7)
+    at async Ledger.create (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1362:12)
+    at async exports.seedDefaultLedgers (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\modules\company\company.controller.js:71:7)
+2026-07-07T12:44:54.587Z - [Create Ledger] insert or update on table "AuditLogs" violates foreign key constraint "AuditLogs_CompanyId_fkey"
+Error
+    at Query.run (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\dialects\postgres\query.js:50:25)
+    at C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\sequelize.js:315:28
+    at async PostgresQueryInterface.insert (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\dialects\abstract\query-interface.js:308:21)
+    at async model.save (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2490:35)
+    at async AuditLog.create (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1362:12)
+    at async Ledger.<anonymous> (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\models\index.js:535:7)
+    at async Ledger.runHooks (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\hooks.js:96:7)
+    at async model.save (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2547:7)
+    at async Ledger.create (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1362:12)
+    at async exports.seedDefaultLedgers (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\modules\company\company.controller.js:71:7)
+2026-07-07T12:44:55.039Z - [Create Ledger] insert or update on table "AuditLogs" violates foreign key constraint "AuditLogs_CompanyId_fkey"
+Error
+    at Query.run (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\dialects\postgres\query.js:50:25)
+    at C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\sequelize.js:315:28
+    at async PostgresQueryInterface.insert (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\dialects\abstract\query-interface.js:308:21)
+    at async model.save (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2490:35)
+    at async AuditLog.create (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1362:12)
+    at async Ledger.<anonymous> (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\models\index.js:535:7)
+    at async Ledger.runHooks (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\hooks.js:96:7)
+    at async model.save (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2547:7)
+    at async Ledger.create (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1362:12)
+    at async exports.seedDefaultLedgers (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\modules\company\company.controller.js:71:7)
+2026-07-07T12:44:55.509Z - [Create Ledger] insert or update on table "AuditLogs" violates foreign key constraint "AuditLogs_CompanyId_fkey"
+Error
+    at Query.run (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\dialects\postgres\query.js:50:25)
+    at C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\sequelize.js:315:28
+    at async PostgresQueryInterface.insert (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\dialects\abstract\query-interface.js:308:21)
+    at async model.save (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2490:35)
+    at async AuditLog.create (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1362:12)
+    at async Ledger.<anonymous> (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\models\index.js:535:7)
+    at async Ledger.runHooks (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\hooks.js:96:7)
+    at async model.save (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2547:7)
+    at async Ledger.create (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1362:12)
+    at async exports.seedDefaultLedgers (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\modules\company\company.controller.js:71:7)
+2026-07-07T12:44:55.960Z - [Create Ledger] insert or update on table "AuditLogs" violates foreign key constraint "AuditLogs_CompanyId_fkey"
+Error
+    at Query.run (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\dialects\postgres\query.js:50:25)
+    at C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\sequelize.js:315:28
+    at async PostgresQueryInterface.insert (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\dialects\abstract\query-interface.js:308:21)
+    at async model.save (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2490:35)
+    at async AuditLog.create (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1362:12)
+    at async Ledger.<anonymous> (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\models\index.js:535:7)
+    at async Ledger.runHooks (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\hooks.js:96:7)
+    at async model.save (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2547:7)
+    at async Ledger.create (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1362:12)
+    at async exports.seedDefaultLedgers (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\modules\company\company.controller.js:71:7)
+2026-07-07T12:44:56.427Z - [Create Ledger] insert or update on table "AuditLogs" violates foreign key constraint "AuditLogs_CompanyId_fkey"
+Error
+    at Query.run (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\dialects\postgres\query.js:50:25)
+    at C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\sequelize.js:315:28
+    at async PostgresQueryInterface.insert (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\dialects\abstract\query-interface.js:308:21)
+    at async model.save (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2490:35)
+    at async AuditLog.create (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1362:12)
+    at async Ledger.<anonymous> (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\models\index.js:535:7)
+    at async Ledger.runHooks (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\hooks.js:96:7)
+    at async model.save (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2547:7)
+    at async Ledger.create (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1362:12)
+    at async exports.seedDefaultLedgers (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\modules\company\company.controller.js:71:7)
+2026-07-07T12:44:56.896Z - [Create Ledger] insert or update on table "AuditLogs" violates foreign key constraint "AuditLogs_CompanyId_fkey"
+Error
+    at Query.run (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\dialects\postgres\query.js:50:25)
+    at C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\sequelize.js:315:28
+    at async PostgresQueryInterface.insert (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\dialects\abstract\query-interface.js:308:21)
+    at async model.save (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2490:35)
+    at async AuditLog.create (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1362:12)
+    at async Ledger.<anonymous> (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\models\index.js:535:7)
+    at async Ledger.runHooks (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\hooks.js:96:7)
+    at async model.save (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2547:7)
+    at async Ledger.create (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1362:12)
+    at async exports.seedDefaultLedgers (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\modules\company\company.controller.js:71:7)
+2026-07-07T12:44:57.365Z - [Create Ledger] insert or update on table "AuditLogs" violates foreign key constraint "AuditLogs_CompanyId_fkey"
+Error
+    at Query.run (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\dialects\postgres\query.js:50:25)
+    at C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\sequelize.js:315:28
+    at async PostgresQueryInterface.insert (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\dialects\abstract\query-interface.js:308:21)
+    at async model.save (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2490:35)
+    at async AuditLog.create (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1362:12)
+    at async Ledger.<anonymous> (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\models\index.js:535:7)
+    at async Ledger.runHooks (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\hooks.js:96:7)
+    at async model.save (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2547:7)
+    at async Ledger.create (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1362:12)
+    at async exports.seedDefaultLedgers (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\modules\company\company.controller.js:71:7)
