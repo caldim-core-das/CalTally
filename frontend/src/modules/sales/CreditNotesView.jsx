@@ -803,8 +803,10 @@ const CreditNoteDetail = ({ id, navigate, companyId }) => {
                              <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Doc-Hash: {note.id?.substring(0, 12)}...</p>
                          </div>
                          <div className="text-right">
+                             <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">For {sessionStorage.getItem('companyName') || 'Authorized Signatory'}</p>
                              <div className="w-48 h-0.5 bg-slate-900 mb-2 ml-auto"></div>
                              <p className="text-[10px] font-bold uppercase tracking-[0.2em]">Authorized Signature</p>
+                             <p className="text-[10px] font-extrabold text-slate-900 uppercase tracking-wider mt-1">{sessionStorage.getItem('companyName') || ''}</p>
                          </div>
                     </div>
                 </div>

@@ -1,4 +1,4 @@
-const { Voucher, Transaction, Ledger, CostCenterAllocation, CostCenter, Group, sequelize } = require('../../models');
+const { Voucher, Transaction, Ledger, CostCenterAllocation, CostCenter, Group, sequelize, InvoicePayment, SalesInvoice } = require('../../models');
 const { Op } = require('sequelize');
 const AccountingService = require('../../services/AccountingService');
 const AuditService = require('../../services/AuditService');
@@ -125,26 +125,35 @@ exports.getVouchers = async (req, res, next) => {
 exports.getVoucherById = async (req, res, next) => {
   try {
     const voucher = await Voucher.findByPk(req.params.id, {
-      include: [{
-        model: Transaction,
-        include: [
-          { 
-            model: Ledger, 
-            attributes: [
-              'id', 'name', 'currency', 'billingAddress', 'shippingAddress', 
-              'address', 'gstNumber', 'pan', 'email', 'phone', 'mobile', 'workPhone'
-            ],
-            include: [{ model: Group, attributes: ['id', 'name'] }]
-          },
-          {
-            model: CostCenterAllocation,
-            include: [{
-              model: CostCenter,
-              attributes: ['id', 'name']
-            }]
-          }
-        ]
-      }]
+      include: [
+        {
+          model: Transaction,
+          include: [
+            { 
+              model: Ledger, 
+              attributes: [
+                'id', 'name', 'currency', 'billingAddress', 'shippingAddress', 
+                'address', 'gstNumber', 'pan', 'email', 'phone', 'mobile', 'workPhone'
+              ],
+              include: [{ model: Group, attributes: ['id', 'name'] }]
+            },
+            {
+              model: CostCenterAllocation,
+              include: [{
+                model: CostCenter,
+                attributes: ['id', 'name']
+              }]
+            }
+          ]
+        },
+        {
+          model: InvoicePayment,
+          include: [{
+            model: SalesInvoice,
+            attributes: ['id', 'invoiceNumber', 'date', 'totalAmount']
+          }]
+        }
+      ]
     });
     if (!voucher) return res.status(404).json({ error: 'Voucher not found' });
 

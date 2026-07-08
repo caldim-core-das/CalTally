@@ -396,7 +396,7 @@ export default function ProfessionalInvoiceView() {
 
   // Line Items
   const [lineItems, setLineItems] = useState([
-    { id: Date.now(), itemId: '', description: '', quantity: 0, rate: 0, discount: 0, discountType: '%', amount: 0 }
+    { id: Date.now(), itemId: '', description: '', quantity: 0, rate: 0, discount: 0, discountType: '%', amount: 0, gstRate: 0 }
   ]);
 
   // Totals & Adjustments
@@ -493,7 +493,7 @@ export default function ProfessionalInvoiceView() {
                 quantity: parseFloat(it.quantity || 0),
                 rate: parseFloat(it.rate || 0),
                 amount: parseFloat(it.quantity || 0) * parseFloat(it.rate || 0),
-                projectId: it.projectId || ''
+                projectId: it.projectId || '', gstRate: parseFloat(it.gstRate) || 0
               })));
             }
 
@@ -547,7 +547,7 @@ export default function ProfessionalInvoiceView() {
                     quantity: item.quantity,
                     rate: item.rate,
                     amount: item.quantity * item.rate,
-                    projectId: item.projectId || ''
+                    projectId: item.projectId || '', gstRate: parseFloat(item.gstRate) || 0
                  })));
               }
            }
@@ -645,7 +645,36 @@ export default function ProfessionalInvoiceView() {
   }, [lineItems]);
 
   const discountAmount = useMemo(() => (subTotal * (discountPercent / 100)), [subTotal, discountPercent]);
-  const gstAmount      = useMemo(() => ((subTotal - discountAmount) * (gstPercent / 100)), [subTotal, discountAmount, gstPercent]);
+  const gstAmount      = useMemo(() => {
+    const discountRatio = subTotal > 0 ? ((subTotal - discountAmount) / subTotal) : 1;
+    return lineItems.reduce((acc, line) => {
+      const qty = parseFloat(line.quantity) || 0;
+      const rate = parseFloat(line.rate) || 0;
+      const discount = parseFloat(line.discount) || 0;
+      const lineBase = qty * rate;
+      const disc = line.discountType === '%' ? (lineBase * (discount / 100)) : discount;
+      const taxable = lineBase - disc;
+      const taxRate = parseFloat(line.gstRate) || 0;
+      return acc + (taxable * discountRatio * (taxRate / 100));
+    }, 0);
+  }, [lineItems, subTotal, discountAmount]);
+  const gstBreakdown   = useMemo(() => {
+    const breakdown = {};
+    const discountRatio = subTotal > 0 ? ((subTotal - discountAmount) / subTotal) : 1;
+    (lineItems || []).forEach(line => {
+      if (!line.itemId) return;
+      const qty = parseFloat(line.quantity) || 0;
+      const rate = parseFloat(line.rate) || 0;
+      const discount = parseFloat(line.discount) || 0;
+      const lineBase = qty * rate;
+      const disc = line.discountType === '%' ? (lineBase * (discount / 100)) : discount;
+      const taxable = lineBase - disc;
+      const taxRate = parseFloat(line.gstRate) || 0;
+      const lineGst = taxable * discountRatio * (taxRate / 100);
+      breakdown[taxRate] = (breakdown[taxRate] || 0) + lineGst;
+    });
+    return breakdown;
+  }, [lineItems, subTotal, discountAmount]);
   const tcsAmount      = useMemo(() => (tcsApplicable ? ((subTotal - discountAmount + gstAmount) * (parseFloat(tcsRate || 0) / 100)) : 0), [subTotal, discountAmount, gstAmount, tcsApplicable, tcsRate]);
   const total = useMemo(() => {
      let t = subTotal - discountAmount + gstAmount + parseFloat(adjustment || 0) + tcsAmount;
@@ -655,7 +684,7 @@ export default function ProfessionalInvoiceView() {
   const totalQuantity = useMemo(() => lineItems.reduce((acc, line) => acc + parseFloat(line.quantity || 0), 0), [lineItems]);
 
   // ─── Handlers ───────────────────────────────────────────────────
-  const addLine = () => setLineItems([...lineItems, { id: Date.now(), itemId: '', description: '', quantity: 1, rate: 0, discount: 0, discountType: '%', amount: 0, projectId: '' }]);
+  const addLine = () => setLineItems([...lineItems, { id: Date.now(), itemId: '', description: '', quantity: 1, rate: 0, discount: 0, discountType: '%', amount: 0, projectId: '', gstRate: 0 }]);
   const removeLine = (id) => lineItems.length > 1 && setLineItems(lineItems.filter(l => l.id !== id));
   
   const updateLine = (id, field, value) => {
@@ -678,6 +707,7 @@ export default function ProfessionalInvoiceView() {
            }
            updated.description = selected.salesDescription || selected.name || '';
         }
+            updated.gstRate = selected.gstRate !== undefined ? parseFloat(selected.gstRate) : 18;
       }
       
       const qty = parseFloat(updated.quantity || 0);
@@ -778,7 +808,7 @@ export default function ProfessionalInvoiceView() {
           rate: l.rate,
           discount: l.discount,
           discountType: l.discountType,
-          projectId: l.projectId || null
+          projectId: l.projectId || null, gstRate: l.gstRate || 0
         })),
         projectId: projectId || null
       };
@@ -1053,6 +1083,7 @@ export default function ProfessionalInvoiceView() {
                     </div>
                   </th>
                   <th className="w-32 px-4 py-3 text-right text-[10px] font-bold text-slate-500 uppercase tracking-widest border-r border-slate-100">Discount</th>
+                  <th className="w-36 px-4 py-3 text-right text-[10px] font-bold text-slate-500 uppercase tracking-widest border-r border-slate-100">GST %</th>
                   <th className="w-40 px-4 py-3 text-right text-[10px] font-bold text-slate-500 uppercase tracking-widest">Amount</th>
                 </tr>
               </thead>
@@ -1123,6 +1154,21 @@ export default function ProfessionalInvoiceView() {
                           </select>
                         </div>
                       </td>
+                      <td className="px-4 py-4 border-r border-slate-100 align-top">
+                        <div className="flex items-center justify-end">
+                          <select 
+                            value={line.gstRate || 0} 
+                            onChange={e => updateLine(line.id, 'gstRate', parseFloat(e.target.value))}
+                            className="bg-white border border-slate-200 rounded px-2 py-1 text-[13px] font-medium text-slate-700 focus:border-blue-500 outline-none transition-all cursor-pointer min-w-[80px] text-right"
+                          >
+                            <option value="0">0%</option>
+                            <option value="5">5%</option>
+                            <option value="12">12%</option>
+                            <option value="18">18%</option>
+                            <option value="28">28%</option>
+                          </select>
+                        </div>
+                      </td>
                       <td className="px-4 py-4 text-right align-top relative">
                         <span className="text-[14px] font-bold text-slate-900">
                           {getCurrencyDisplay(currencyCode)} {parseFloat(line.amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
@@ -1159,7 +1205,7 @@ export default function ProfessionalInvoiceView() {
         <div className="flex justify-between items-start pt-12 border-t border-slate-100 gap-20">
            <div className="flex-1 max-w-md space-y-8">
               <div className="space-y-3">
-                 <label className="text-[11px] font-bold text-slate-600 uppercase tracking-widest">Customer Notes</label>
+                <label className="text-[11px] font-bold text-slate-600 uppercase tracking-widest">Customer Notes</label>
                  <textarea 
                     value={notes} 
                     onChange={e => setNotes(e.target.value)} 
@@ -1185,28 +1231,26 @@ export default function ProfessionalInvoiceView() {
                  <span className="font-bold text-slate-900 font-mono">{subTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                </div>
  
-               <div className="flex justify-between items-center text-[13px] py-2">
-                 <span className="font-bold text-slate-700">GST</span>
-                 <div className="flex items-center gap-2">
-                    <select
-                      disabled={!!orderNo || !!location.state?.orderData || !!location.state?.quoteData || !!location.state?.challanData}
-                      value={gstPercent === 0 ? '' : String(gstPercent)}
-                      onChange={e => setGstPercent(e.target.value === '' ? 0 : parseFloat(e.target.value))}
-                      className={`h-9 px-3 bg-white border border-slate-200 rounded-lg text-[13px] font-medium text-slate-500 outline-none min-w-[140px] transition-all ${(!!orderNo || !!location.state?.orderData || !!location.state?.quoteData || !!location.state?.challanData) ? 'opacity-60 cursor-not-allowed bg-slate-50' : 'focus:border-blue-500 cursor-pointer'}`}
-                    >
-                      <option value="">Select a Tax</option>
-                      <option value="5">GST @ 5%</option>
-                      <option value="12">GST @ 12%</option>
-                      <option value="18">GST @ 18%</option>
-                      <option value="28">GST @ 28%</option>
-                    </select>
-                    <span className="text-slate-600 font-bold min-w-[60px] text-right">
-                      {gstPercent > 0 ? `+ ${gstAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}` : '0.00'}
+                {Object.keys(gstBreakdown).length === 0 ? (
+                  <div className="flex justify-between items-center text-[13px] py-2">
+                    <span className="font-bold text-slate-700">GST @ 0%</span>
+                    <span className="text-slate-900 font-bold font-mono">
+                      + {currencySymbol} {(0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                     </span>
-                 </div>
-               </div>
- 
-               <div className="flex justify-between items-center text-[13px] py-2">
+                  </div>
+                ) : (
+                  Object.entries(gstBreakdown)
+                    .sort(([rateA], [rateB]) => parseFloat(rateA) - parseFloat(rateB))
+                    .map(([rate, amount]) => (
+                      <div key={rate} className="flex justify-between items-center text-[13px] py-2">
+                        <span className="font-bold text-slate-700">GST @ {rate}%</span>
+                        <span className="text-slate-900 font-bold font-mono">
+                          + {currencySymbol} {amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                        </span>
+                      </div>
+                    ))
+                )}
+                <div className="flex justify-between items-center text-[13px] py-2">
                  <div className="flex items-center gap-4">
                     <label className="flex items-center gap-2 cursor-pointer">
                         <input 

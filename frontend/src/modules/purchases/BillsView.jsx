@@ -1141,8 +1141,10 @@ const BillsView = ({ companyId }) => {
                                                 
                                                 <div className="mt-20 flex justify-between items-end grayscale opacity-50">
                                                     <div>
+                                                        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">For {sessionStorage.getItem('companyName') || 'Authorized Signatory'}</p>
                                                         <p className="text-[10px] text-slate-400 font-bold uppercase tracking-[0.2em]">Authorized Signature</p>
                                                         <div className="mt-4 w-48 h-px bg-slate-200" />
+                                                        <p className="text-[10px] font-extrabold text-slate-900 uppercase tracking-wider mt-1">{sessionStorage.getItem('companyName') || ''}</p>
                                                     </div>
                                                     <div className="text-right">
                                                         <p className="text-[9px] text-slate-300 font-medium">Generated on {new Date().toLocaleDateString()}</p>

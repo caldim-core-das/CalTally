@@ -538,6 +538,17 @@ exports.recordPayment = async (req, res, next) => {
           else if (newPaid > 0) status = 'Partially Paid';
 
           await invoice.update({ amountPaid: newPaid, balance: newBalance, status }, { transaction: t });
+
+          const { InvoicePayment } = require('../../models');
+          await InvoicePayment.create({
+            companyId,
+            invoiceId: inv.id,
+            voucherId: voucher.id,
+            amount: inv.amountToApply,
+            paymentDate,
+            paymentMode: paymentMode || 'Bank Transfer',
+            reference
+          }, { transaction: t });
         }
     }
 

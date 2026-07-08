@@ -38,6 +38,29 @@ import useNotificationStore from '../../store/notificationStore';
 import { getCurrencyDisplay } from '../../utils/currencies';
 import { motion, AnimatePresence } from 'framer-motion';
 
+const formatAddress = (address) => {
+    if (!address) return '';
+    try {
+        if (typeof address === 'string' && (address.startsWith('{') || address.startsWith('['))) {
+            const parsed = JSON.parse(address);
+            if (typeof parsed === 'object') {
+                return [
+                    parsed.attention,
+                    parsed.street1,
+                    parsed.street2,
+                    parsed.city,
+                    parsed.state,
+                    parsed.country,
+                    parsed.pinCode
+                ].filter(Boolean).join(', ');
+            }
+        }
+        return address;
+    } catch (e) {
+        return address;
+    }
+};
+
 // ─────────────────────────────────────────────────────────────────────────────
 // PAYMENT RECEIPT PREVIEW COMPONENT
 // ─────────────────────────────────────────────────────────────────────────────
@@ -194,181 +217,214 @@ ${cleanCompany}`
                 </div>
             </div>
 
-            {/* Sub-Toolbar */}
-            <div className="bg-white border-b border-slate-100 px-8 py-2 flex items-center justify-between shadow-sm no-print">
-                <div className="flex items-center gap-1">
-                    <button 
-                        onClick={() => window.print()}
-                        className="px-4 py-1.5 bg-slate-50 text-slate-700 rounded flex items-center gap-1.5 text-[12px] font-bold transition-all border border-slate-200 hover:bg-white hover:border-blue-400"
-                    >
-                        <Printer size={14}/> PDF/Print
-                    </button>
-                    <button 
-                        onClick={() => setIsEmailModalOpen(true)}
-                        className="px-3 py-1.5 text-slate-600 hover:bg-slate-50 rounded flex items-center gap-1.5 text-[12px] font-bold transition-all"
-                    >
-                        <Mail size={14}/> Email
-                    </button>
-                    <span className="w-px h-5 bg-slate-100 mx-2" />
-                    <button className="p-1.5 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded transition-all ml-2"><Trash2 size={16}/></button>
-                    <button className="p-1.5 text-slate-400 hover:bg-slate-50 rounded transition-all ml-1"><MoreHorizontal size={16}/></button>
-                </div>
+            {/* Sub-Toolbar (Zoho Style) */}
+            <div className="px-8 py-2.5 bg-white border-b border-slate-100 flex items-center gap-3 no-print">
+                 <button onClick={() => window.print()} className="h-9 w-44 border border-slate-200 rounded text-[12px] font-bold text-slate-600 hover:bg-slate-50 transition-all uppercase tracking-widest shadow-sm flex items-center justify-center gap-2"><Printer size={14}/> PDF/Print</button>
+                 <button onClick={() => setIsEmailModalOpen(true)} className="h-9 w-44 border border-slate-200 rounded text-[12px] font-bold text-slate-600 hover:bg-slate-50 transition-all uppercase tracking-widest shadow-sm flex items-center justify-center gap-2"><Mail size={14}/> Send Email</button>
             </div>
 
             {/* Receipt Preview */}
-            <div className="flex-1 overflow-y-auto p-12 flex flex-col items-center custom-scrollbar print:p-0 print:bg-white transition-all">
-                <div className="bg-white shadow-[0_50px_100px_-20px_rgba(15,23,42,0.06),0_30px_60px_-30px_rgba(15,23,42,0.1)] rounded-[2.5rem] min-h-[842px] w-full max-w-[800px] mx-auto p-6 relative border border-slate-100 mb-20 animate-fade-in print:shadow-none print:border-none print:m-0">
+            <div className="flex-1 overflow-y-auto p-4 md:p-10 flex flex-col items-center custom-scrollbar print:p-0 print:bg-white transition-all bg-slate-100">
+                 {/* Main Scrollable Receipt Document */}
+                 <div id="printable-receipt" className="pdf-preview-paper bg-white w-full max-w-[800px] mx-auto mb-20 border border-slate-200/80 shadow-lg relative p-12 overflow-hidden flex flex-col justify-between" style={{fontFamily: 'Arial, sans-serif', fontSize: '12px', minHeight: '1050px'}} >
                     
-                    {/* Inner Border Frame */}
-                    <div className="border border-slate-100 rounded-[2rem] p-16 bg-white h-full relative overflow-hidden flex flex-col justify-between">
-                        
-                        {/* Decorative Top Security Line */}
-                        <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-blue-500 via-sky-500 to-blue-600 opacity-80" />
-
-                        {/* Status Stamp */}
-                        <div className="absolute top-20 right-20 rotate-[15deg] opacity-[0.06] no-print pointer-events-none">
-                            <div className="border-[8px] border-emerald-500 text-emerald-500 px-10 py-4 text-5xl font-bold uppercase tracking-widest rounded-3xl">PAID</div>
-                        </div>
-
-                        {/* Header Section */}
-                        <div className="flex justify-between items-start mb-16">
-                            <div className="space-y-4">
-                                <div className="w-16 h-16 rounded-[1.25rem] bg-gradient-to-tr from-blue-600 to-blue-700 border-2 border-blue-500 shadow-[0_10px_25px_-5px_rgba(30,97,240,0.3)] flex items-center justify-center text-white font-extrabold text-2xl">
-                                    {sessionStorage.getItem('companyName')?.charAt(0) || 'M'}
-                                </div>
-                                <div className="space-y-1">
-                                    <h2 className="text-[20px] font-black text-slate-800 tracking-tight uppercase leading-none">{sessionStorage.getItem('companyName') || 'THE MOON ENTERPRISES'}</h2>
-                                    <p className="text-[11px] text-slate-400 font-bold uppercase tracking-widest">Global Trading Solutions</p>
-                                </div>
-                            </div>
-                            <div className="text-right space-y-3">
-                                <h1 className="text-[36px] font-black text-slate-900 tracking-tighter uppercase leading-none opacity-5">RECEIPT</h1>
-                                <div className="space-y-1">
-                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Receipt Number</p>
-                                    <div className="bg-slate-50 border border-slate-200/80 rounded-xl px-4 py-1.5 inline-flex items-center gap-2 text-[12px] font-extrabold font-mono text-slate-700 shadow-sm">
-                                        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                                        {payment.voucherNumber}
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Receipt Core Information Banner */}
-                        <div className="bg-gradient-to-r from-blue-600 via-[#1e61f0] to-blue-700 text-white rounded-[2rem] py-12 px-12 mb-12 shadow-[0_20px_45px_-10px_rgba(30,97,240,0.25)] border border-blue-500 relative overflow-hidden flex items-center justify-between">
-                            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-white/10 via-transparent to-transparent pointer-events-none" />
-                            <div className="relative z-10 space-y-2">
-                                <p className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-blue-100">Total Amount Received</p>
-                                <h4 className="text-[36px] font-black tracking-tighter text-white leading-none">
-                                    {getCurrencyDisplay(customer?.currency)} {parseFloat(amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                                </h4>
-                            </div>
-                            <div className="relative z-10 text-right space-y-2">
-                                <p className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-blue-100">Payment Date</p>
-                                <h4 className="text-[16px] font-bold font-mono text-slate-100 tracking-tight">
-                                    {new Date(payment.date).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}
-                                </h4>
-                            </div>
-                        </div>
-
-                        {/* Transaction Details Grid */}
-                        <div className="grid grid-cols-2 gap-6 mb-12">
-                            <div className="flex flex-col gap-4">
-                                {/* Received From Card */}
-                                <div className="bg-blue-50/10 border border-blue-100 rounded-2xl p-5 flex items-center gap-4 shadow-sm hover:bg-blue-50/20 transition-all">
-                                    <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600 border border-blue-100 shadow-inner">
-                                        <User size={18} />
-                                    </div>
-                                    <div className="space-y-0.5">
-                                        <p className="text-[9px] font-bold text-blue-600/70 uppercase tracking-widest leading-none">Received From</p>
-                                        <p className="text-[15px] font-extrabold text-[#1e61f0] leading-tight">{customer?.name || 'Customer'}</p>
-                                        <p className="text-[10px] text-blue-500 font-bold uppercase tracking-wider">Premium Partner Account</p>
-                                    </div>
-                                </div>
-                                
-                                {/* Settlement Account Card */}
-                                <div className="bg-blue-50/10 border border-blue-100 rounded-2xl p-5 flex items-center gap-4 shadow-sm hover:bg-blue-50/20 transition-all">
-                                    <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600 border border-blue-100 shadow-inner">
-                                        <Banknote size={18} />
-                                    </div>
-                                    <div className="space-y-0.5">
-                                        <p className="text-[9px] font-bold text-blue-600/70 uppercase tracking-widest leading-none">Settlement Account</p>
-                                        <p className="text-[15px] font-extrabold text-slate-800 leading-tight">{bank?.name || 'Bank Transfer'}</p>
-                                        <p className="text-[10px] text-blue-500 font-bold uppercase tracking-wider">Verified Payment</p>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Transaction Status Card */}
-                            <div className="bg-blue-50/10 border border-blue-100 rounded-2xl p-5 flex flex-col justify-center items-center text-center space-y-3.5 shadow-sm h-full">
-                                <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-md text-emerald-500 border border-slate-100 animate-pulse">
-                                    <CheckCircle2 size={24} />
-                                </div>
-                                <div className="space-y-1">
-                                    <h3 className="text-[14px] font-extrabold text-blue-800 tracking-tight uppercase leading-none">Transaction Cleared</h3>
-                                    <p className="text-[11px] text-blue-600/80 font-medium max-w-[160px] leading-relaxed mx-auto">Payment successfully applied to invoice balance</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Narration Block */}
-                        <div className="border-t border-slate-100 pt-10 mb-12">
-                             <h5 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Settlement Remarks</h5>
-                             <div className="bg-slate-50/30 border border-slate-200/60 rounded-2xl p-5 italic text-[14px] text-slate-600 font-bold leading-relaxed shadow-sm">
-                                 "{payment.narration || 'This payment has been successfully received and credited to your account. We appreciate your continued business partnership.'}"
-                             </div>
-                        </div>
-
-                        {/* Footer & Signature Section */}
-                        <div className="flex justify-between items-end border-t border-slate-100 pt-10">
-                             <div className="space-y-2">
-                                 <div className="flex items-center gap-2 text-slate-400">
-                                     <ShieldCheck size={16} className="text-emerald-500" />
-                                     <span className="text-[10px] font-extrabold uppercase tracking-widest">Digital Audit Logged</span>
-                                 </div>
-                                 <p className="text-[10px] text-slate-400 font-bold max-w-[240px] leading-relaxed">This is an electronically generated receipt issued under the authority of {sessionStorage.getItem('companyName')}.</p>
-                             </div>
-                             
-                             <div className="flex items-center gap-8 text-right">
-                                 {/* Circular stamp seal */}
-                                 <div className="w-16 h-16 rounded-full border-2 border-indigo-400/40 flex items-center justify-center relative rotate-[-12deg] select-none pointer-events-none no-print">
-                                     <div className="w-14 h-14 rounded-full border border-dashed border-indigo-400/40 flex flex-col items-center justify-center text-[7px] font-black uppercase text-indigo-400/60 tracking-wider">
-                                         <span>SECURED</span>
-                                         <span className="text-[6px] font-medium font-mono">VERIFIED</span>
-                                         <span>CALBOOKS</span>
-                                     </div>
-                                 </div>
-                                 
-                                 <div className="w-64 text-center">
-                                    <div className="h-14 border-b border-slate-300 border-dashed mb-3 relative">
-                                        <div className="absolute -top-4 left-1/2 -translate-x-1/2 font-serif text-[24px] tracking-wide text-indigo-600/85 italic font-bold select-none rotate-[-4deg]">
-                                            {signatureText}
-                                        </div>
-                                    </div>
-                                    <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">Authorized Signature</p>
-                                 </div>
-                             </div>
-                        </div>
-
-                        {/* Decorative Barcode */}
-                        <div className="flex flex-col items-center justify-center mt-10 opacity-35 select-none no-print">
-                            <div className="flex gap-[2px] h-8 items-end mb-1">
-                                <div className="w-[2px] h-full bg-slate-900" />
-                                <div className="w-[1px] h-full bg-slate-900" />
-                                <div className="w-[4px] h-full bg-slate-900" />
-                                <div className="w-[1px] h-full bg-slate-900" />
-                                <div className="w-[2px] h-full bg-slate-900" />
-                                <div className="w-[3px] h-full bg-slate-900" />
-                                <div className="w-[1px] h-full bg-slate-900" />
-                                <div className="w-[4px] h-full bg-slate-900" />
-                                <div className="w-[2px] h-full bg-slate-900" />
-                                <div className="w-[1px] h-full bg-slate-900" />
-                                <div className="w-[3px] h-full bg-slate-900" />
-                                <div className="w-[2px] h-full bg-slate-900" />
-                            </div>
-                            <span className="text-[9px] font-mono font-bold tracking-[0.3em] text-slate-500 uppercase">{payment.voucherNumber}</span>
-                        </div>
+                    {/* Status Ribbon (no-print) */}
+                    <div className="absolute top-8 -right-12 w-48 py-2 text-[10px] font-bold uppercase tracking-[0.2em] transform rotate-45 text-center shadow-lg text-white bg-emerald-600 no-print">
+                        SUCCESS / PAID
                     </div>
-                </div>
+
+                    <div>
+                      {/* —— Top Header: Company (left) | PAYMENT RECEIPT (right) —— */}
+                      <div className="flex justify-between items-start mb-12">
+                        <div className="space-y-4">
+                          <div className="w-16 h-16 rounded-[1.25rem] bg-gradient-to-tr from-blue-600 to-blue-700 border-2 border-blue-500 shadow-[0_10px_25px_-5px_rgba(30,97,240,0.3)] flex items-center justify-center text-white font-extrabold text-2xl">
+                              {sessionStorage.getItem('companyName')?.charAt(0) || 'M'}
+                          </div>
+                          <div className="space-y-1">
+                              <h3 className="text-[18px] font-extrabold text-slate-900 tracking-tight">{sessionStorage.getItem('companyName') || 'THE MOON ENTERPRISES'}</h3>
+                              <p className="text-[11px] text-slate-400 font-bold uppercase tracking-widest">Global Trading Solutions</p>
+                              <p className="text-[12px] text-slate-500 font-medium">Tamil Nadu, India</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <h1 className="text-[28px] font-bold text-slate-800 uppercase tracking-wider mb-2" style={{fontFamily:'Georgia, serif'}}>PAYMENT RECEIPT</h1>
+                          <p className="text-[15px] font-bold text-slate-500">Receipt No: {payment.voucherNumber}</p>
+                          <p className="text-[12px] font-semibold text-slate-400 mt-1">Date: {new Date(payment.date).toLocaleDateString('en-IN', {day:'2-digit',month:'short',year:'numeric'})}</p>
+                        </div>
+                      </div>
+
+                      {/* —— Bill To & Payment Info (2-column layout) —— */}
+                      <div className="grid grid-cols-2 gap-8 mb-12 border-t border-slate-100 pt-8">
+                        {/* Received From Customer details */}
+                        <div className="space-y-2">
+                          <h4 className="text-[11px] font-bold text-blue-600 uppercase tracking-widest">Received From</h4>
+                          <div className="text-[13px] text-slate-800 leading-relaxed font-semibold">
+                            <p className="font-extrabold text-slate-950 text-[14px]">{customer?.name || 'Customer'}</p>
+                            <p className="font-semibold text-slate-600">
+                              {formatAddress(customer?.billingAddress || customer?.address) || 'No billing address available.'}
+                            </p>
+                            {customer?.gstNumber && <p className="text-[12px] mt-1">GSTIN: {customer.gstNumber}</p>}
+                            {customer?.email && <p className="text-[12px] mt-0.5">Email: {customer.email}</p>}
+                          </div>
+                        </div>
+
+                        {/* Payment & Settlement details */}
+                        <div className="space-y-2">
+                          <h4 className="text-[11px] font-bold text-blue-600 uppercase tracking-widest">Payment Details</h4>
+                          <div className="text-[13px] text-slate-800 leading-relaxed font-semibold space-y-1">
+                            <p className="text-[13px] text-slate-700"><span className="text-slate-400 font-bold uppercase tracking-wider text-[10px] mr-2">Payment Mode:</span> {payment.narration?.includes('Cash') ? 'Cash' : 'Bank Transfer'}</p>
+                            <p className="text-[13px] text-slate-700"><span className="text-slate-400 font-bold uppercase tracking-wider text-[10px] mr-2">Deposit Account:</span> {bank?.name || 'Bank/Cash'}</p>
+                            <p className="text-[13px] text-slate-700"><span className="text-slate-400 font-bold uppercase tracking-wider text-[10px] mr-2">Reference ID:</span> {payment.reference || 'N/A'}</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* —— Allocation Table / Applied Invoices —— */}
+                      <div className="space-y-4 mb-10">
+                        <h4 className="text-[11px] font-bold text-slate-900 uppercase tracking-[0.1em] border-b border-slate-100 pb-2">Invoice Allocations</h4>
+                        <table className="w-full text-left">
+                          <thead>
+                            <tr className="bg-slate-800 text-white text-[11px] font-bold uppercase tracking-wider">
+                              <th className="px-4 py-3 rounded-l">#</th>
+                              <th className="px-4 py-3">Invoice Number</th>
+                              <th className="px-4 py-3">Invoice Date</th>
+                              <th className="px-4 py-3 text-right">Invoice Amount</th>
+                              <th className="px-4 py-3 text-right rounded-r">Amount Applied</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100 text-[13px] font-semibold text-slate-700">
+                            {(() => {
+                              const allocations = payment.InvoicePayments || payment.invoicePayments || payment.payments || [];
+                              if (allocations.length > 0) {
+                                return allocations.map((alloc, idx) => {
+                                  const inv = alloc.SalesInvoice || {};
+                                  const currency = getCurrencyDisplay(customer?.currency);
+                                  return (
+                                    <tr key={idx}>
+                                      <td className="px-4 py-3.5 text-slate-400">{idx + 1}</td>
+                                      <td className="px-4 py-3.5 font-extrabold text-blue-600">{inv.invoiceNumber || 'INV-000000'}</td>
+                                      <td className="px-4 py-3.5 text-slate-500">
+                                        {inv.date ? new Date(inv.date).toLocaleDateString('en-IN', {day:'2-digit',month:'short',year:'numeric'}) : 'N/A'}
+                                      </td>
+                                      <td className="px-4 py-3.5 text-right font-mono">
+                                        {inv.totalAmount ? `${currency} ${parseFloat(inv.totalAmount).toLocaleString('en-IN', {minimumFractionDigits: 2})}` : 'N/A'}
+                                      </td>
+                                      <td className="px-4 py-3.5 text-right font-mono font-bold text-slate-900">
+                                        {currency} {parseFloat(alloc.amount).toLocaleString('en-IN', {minimumFractionDigits: 2})}
+                                      </td>
+                                    </tr>
+                                  );
+                                });
+                              } else {
+                                const currency = getCurrencyDisplay(customer?.currency);
+                                return (
+                                  <tr>
+                                    <td className="px-4 py-3.5 text-slate-400">1</td>
+                                    <td className="px-4 py-3.5 font-extrabold text-slate-800">Unspecified Invoice (Retroactive Allocation)</td>
+                                    <td className="px-4 py-3.5 text-slate-500">{new Date(payment.date).toLocaleDateString('en-IN', {day:'2-digit',month:'short',year:'numeric'})}</td>
+                                    <td className="px-4 py-3.5 text-right font-mono">{currency} {parseFloat(amount).toLocaleString('en-IN', {minimumFractionDigits: 2})}</td>
+                                    <td className="px-4 py-3.5 text-right font-mono font-bold text-slate-900">{currency} {parseFloat(amount).toLocaleString('en-IN', {minimumFractionDigits: 2})}</td>
+                                  </tr>
+                                );
+                              }
+                            })()}
+                          </tbody>
+                        </table>
+                      </div>
+
+                      {/* —— Summary / Totals block —— */}
+                      <div className="flex justify-end mb-16">
+                        <div className="w-80 space-y-2 text-[13px] font-bold text-slate-600">
+                          <div className="flex justify-between items-center py-1">
+                            <span>Total Allocated</span>
+                            <span className="font-mono text-slate-800 whitespace-nowrap">
+                              {getCurrencyDisplay(customer?.currency)} {(() => {
+                                const allocations = payment.InvoicePayments || payment.invoicePayments || payment.payments || [];
+                                const totalAllocated = allocations.reduce((sum, item) => sum + parseFloat(item.amount || 0), 0);
+                                return (totalAllocated || amount).toLocaleString('en-IN', {minimumFractionDigits: 2});
+                              })()}
+                            </span>
+                          </div>
+                          {(() => {
+                            const allocations = payment.InvoicePayments || payment.invoicePayments || payment.payments || [];
+                            const totalAllocated = allocations.reduce((sum, item) => sum + parseFloat(item.amount || 0), 0);
+                            const surplus = amount - totalAllocated;
+                            if (surplus > 0.01) {
+                              return (
+                                <div className="flex justify-between items-center py-1 text-blue-600">
+                                  <span>Unallocated Surplus</span>
+                                  <span className="font-mono whitespace-nowrap">{getCurrencyDisplay(customer?.currency)} {surplus.toLocaleString('en-IN', {minimumFractionDigits: 2})}</span>
+                                </div>
+                              );
+                            }
+                            return null;
+                          })()}
+                          <div className="flex justify-between items-center border-t border-slate-200 py-3 text-[15px] text-slate-900 font-extrabold">
+                            <span className="whitespace-nowrap mr-4">Total Amount Received</span>
+                            <span className="font-mono text-[#1e61f0] whitespace-nowrap">{getCurrencyDisplay(customer?.currency)} {parseFloat(amount).toLocaleString('en-IN', {minimumFractionDigits: 2})}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                    </div>
+
+                    {/* ——— Narration / Remarks + Signature ——— */}
+                    <div>
+                      {payment.narration && (
+                        <div className="mb-10 text-[12px]">
+                          <h4 className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-2">Remarks</h4>
+                          <p className="text-slate-600 bg-slate-50 border border-slate-100 rounded-lg p-4 italic font-medium leading-relaxed">
+                            "{payment.narration}"
+                          </p>
+                        </div>
+                      )}
+
+                      <div className="flex justify-between items-end border-t border-slate-100 pt-10">
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2 text-slate-400">
+                            <ShieldCheck size={16} className="text-emerald-500" />
+                            <span className="text-[10px] font-extrabold uppercase tracking-widest">Digital Audit Logged</span>
+                          </div>
+                          <p className="text-[10px] text-slate-400 font-bold max-w-[240px] leading-relaxed">This is an electronically generated receipt issued under the authority of {sessionStorage.getItem('companyName') || 'CalBooks'}.</p>
+                        </div>
+                        
+                        <div className="flex items-center gap-8 text-right">
+                          <div className="w-16 h-16 rounded-full border-2 border-indigo-400/40 flex items-center justify-center relative rotate-[-12deg] select-none pointer-events-none no-print">
+                            <div className="w-14 h-14 rounded-full border border-dashed border-indigo-400/40 flex flex-col items-center justify-center text-[7px] font-black uppercase text-indigo-400/60 tracking-wider">
+                              <span>SECURED</span>
+                              <span className="text-[6px] font-medium font-mono">VERIFIED</span>
+                              <span>CALBOOKS</span>
+                            </div>
+                          </div>
+                          
+                          <div className="w-64 text-center">
+                            <div className="h-14 border-b border-slate-300 border-dashed mb-3 relative">
+                              <div className="absolute -top-4 left-1/2 -translate-x-1/2 font-serif text-[24px] tracking-wide text-indigo-600/85 italic font-bold select-none rotate-[-4deg]">
+                                {signatureText}
+                              </div>
+                            </div>
+                            <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">Authorized Signature</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Barcode */}
+                      <div className="flex flex-col items-center justify-center mt-10 opacity-35 select-none no-print">
+                        <div className="flex gap-[2px] h-8 items-end mb-1">
+                          <div className="w-[2px] h-full bg-slate-900" />
+                          <div className="w-[1px] h-full bg-slate-900" />
+                          <div className="w-[4px] h-full bg-slate-900" />
+                          <div className="w-[1px] h-full bg-slate-900" />
+                          <div className="w-[2px] h-full bg-slate-900" />
+                          <div className="w-[3px] h-full bg-slate-900" />
+                          <div className="w-[1px] h-full bg-slate-900" />
+                          <div className="w-[4px] h-full bg-slate-900" />
+                        </div>
+                        <span className="text-[9px] font-mono font-bold tracking-[0.3em] text-slate-500 uppercase">{payment.voucherNumber}</span>
+                      </div>
+                    </div>
+
+                 </div>
             </div>
 
             {/* Email Modal */}

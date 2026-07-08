@@ -458,6 +458,27 @@ const InvoiceDetail = ({ id, company, navigate, onRefresh }) => {
 
     const items = invoice.items || [];
 
+    // Calculate dynamic GST breakdown for display in PDF/Detail preview
+    const subTotal = parseFloat(invoice.subTotal) || 0;
+    const discountAmount = parseFloat(invoice.discountAmount) || 0;
+    const discountRatio = subTotal > 0 ? ((subTotal - discountAmount) / subTotal) : 1;
+
+    const breakdown = {};
+    items.forEach(item => {
+        const qty = parseFloat(item.quantity) || 0;
+        const rate = parseFloat(item.rate) || 0;
+        const discount = parseFloat(item.discount) || 0;
+        const lineBase = qty * rate;
+        const disc = item.discountType === '%' ? (lineBase * (discount / 100)) : discount;
+        const taxable = lineBase - disc;
+        const rateGst = parseFloat(item.gstRate) || 0;
+        const itemTax = taxable * discountRatio * (rateGst / 100);
+        breakdown[rateGst] = (breakdown[rateGst] || 0) + itemTax;
+    });
+
+    const totalBreakdownTax = Object.values(breakdown).reduce((sum, v) => sum + v, 0);
+    const hasBreakdown = totalBreakdownTax > 0.01;
+
     return (
         <div className="flex-1 flex flex-col h-full bg-white animate-fade-in">
             {/* Split View Sub-Header */}
@@ -680,10 +701,28 @@ const InvoiceDetail = ({ id, company, navigate, onRefresh }) => {
                             <span className="font-mono whitespace-nowrap">- {parseFloat(invoice.discountAmount || 0).toLocaleString('en-IN', {minimumFractionDigits: 2})}</span>
                           </div>
                         )}
-                        <div className="flex justify-between items-center py-1">
-                          <span>GST</span>
-                          <span className="font-mono text-slate-800 whitespace-nowrap">+ {parseFloat(invoice.gstAmount || 0).toLocaleString('en-IN', {minimumFractionDigits: 2})}</span>
-                        </div>
+                        {parseFloat(invoice.gstAmount || 0) > 0 ? (
+                          hasBreakdown ? (
+                            Object.entries(breakdown)
+                              .sort(([rateA], [rateB]) => parseFloat(rateA) - parseFloat(rateB))
+                              .map(([rate, amount]) => (
+                                <div key={rate} className="flex justify-between items-center py-1">
+                                  <span>GST @ {rate}%</span>
+                                  <span className="font-mono text-slate-800 whitespace-nowrap">+ {amount.toLocaleString('en-IN', {minimumFractionDigits: 2})}</span>
+                                </div>
+                              ))
+                          ) : (
+                            <div className="flex justify-between items-center py-1">
+                              <span>GST</span>
+                              <span className="font-mono text-slate-800 whitespace-nowrap">+ {parseFloat(invoice.gstAmount || 0).toLocaleString('en-IN', {minimumFractionDigits: 2})}</span>
+                            </div>
+                          )
+                        ) : (
+                          <div className="flex justify-between items-center py-1">
+                            <span>GST @ 0%</span>
+                            <span className="font-mono text-slate-800 whitespace-nowrap">+ 0.00</span>
+                          </div>
+                        )}
                         <div className="flex justify-between items-center py-1">
                           <span>TCS</span>
                           <span className="font-mono text-slate-800 whitespace-nowrap">+ {parseFloat(invoice.tcsAmount || 0).toLocaleString('en-IN', {minimumFractionDigits: 2})}</span>
