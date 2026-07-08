@@ -143,7 +143,9 @@ sequelize.sync(syncOptions).then(async () => {
       'ALTER TABLE "Users" ADD COLUMN "oauthOnly" BOOLEAN DEFAULT false;',
       'ALTER TABLE "Users" ADD COLUMN "failedLoginAttempts" INTEGER DEFAULT 0;',
       'ALTER TABLE "Users" ADD COLUMN "lockedUntil" TIMESTAMP WITH TIME ZONE;',
-      'ALTER TABLE "Ledgers" ADD COLUMN "tdsApplicable" BOOLEAN DEFAULT false;'
+      'ALTER TABLE "Ledgers" ADD COLUMN "tdsApplicable" BOOLEAN DEFAULT false;',
+      'ALTER TABLE "SalesInvoiceItems" ADD COLUMN "gstRate" FLOAT DEFAULT 0;',
+      'ALTER TABLE "SalesOrderItems" ADD COLUMN "gstRate" FLOAT DEFAULT 0;'
     ];
     for (const q of queries) {
       await sequelize.query(q).catch(e => {

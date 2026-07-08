@@ -351,7 +351,7 @@ const SalesOrdersView = ({ companyId }) => {
         expectedShipmentDate: '',
         paymentTerms: 'Due on Receipt',
         salesperson: '',
-        items: [{ id: Date.now(), itemId: '', detail: '', quantity: 0, rate: 0, amount: 0 }],
+        items: [{ id: Date.now(), itemId: '', detail: '', quantity: 0, rate: 0, amount: 0, gstRate: 0 }],
         subTotal: 0,
         discount: 0,
         taxPercent: 18,
@@ -411,11 +411,34 @@ const SalesOrdersView = ({ companyId }) => {
         const subTotal = formData.items.reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0);
         const discountAmt = subTotal * (parseFloat(formData.discount || 0) / 100);
         const taxableAmount = subTotal - discountAmt;
-        const tax = taxableAmount * (parseFloat(formData.taxPercent || 0) / 100);
+        const discountRatio = subTotal > 0 ? (taxableAmount / subTotal) : 1;
+        const tax = formData.items.reduce((sum, item) => {
+            const itemAmount = (parseFloat(item.quantity) || 0) * (parseFloat(item.rate) || 0);
+            const itemTaxable = itemAmount * discountRatio;
+            const itemTax = itemTaxable * (parseFloat(item.gstRate || 0) / 100);
+            return sum + itemTax;
+        }, 0);
         const tcsAmt = formData.tcsApplicable ? (taxableAmount + tax) * (parseFloat(formData.tcsRate || 0) / 100) : 0;
         const total = taxableAmount + tax + (parseFloat(formData.adjustment || 0)) + tcsAmt;
         setFormData(prev => ({ ...prev, subTotal, tax, tcsAmount: tcsAmt, totalAmount: total }));
-    }, [formData.items, formData.discount, formData.taxPercent, formData.adjustment, formData.tcsApplicable, formData.tcsRate]);
+    }, [formData.items, formData.discount, formData.adjustment, formData.tcsApplicable, formData.tcsRate], [formData.items, formData.discount, formData.taxPercent, formData.adjustment, formData.tcsApplicable, formData.tcsRate]);
+
+    const gstBreakdown = useMemo(() => {
+        const breakdown = {};
+        const subTotal = formData.items.reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0);
+        const discountAmt = subTotal * (parseFloat(formData.discount || 0) / 100);
+        const taxableAmount = subTotal - discountAmt;
+        const discountRatio = subTotal > 0 ? (taxableAmount / subTotal) : 1;
+        formData.items.forEach(item => {
+            if (!item.itemId) return;
+            const itemAmount = (parseFloat(item.quantity) || 0) * (parseFloat(item.rate) || 0);
+            const itemTaxable = itemAmount * discountRatio;
+            const itemTax = itemTaxable * (parseFloat(item.gstRate || 0) / 100);
+            const rate = parseFloat(item.gstRate) || 0;
+            breakdown[rate] = (breakdown[rate] || 0) + itemTax;
+        });
+        return breakdown;
+    }, [formData.items, formData.discount]);
 
     const handleItemUpdate = (id, field, value) => {
         setFormData(prev => {
@@ -429,6 +452,7 @@ const SalesOrdersView = ({ companyId }) => {
                             updated.rate = selected.sellingPrice || 0;
                             const currentQty = parseFloat(updated.quantity) || 0;
                             updated.quantity = currentQty === 0 ? 1 : currentQty;
+                        updated.gstRate = selected.gstRate !== undefined ? parseFloat(selected.gstRate) : 18;
                         }
                     }
                     updated.amount = (parseFloat(updated.quantity) || 0) * (parseFloat(updated.rate) || 0);
@@ -443,7 +467,7 @@ const SalesOrdersView = ({ companyId }) => {
     const handleAddField = () => {
         setFormData(prev => ({
             ...prev,
-            items: [...prev.items, { id: Date.now(), itemId: '', detail: '', quantity: 1, rate: 0, amount: 0 }]
+            items: [...prev.items, { id: Date.now(), itemId: '', detail: '', quantity: 1, rate: 0, amount: 0, gstRate: 0 }]
         }));
     };
 
@@ -544,7 +568,7 @@ const SalesOrdersView = ({ companyId }) => {
             expectedShipmentDate: '',
             paymentTerms: 'Due on Receipt',
             salesperson: '',
-            items: [{ id: Date.now(), itemId: '', detail: '', quantity: 1, rate: 0, amount: 0 }],
+            items: [{ id: Date.now(), itemId: '', detail: '', quantity: 1, rate: 0, amount: 0, gstRate: 0 }],
             subTotal: 0,
             discount: 0,
             taxPercent: 18,
@@ -572,8 +596,9 @@ const SalesOrdersView = ({ companyId }) => {
                     itemId: i.ItemId || i.itemId,
                     quantity: parseFloat(i.quantity) || 0,
                     rate: parseFloat(i.rate) || 0,
-                    amount: parseFloat(i.amount) || 0
-                })) || [{ id: Date.now(), itemId: '', detail: '', quantity: 1, rate: 0, amount: 0 }],
+                    amount: parseFloat(i.amount) || 0,
+                    gstRate: parseFloat(i.gstRate) || 0
+                })) || [{ id: Date.now(), itemId: '', detail: '', quantity: 1, rate: 0, amount: 0, gstRate: 0 }],
                 subTotal: parseFloat(order.subTotal) || 0,
                 discount: parseFloat(order.discount) || 0,
                 taxPercent: parseFloat(order.taxPercent) || 0,
@@ -957,6 +982,7 @@ const SalesOrdersView = ({ companyId }) => {
                                             <th className="px-6 py-3 text-left">Item Details</th>
                                             <th className="px-6 py-3 text-right w-28">Quantity</th>
                                             <th className="px-6 py-3 text-right w-36">Rate</th>
+                                            <th className="px-6 py-3 text-right w-32">GST %</th>
                                             <th className="px-6 py-3 text-right w-40">Amount</th>
                                             <th className="w-12"></th>
                                         </tr>
@@ -997,6 +1023,21 @@ const SalesOrdersView = ({ companyId }) => {
                                                         onChange={e => handleItemUpdate(line.id, 'rate', parseFloat(e.target.value))}
                                                         className="w-full text-right bg-transparent border-none outline-none text-[13px] font-bold text-slate-600 focus:bg-white rounded transition-all tabular-nums" 
                                                     />
+                                                </td>
+                                                <td className="px-6 py-5 align-top">
+                                                    <div className="flex items-center justify-end">
+                                                        <select 
+                                                            value={line.gstRate || 0} 
+                                                            onChange={e => handleItemUpdate(line.id, 'gstRate', parseFloat(e.target.value))}
+                                                            className="bg-white border border-slate-200 rounded px-2 py-1 text-[13px] font-bold text-slate-600 focus:border-blue-500 outline-none transition-all cursor-pointer min-w-[85px] text-right"
+                                                        >
+                                                            <option value="0">0%</option>
+                                                            <option value="5">5%</option>
+                                                            <option value="12">12%</option>
+                                                            <option value="18">18%</option>
+                                                            <option value="28">28%</option>
+                                                        </select>
+                                                    </div>
                                                 </td>
                                                 <td className="px-6 py-5 text-right align-top">
                                                 <span className="text-[13px] font-bold text-slate-900 tabular-nums">{getCurrencyDisplay(customers.find(c => c.id === formData.customerId)?.currency)} {(parseFloat(line.amount) || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
@@ -1063,29 +1104,21 @@ const SalesOrdersView = ({ companyId }) => {
                                         </div>
                                     </div>
 
-                                    <div className="flex justify-between items-center text-[13px]">
-                                        <span className="text-slate-700">Tax (GST)</span>
-                                        <div className="flex items-center gap-3">
-                                            <div className="relative w-36">
-                                                <select 
-                                                        value={formData.taxPercent} 
-                                                        onChange={e => {
-                                                        const rate = parseFloat(e.target.value) || 0;
-                                                        setFormData(p => ({ ...p, taxPercent: rate }));
-                                                    }}
-                                                    className="w-full h-9 px-3 bg-white border border-slate-200 rounded text-[12px] font-bold text-slate-700 outline-none focus:border-blue-400 transition-all appearance-none"
-                                            >
-                                                    <option value="0">Select a Tax (0%)</option>
-                                                    <option value="5">GST (5%)</option>
-                                                    <option value="12">GST (12%)</option>
-                                                    <option value="18">GST (18%)</option>
-                                                    <option value="28">GST (28%)</option>
-                                            </select>
-                                            <ChevronDown size={12} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                                    {Object.keys(gstBreakdown).length === 0 ? (
+                                        <div className="flex justify-between items-center text-[13px]">
+                                            <span className="text-slate-700">GST @ 0%</span>
+                                            <span className="w-32 whitespace-nowrap text-right text-slate-700 font-mono">+ {currencySymbol} {(0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                                         </div>
-                                        <span className="w-32 whitespace-nowrap text-right text-slate-700 font-mono">+ {currencySymbol} {(parseFloat(formData.tax) || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
-                                    </div>
-                                    </div>
+                                    ) : (
+                                        Object.entries(gstBreakdown)
+                                            .sort(([rateA], [rateB]) => parseFloat(rateA) - parseFloat(rateB))
+                                            .map(([rate, amount]) => (
+                                                <div key={rate} className="flex justify-between items-center text-[13px]">
+                                                    <span className="text-slate-700">GST @ {rate}%</span>
+                                                    <span className="w-32 whitespace-nowrap text-right text-slate-700 font-mono">+ {currencySymbol} {amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                                </div>
+                                            ))
+                                    )}
 
                                     <div className="flex justify-between items-center text-[13px]">
                                         <span className="text-slate-700">Adjustment</span>
@@ -1177,6 +1210,25 @@ const SalesOrdersView = ({ companyId }) => {
         const order = selectedOrder;
         if (!order) return null;
         const itemsList = order.Items || [];
+
+        // Calculate breakdown for display in PDF/Detail paper
+        const subTotal = parseFloat(order.subTotal) || 0;
+        const discountPercent = parseFloat(order.discount) || 0;
+        const discountAmt = subTotal * (discountPercent / 100);
+        const taxableAmount = subTotal - discountAmt;
+        const discountRatio = subTotal > 0 ? (taxableAmount / subTotal) : 1;
+
+        const breakdown = {};
+        itemsList.forEach(item => {
+            const itemAmount = (parseFloat(item.quantity) || 0) * (parseFloat(item.rate) || 0);
+            const itemTaxable = itemAmount * discountRatio;
+            const rate = parseFloat(item.gstRate) || 0;
+            const itemTax = itemTaxable * (rate / 100);
+            breakdown[rate] = (breakdown[rate] || 0) + itemTax;
+        });
+
+        const totalBreakdownTax = Object.values(breakdown).reduce((sum, v) => sum + v, 0);
+        const hasBreakdown = totalBreakdownTax > 0.01;
 
         return (
             <div className="flex-1 flex flex-col h-full bg-[#f8fafc] animate-fade-in shadow-inner overflow-hidden">
@@ -1354,10 +1406,21 @@ const SalesOrdersView = ({ companyId }) => {
                               </div>
                             )}
                             {parseFloat(order.tax || order.taxAmount || 0) > 0 && (
-                              <div className="flex justify-between items-center py-1">
-                                <span>GST {order.taxPercent ? `(${order.taxPercent}%)` : ''}</span>
-                                <span className="font-mono text-slate-800">+ {parseFloat(order.tax || order.taxAmount || 0).toLocaleString('en-IN', {minimumFractionDigits: 2})}</span>
-                              </div>
+                              hasBreakdown ? (
+                                Object.entries(breakdown)
+                                  .sort(([rateA], [rateB]) => parseFloat(rateA) - parseFloat(rateB))
+                                  .map(([rate, amount]) => (
+                                    <div key={rate} className="flex justify-between items-center py-1">
+                                      <span>GST @ {rate}%</span>
+                                      <span className="font-mono text-slate-800">+ {amount.toLocaleString('en-IN', {minimumFractionDigits: 2})}</span>
+                                    </div>
+                                  ))
+                              ) : (
+                                <div className="flex justify-between items-center py-1">
+                                  <span>GST</span>
+                                  <span className="font-mono text-slate-800">+ {parseFloat(order.tax || order.taxAmount || 0).toLocaleString('en-IN', {minimumFractionDigits: 2})}</span>
+                                </div>
+                              )
                             )}
                             {parseFloat(order.adjustment || 0) !== 0 && (
                               <div className="flex justify-between items-center py-1">

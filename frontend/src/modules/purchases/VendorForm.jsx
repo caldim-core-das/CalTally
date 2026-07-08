@@ -13,6 +13,30 @@ import useNotificationStore from '../../store/notificationStore';
 import { CURRENCIES } from '../../utils/currencies';
 import { STATE_CODE_TO_NAME } from '../../utils/gstinUtils';
 
+// Country-specific phone digit limits
+const PHONE_MAX_LENGTHS = {
+  '+91': 10, '+1': 10, '+44': 10, '+61': 9, '+81': 11, '+86': 11,
+  '+49': 11, '+33': 9, '+39': 10, '+34': 9, '+55': 11, '+7': 10,
+  '+92': 10, '+880': 10, '+94': 9, '+977': 10, '+971': 9, '+966': 9,
+  '+65': 8, '+60': 10, '+62': 12, '+63': 10, '+66': 9, '+82': 10,
+  '+27': 9, '+20': 10, '+234': 10, '+254': 9,
+};
+const getPhoneMaxLength = (code) => PHONE_MAX_LENGTHS[code] ?? 15;
+
+const parsePhone = (phoneStr) => {
+  if (!phoneStr) return { code: '+91', number: '' };
+  const cleanStr = phoneStr.trim();
+  if (cleanStr.startsWith('+')) {
+    const sorted = [...COUNTRY_CODES].sort((a, b) => b.code.length - a.code.length);
+    for (const c of sorted) {
+      if (cleanStr.startsWith(c.code)) {
+        return { code: c.code, number: cleanStr.substring(c.code.length).trim().replace(/\D/g, '') };
+      }
+    }
+  }
+  return { code: '+91', number: cleanStr.replace(/\D/g, '') };
+};
+
 const VendorForm = ({ editId, standalone = true, onSaveSuccess, onCancel, companyId: propCompanyId }) => {
   const navigate = useNavigate();
   const isEditMode = Boolean(editId);
@@ -32,8 +56,10 @@ const VendorForm = ({ editId, standalone = true, onSaveSuccess, onCancel, compan
   const [lastName, setLastName] = useState('');
   const [companyName, setCompanyName] = useState('');
   const [email, setEmail] = useState('');
-  const [workPhone, setWorkPhone] = useState('');
-  const [mobile, setMobile] = useState('');
+  const [workPhoneCode, setWorkPhoneCode] = useState('+91');
+  const [workPhoneNo, setWorkPhoneNo] = useState('');
+  const [mobileCode, setMobileCode] = useState('+91');
+  const [mobileNo, setMobileNo] = useState('');
   const [website, setWebsite] = useState('');
   const [displayName, setDisplayName] = useState('');
 
@@ -207,8 +233,12 @@ const VendorForm = ({ editId, standalone = true, onSaveSuccess, onCancel, compan
              setLastName(c.lastName || '');
              setVendorType(c.customerType || 'Business');
              setEmail(c.email || '');
-             setWorkPhone(c.phone || c.workPhone || '');
-             setMobile(c.mobile || '');
+             const parsedWork = parsePhone(c.phone || c.workPhone);
+             setWorkPhoneCode(parsedWork.code);
+             setWorkPhoneNo(parsedWork.number);
+             const parsedMobile = parsePhone(c.mobile);
+             setMobileCode(parsedMobile.code);
+             setMobileNo(parsedMobile.number);
              setWebsite(c.website || '');
              setPan(c.pan || '');
              setCurrency(c.currency || 'INR- Indian Rupee');
@@ -294,8 +324,9 @@ const VendorForm = ({ editId, standalone = true, onSaveSuccess, onCancel, compan
         lastName,
         customerType: vendorType,
         email,
-        phone: workPhone,
-        mobile,
+        phone: workPhoneNo ? `${workPhoneCode} ${workPhoneNo}`.trim() : '',
+        workPhone: workPhoneNo ? `${workPhoneCode} ${workPhoneNo}`.trim() : '',
+        mobile: mobileNo ? `${mobileCode} ${mobileNo}`.trim() : '',
         website,
         pan,
         gstNumber: gstNumber || null,
@@ -438,16 +469,50 @@ const VendorForm = ({ editId, standalone = true, onSaveSuccess, onCancel, compan
                 <div className="flex items-center">
                     <label className="w-48 text-[13px] font-medium text-slate-500">Vendor Phone</label>
                     <div className="flex flex-1 max-w-lg gap-4">
-                        <input 
-                            placeholder="Work Phone"
-                            value={workPhone} onChange={e => setWorkPhone(e.target.value)}
-                            className="flex-1 h-9 px-3 border border-slate-200 rounded text-[13px] outline-none focus:border-blue-400" 
-                        />
-                        <input 
-                            placeholder="Mobile"
-                            value={mobile} onChange={e => setMobile(e.target.value)}
-                            className="flex-1 h-9 px-3 border border-slate-200 rounded text-[13px] outline-none focus:border-blue-400" 
-                        />
+                        <div className="flex-1 flex h-9 border border-slate-200 rounded overflow-hidden focus-within:border-blue-400 bg-white shadow-sm">
+                            <div className="flex-shrink-0 flex items-center bg-slate-50 border-r border-slate-200 px-2 gap-1 select-none w-[100px]">
+                                <span className="text-[14px] leading-none">{COUNTRY_CODES.find(c => c.code === workPhoneCode)?.flag || '🌐'}</span>
+                                <select
+                                    value={workPhoneCode}
+                                    onChange={e => setWorkPhoneCode(e.target.value)}
+                                    className="bg-transparent text-[12px] outline-none font-bold text-slate-700 cursor-pointer appearance-none w-full"
+                                >
+                                    {COUNTRY_CODES.map((c, i) => (
+                                        <option key={i} value={c.code}>{c.flag} {c.code} ({c.country})</option>
+                                    ))}
+                                </select>
+                                <ChevronDown size={9} className="text-slate-400 pointer-events-none flex-shrink-0" />
+                            </div>
+                            <input
+                                placeholder="Work Phone"
+                                value={workPhoneNo}
+                                onChange={e => setWorkPhoneNo(e.target.value.replace(/\D/g, '').slice(0, getPhoneMaxLength(workPhoneCode)))}
+                                maxLength={getPhoneMaxLength(workPhoneCode)}
+                                className="flex-1 min-w-0 h-full px-3 text-[13px] outline-none font-medium text-slate-700 bg-transparent"
+                            />
+                        </div>
+                        <div className="flex-1 flex h-9 border border-slate-200 rounded overflow-hidden focus-within:border-blue-400 bg-white shadow-sm">
+                            <div className="flex-shrink-0 flex items-center bg-slate-50 border-r border-slate-200 px-2 gap-1 select-none w-[100px]">
+                                <span className="text-[14px] leading-none">{COUNTRY_CODES.find(c => c.code === mobileCode)?.flag || '🌐'}</span>
+                                <select
+                                    value={mobileCode}
+                                    onChange={e => setMobileCode(e.target.value)}
+                                    className="bg-transparent text-[12px] outline-none font-bold text-slate-700 cursor-pointer appearance-none w-full"
+                                >
+                                    {COUNTRY_CODES.map((c, i) => (
+                                        <option key={i} value={c.code}>{c.flag} {c.code} ({c.country})</option>
+                                    ))}
+                                </select>
+                                <ChevronDown size={9} className="text-slate-400 pointer-events-none flex-shrink-0" />
+                            </div>
+                            <input
+                                placeholder="Mobile"
+                                value={mobileNo}
+                                onChange={e => setMobileNo(e.target.value.replace(/\D/g, '').slice(0, getPhoneMaxLength(mobileCode)))}
+                                maxLength={getPhoneMaxLength(mobileCode)}
+                                className="flex-1 min-w-0 h-full px-3 text-[13px] outline-none font-medium text-slate-700 bg-transparent"
+                            />
+                        </div>
                     </div>
                 </div>
 
