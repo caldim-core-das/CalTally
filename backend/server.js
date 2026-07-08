@@ -12,7 +12,7 @@ dotenv.config();
 
 const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:5173';
 const corsOptions = {
-  origin: CLIENT_URL,
+  origin: true, // Allows any origin to connect (useful for dynamic Vercel preview URLs)
   credentials: true,
   exposedHeaders: ['x-csrf-token']
 };
