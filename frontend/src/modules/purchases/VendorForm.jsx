@@ -304,7 +304,7 @@ const VendorForm = ({ editId, standalone = true, onSaveSuccess, onCancel, compan
       return;
     }
 
-    if (!workPhone && !mobile) {
+    if (!workPhoneNo && !mobileNo) {
       addNotification('Vendor Phone is compulsory.', 'error');
       return;
     }

@@ -888,7 +888,7 @@ const VendorDetailView = ({ companyId }) => {
             </header>
 
             <div className="px-8 border-b border-slate-100 flex gap-10">
-               {['Overview', 'Comments', 'Transactions', 'Mails', 'Statement'].map(tab => (
+               {['Overview', 'Statement'].map(tab => (
                  <button key={tab} onClick={() => setActiveTab(tab)} className={`py-4 text-[14px] font-bold tracking-tight relative transition-all ${activeTab === tab ? 'text-blue-600' : 'text-slate-400 hover:text-slate-700'}`}>
                    {tab} {activeTab === tab && <div className="absolute bottom-0 left-0 w-full h-[3px] bg-blue-600 rounded-t-full"></div>}
                  </button>

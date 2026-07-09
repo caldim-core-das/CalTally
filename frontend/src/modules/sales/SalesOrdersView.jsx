@@ -824,7 +824,7 @@ const SalesOrdersView = ({ companyId }) => {
                 <header className="bg-white border-b border-slate-200 px-8 py-4 flex items-center justify-between shrink-0 sticky top-0 z-20">
                     <div className="flex items-center gap-6">
                         <button 
-                            onClick={() => navigate('/sales-orders')}
+                            onClick={() => { setView('list'); navigate('/sales-orders'); }}
                             className="p-2 hover:bg-slate-100 rounded text-slate-400 hover:text-slate-900 transition-all"
                         >
                             <ArrowLeft size={22} />
@@ -1234,7 +1234,7 @@ const SalesOrdersView = ({ companyId }) => {
             <div className="flex-1 flex flex-col h-full bg-[#f8fafc] animate-fade-in shadow-inner overflow-hidden">
                 <div className="bg-[#fcfdfe] border-b border-slate-200 px-8 py-2.5 flex items-center justify-between sticky top-0 z-10 no-print">
                     <div className="flex items-center gap-2">
-                        <button onClick={() => navigate('/sales-orders')} className="text-[13px] font-bold text-blue-600 hover:underline flex items-center gap-1.5 transition-all">
+                        <button onClick={() => { setView('list'); navigate('/sales-orders'); }} className="text-[13px] font-bold text-blue-600 hover:underline flex items-center gap-1.5 transition-all">
                            <ChevronDown size={14} className="rotate-90"/> All Sales Orders
                         </button>
                         <span className="text-slate-300">|</span>
