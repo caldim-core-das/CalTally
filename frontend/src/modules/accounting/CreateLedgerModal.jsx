@@ -7,34 +7,34 @@ import { groupAPI, ledgerAPI } from '../../services/api';
 
 // ─── Nature color mapping ───────────────────────────────────────
 const NATURE_COLORS = {
-  Assets:      'bg-blue-50 text-blue-700 border-blue-200',
+  Assets: 'bg-blue-50 text-blue-700 border-blue-200',
   Liabilities: 'bg-rose-50 text-rose-700 border-rose-200',
-  Income:      'bg-emerald-50 text-emerald-700 border-emerald-200',
-  Expenses:    'bg-amber-50 text-amber-700 border-amber-200',
+  Income: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+  Expenses: 'bg-amber-50 text-amber-700 border-amber-200',
 };
 
 // ─── Group nature icons ─────────────────────────────────────────
 const NATURE_DOT = {
-  Assets:      'bg-blue-500',
+  Assets: 'bg-blue-500',
   Liabilities: 'bg-rose-500',
-  Income:      'bg-emerald-500',
-  Expenses:    'bg-amber-500',
+  Income: 'bg-emerald-500',
+  Expenses: 'bg-amber-500',
 };
 
 export default function CreateLedgerModal({ isOpen, onClose, onSuccess, ledgerToEdit }) {
-  const [groups, setGroups]               = useState([]);
+  const [groups, setGroups] = useState([]);
   const [groupsByNature, setGroupsByNature] = useState({});
-  const [name, setName]                   = useState('');
-  const [groupId, setGroupId]             = useState('');
+  const [name, setName] = useState('');
+  const [groupId, setGroupId] = useState('');
   const [selectedGroup, setSelectedGroup] = useState(null);
   const [openingBalance, setOpeningBalance] = useState('');
-  const [balanceType, setBalanceType]     = useState('Dr'); // Dr or Cr
+  const [balanceType, setBalanceType] = useState('Dr'); // Dr or Cr
   const [gstApplicable, setGstApplicable] = useState('Not Applicable');
-  const [description, setDescription]    = useState('');
-  const [saving, setSaving]              = useState(false);
-  const [seeding, setSeeding]            = useState(false);
-  const [error, setError]                = useState('');
-  const [saved, setSaved]                = useState(false);
+  const [description, setDescription] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [seeding, setSeeding] = useState(false);
+  const [error, setError] = useState('');
+  const [saved, setSaved] = useState(false);
 
   const companyId = sessionStorage.getItem('companyId');
 
@@ -115,7 +115,7 @@ export default function CreateLedgerModal({ isOpen, onClose, onSuccess, ledgerTo
             byNature[n].push(g);
           });
           setGroupsByNature(byNature);
-        } catch {}
+        } catch { }
       } else {
         setError('Failed to seed standard groups.');
       }
@@ -128,7 +128,7 @@ export default function CreateLedgerModal({ isOpen, onClose, onSuccess, ledgerTo
   const handleSave = async (e) => {
     e.preventDefault();
     if (!name.trim()) return setError('Ledger name is required.');
-    if (!groupId)     return setError('Please select a parent group.');
+    if (!groupId) return setError('Please select a parent group.');
     setSaving(true);
     setError('');
     try {
@@ -307,11 +307,10 @@ export default function CreateLedgerModal({ isOpen, onClose, onSuccess, ledgerTo
                       key={t}
                       type="button"
                       onClick={() => setBalanceType(t)}
-                      className={`flex-1 rounded-xl text-sm font-bold tracking-widest border-2 transition-all ${
-                        balanceType === t
+                      className={`flex-1 rounded-xl text-sm font-bold tracking-widest border-2 transition-all ${balanceType === t
                           ? t === 'Dr' ? 'bg-emerald-600 border-emerald-600 text-white' : 'bg-red-600 border-red-600 text-white'
                           : 'bg-white border-slate-200 text-slate-500 hover:border-slate-400'
-                      }`}
+                        }`}
                     >
                       {t === 'Dr' ? 'Debit (Dr)' : 'Credit (Cr)'}
                     </button>
@@ -344,8 +343,8 @@ export default function CreateLedgerModal({ isOpen, onClose, onSuccess, ledgerTo
             <div className="bg-slate-50 border border-slate-100 rounded-xl p-4 flex items-start gap-3">
               <Info size={14} className="text-slate-400 mt-0.5 shrink-0" />
               <p className="text-[11px] text-slate-500 leading-relaxed font-medium">
-                All ledger accounts follow the <strong>Double-Entry Accounting Standard (ISO-20022)</strong>. 
-                Every debit must have a matching credit. The <strong>parent group</strong> determines 
+                All ledger accounts follow the <strong>Double-Entry Accounting Standard (ISO-20022)</strong>.
+                Every debit must have a matching credit. The <strong>parent group</strong> determines
                 where this ledger appears in your Trial Balance and financial statements.
               </p>
             </div>
@@ -364,14 +363,13 @@ export default function CreateLedgerModal({ isOpen, onClose, onSuccess, ledgerTo
             type="submit"
             onClick={handleSave}
             disabled={saving || saved || seeding}
-            className={`flex items-center gap-2 px-8 py-2.5 rounded-xl font-bold text-sm tracking-wide shadow-lg transition-all ${
-              saved ? 'bg-emerald-600 text-white' :
-              'bg-slate-900 hover:bg-blue-700 text-white shadow-slate-900/20 hover:scale-[1.02] active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:scale-100'
-            }`}
+            className={`flex items-center gap-2 px-8 py-2.5 rounded-xl font-bold text-sm tracking-wide shadow-lg transition-all ${saved ? 'bg-emerald-600 text-white' :
+                'bg-slate-900 hover:bg-blue-700 text-white shadow-slate-900/20 hover:scale-[1.02] active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:scale-100'
+              }`}
           >
             {saving ? <><Loader2 size={15} className="animate-spin" /> Saving...</> :
-             saved  ? <><CheckCircle2 size={15} /> Saved!</> :
-                      <><Save size={15} /> {ledgerToEdit ? 'Update Ledger' : 'Create Ledger Account'}</>}
+              saved ? <><CheckCircle2 size={15} /> Saved!</> :
+                <><Save size={15} /> {ledgerToEdit ? 'Update Ledger' : 'Create Ledger Account'}</>}
           </button>
         </div>
       </div>
