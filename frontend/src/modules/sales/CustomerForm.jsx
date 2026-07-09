@@ -82,6 +82,7 @@ const CustomerForm = ({ onSaveSuccess, onCancel, customerToEdit = null, standalo
   const [pan, setPan] = useState('');
   const [tcsApplicable, setTcsApplicable] = useState(false);
   const [tcsRate, setTcsRate] = useState('');
+  const [isGstinApplicable, setIsGstinApplicable] = useState(false);
   const [gstNumber, setGstNumber] = useState('');
   const [gstError, setGstError] = useState('');
   const [currency, setCurrency] = useState('INR- Indian Rupee');
@@ -159,6 +160,7 @@ const CustomerForm = ({ onSaveSuccess, onCancel, customerToEdit = null, standalo
        setTcsApplicable(customerToEdit.tcsApplicable || false);
        setTcsRate(customerToEdit.tcsRate || '');
        setGstNumber(customerToEdit.gstNumber || '');
+       setIsGstinApplicable(!!customerToEdit.gstNumber);
        setCurrency(customerToEdit.currency || 'INR- Indian Rupee');
        setPaymentTerms(customerToEdit.paymentTerms || 'Due on Receipt');
        setCompanyName(customerToEdit.companyName || '');
@@ -237,6 +239,11 @@ const CustomerForm = ({ onSaveSuccess, onCancel, customerToEdit = null, standalo
       return;
     }
 
+    if (isGstinApplicable && !gstNumber.trim()) {
+      addNotification('GSTIN number is required.', 'error');
+      return;
+    }
+
     if (gstError) {
       addNotification('Please fix the GSTIN error before saving.', 'error');
       return;
@@ -258,7 +265,7 @@ const CustomerForm = ({ onSaveSuccess, onCancel, customerToEdit = null, standalo
         pan,
         tcsApplicable,
         tcsRate: tcsRate === '' ? null : parseFloat(tcsRate),
-        gstNumber: gstNumber.trim(),
+        gstNumber: isGstinApplicable ? gstNumber.trim() : '',
         companyId,
         groupName: 'Sundry Debtors',
         billingAddress: JSON.stringify(billingAddress),
@@ -454,18 +461,20 @@ const CustomerForm = ({ onSaveSuccess, onCancel, customerToEdit = null, standalo
                             <label className="w-48 text-[11px] font-bold text-slate-500 uppercase tracking-widest">Customer Phone</label>
                             <div className="flex flex-1 max-w-lg gap-4">
                                 <div className="flex-1 flex h-9 border border-slate-200 rounded overflow-hidden focus-within:border-blue-400 bg-white shadow-sm">
-                                    <div className="flex-shrink-0 flex items-center bg-slate-50 border-r border-slate-200 px-2 gap-1 select-none w-[100px]">
-                                        <span className="text-[14px] leading-none">{COUNTRY_CODES.find(c => c.code === workPhoneCode)?.flag || '🌐'}</span>
+                                    <div className="relative flex-shrink-0 flex items-center bg-slate-50 border-r border-slate-200 px-2 gap-1 select-none w-[85px]">
+                                        <span className="text-[14px] leading-none pointer-events-none">{COUNTRY_CODES.find(c => c.code === workPhoneCode)?.flag || '🌐'}</span>
+                                        <span className="text-[12px] font-bold text-slate-700 pointer-events-none">{workPhoneCode}</span>
+                                        <ChevronDown size={12} className="text-slate-400 pointer-events-none flex-shrink-0 ml-auto" />
                                         <select 
                                             value={workPhoneCode} 
                                             onChange={e => setWorkPhoneCode(e.target.value)}
-                                            className="bg-transparent text-[12px] outline-none font-bold text-slate-700 cursor-pointer appearance-none w-full"
+                                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                            title="Select Country Code"
                                         >
                                             {COUNTRY_CODES.map((c, i) => (
-                                                <option key={i} value={c.code}>{c.flag} {c.code} ({c.country})</option>
+                                                <option key={i} value={c.code}>{c.flag} {c.country} ({c.code})</option>
                                             ))}
                                         </select>
-                                        <ChevronDown size={9} className="text-slate-400 pointer-events-none flex-shrink-0" />
                                     </div>
                                     <input 
                                         placeholder="Work Phone"
@@ -476,18 +485,20 @@ const CustomerForm = ({ onSaveSuccess, onCancel, customerToEdit = null, standalo
                                     />
                                 </div>
                                 <div className="flex-1 flex h-9 border border-slate-200 rounded overflow-hidden focus-within:border-blue-400 bg-white shadow-sm">
-                                    <div className="flex-shrink-0 flex items-center bg-slate-50 border-r border-slate-200 px-2 gap-1 select-none w-[100px]">
-                                        <span className="text-[14px] leading-none">{COUNTRY_CODES.find(c => c.code === mobileCode)?.flag || '🌐'}</span>
+                                    <div className="relative flex-shrink-0 flex items-center bg-slate-50 border-r border-slate-200 px-2 gap-1 select-none w-[85px]">
+                                        <span className="text-[14px] leading-none pointer-events-none">{COUNTRY_CODES.find(c => c.code === mobileCode)?.flag || '🌐'}</span>
+                                        <span className="text-[12px] font-bold text-slate-700 pointer-events-none">{mobileCode}</span>
+                                        <ChevronDown size={12} className="text-slate-400 pointer-events-none flex-shrink-0 ml-auto" />
                                         <select 
                                             value={mobileCode} 
                                             onChange={e => setMobileCode(e.target.value)}
-                                            className="bg-transparent text-[12px] outline-none font-bold text-slate-700 cursor-pointer appearance-none w-full"
+                                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                            title="Select Country Code"
                                         >
                                             {COUNTRY_CODES.map((c, i) => (
-                                                <option key={i} value={c.code}>{c.flag} {c.code} ({c.country})</option>
+                                                <option key={i} value={c.code}>{c.flag} {c.country} ({c.code})</option>
                                             ))}
                                         </select>
-                                        <ChevronDown size={9} className="text-slate-400 pointer-events-none flex-shrink-0" />
                                     </div>
                                     <input 
                                         placeholder="Mobile"
@@ -717,9 +728,40 @@ const CustomerForm = ({ onSaveSuccess, onCancel, customerToEdit = null, standalo
                         {/* GSTIN */}
                         <div className="flex items-start mt-4">
                             <div className="w-48 flex items-center gap-1.5 mt-2.5">
-                                <label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">GSTIN</label>
+                                <label className="text-[11px] font-bold text-slate-800 uppercase tracking-widest">GSTIN Applicable?<span className="text-rose-500">*</span></label>
                             </div>
-                            <div className="flex-1">
+                            <div className="flex-1 space-y-4">
+                                <div className="flex gap-4 items-center h-9">
+                                    <label className="flex items-center gap-2 cursor-pointer">
+                                        <input 
+                                            type="radio" 
+                                            name="gstinApplicable"
+                                            checked={isGstinApplicable} 
+                                            onChange={() => setIsGstinApplicable(true)}
+                                            className="w-4 h-4 text-blue-600 border-slate-300 focus:ring-blue-500"
+                                        />
+                                        <span className={`text-[13px] ${isGstinApplicable ? 'text-slate-900 font-bold' : 'text-slate-500'}`}>Yes</span>
+                                    </label>
+                                    <label className="flex items-center gap-2 cursor-pointer">
+                                        <input 
+                                            type="radio" 
+                                            name="gstinApplicable"
+                                            checked={!isGstinApplicable} 
+                                            onChange={() => {
+                                                setIsGstinApplicable(false);
+                                                setGstNumber('');
+                                                setGstError('');
+                                            }}
+                                            className="w-4 h-4 text-blue-600 border-slate-300 focus:ring-blue-500"
+                                        />
+                                        <span className={`text-[13px] ${!isGstinApplicable ? 'text-slate-900 font-bold' : 'text-slate-500'}`}>No</span>
+                                    </label>
+                                </div>
+                                {isGstinApplicable && (
+                                    <div className="animate-fade-in relative">
+                                        <div className="absolute -top-3 left-2 bg-white px-1 z-10">
+                                            <label className="text-[10px] font-bold text-slate-800 uppercase tracking-widest">GSTIN Number<span className="text-rose-500">*</span></label>
+                                        </div>
                                 <input 
                                     value={gstNumber} 
                                     onChange={e => {
@@ -749,10 +791,12 @@ const CustomerForm = ({ onSaveSuccess, onCancel, customerToEdit = null, standalo
                                     placeholder="22AAAAA0000A1Z5"
                                     maxLength={15}
                                 />
-                                {gstError && (
-                                  <p className="text-red-500 text-[11px] font-medium mt-1.5 flex items-center gap-1">
-                                    <AlertCircle size={12} /> {gstError}
-                                  </p>
+                                        {gstError && (
+                                          <p className="text-red-500 text-[11px] font-medium mt-1.5 flex items-center gap-1">
+                                            <AlertCircle size={12} /> {gstError}
+                                          </p>
+                                        )}
+                                    </div>
                                 )}
                             </div>
                         </div>
@@ -760,7 +804,7 @@ const CustomerForm = ({ onSaveSuccess, onCancel, customerToEdit = null, standalo
                         {/* PAN */}
                         <div className="flex items-center">
                             <div className="w-48 flex items-center gap-1.5">
-                                <label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">PAN</label>
+                                <label className="text-[11px] font-bold text-slate-800 uppercase tracking-widest">PAN<span className="text-rose-500">*</span></label>
                                 <Info size={12} className="text-slate-300" />
                             </div>
                             <input 
