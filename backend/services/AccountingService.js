@@ -534,8 +534,8 @@ class AccountingService {
       
       if (isLocal) {
         // Intra-state: CGST + SGST
-        let cgstLedger = await Ledger.findOne({ where: { CompanyId: companyId, name: { [Op.like]: '%CGST%' } }, ...options });
-        let sgstLedger = await Ledger.findOne({ where: { CompanyId: companyId, name: { [Op.like]: '%SGST%' } }, ...options });
+        let cgstLedger = await Ledger.findOne({ where: { CompanyId: companyId, name: { [Op.like]: '%CGST%Output%' } }, ...options });
+        let sgstLedger = await Ledger.findOne({ where: { CompanyId: companyId, name: { [Op.like]: '%SGST%Output%' } }, ...options });
 
         if (!cgstLedger) {
           cgstLedger = await Ledger.create({ name: 'CGST (Output)', category: 'Liability', groupName: 'Duties & Taxes', GroupId: taxGroup?.id, CompanyId: companyId, currentBalance: 0 }, options);
@@ -548,7 +548,7 @@ class AccountingService {
         journalEntries.push({ ledgerId: sgstLedger.id, debit: 0, credit: totalGstAmount / 2 });
       } else {
         // Inter-state: IGST
-        let igstLedger = await Ledger.findOne({ where: { CompanyId: companyId, name: { [Op.like]: '%IGST%' } }, ...options });
+        let igstLedger = await Ledger.findOne({ where: { CompanyId: companyId, name: { [Op.like]: '%IGST%Output%' } }, ...options });
         if (!igstLedger) {
           igstLedger = await Ledger.create({ name: 'IGST (Output)', category: 'Liability', groupName: 'Duties & Taxes', GroupId: taxGroup?.id, CompanyId: companyId, currentBalance: 0 }, options);
         }

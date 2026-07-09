@@ -1422,6 +1422,12 @@ const SalesOrdersView = ({ companyId }) => {
                                 </div>
                               )
                             )}
+                            {order.tcsApplicable && parseFloat(order.tcsAmount || 0) > 0 && (
+                              <div className="flex justify-between items-center py-1">
+                                <span>TCS @ {parseFloat(order.tcsRate || 0)}%</span>
+                                <span className="font-mono text-slate-800">+ {parseFloat(order.tcsAmount || 0).toLocaleString('en-IN', {minimumFractionDigits: 2})}</span>
+                              </div>
+                            )}
                             {parseFloat(order.adjustment || 0) !== 0 && (
                               <div className="flex justify-between items-center py-1">
                                 <span>Adjustment</span>

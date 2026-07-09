@@ -242,6 +242,7 @@ const PurchaseOrderEntryView = ({ companyId }) => {
       if (it.id === rowId) {
         return {
           ...it,
+          itemId: invItem.id || invItem._id,
           itemName: invItem.name,
           rate: invItem.costPrice || invItem.sellingPrice || 0,
           account: invItem.purchaseAccount || it.account || 'Cost of Goods Sold',
