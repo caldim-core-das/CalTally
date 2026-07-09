@@ -85,26 +85,26 @@ const newRow = (type = 'Dr', amount = '') => ({ _id: _uid++, ledgerId: '', costC
 export default function VoucherEntryView({ onSaveSuccess, onCancel }) {
   const navigate = useNavigate();
   const { addNotification } = useNotificationStore();
-  const { id }   = useParams();
+  const { id } = useParams();
   const [searchParams] = useSearchParams();
   const initialType = searchParams.get('type') || 'Journal';
   const initialAmount = searchParams.get('amount') || '';
   const initialNarration = searchParams.get('narration') || '';
 
-  const [vType,     setVType]     = useState(initialType);
-  const [date,      setDate]      = useState(new Date().toISOString().split('T')[0]);
-  const [refNo,     setRefNo]     = useState('');
+  const [vType, setVType] = useState(initialType);
+  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  const [refNo, setRefNo] = useState('');
   const [narration, setNarration] = useState(initialNarration);
-  const [rows,      setRows]      = useState(initialAmount ? [newRow('Dr', initialAmount), newRow('Cr', initialAmount)] : [newRow('Dr'), newRow('Cr')]);
-  const [ledgers,   setLedgers]   = useState([]);
+  const [rows, setRows] = useState(initialAmount ? [newRow('Dr', initialAmount), newRow('Cr', initialAmount)] : [newRow('Dr'), newRow('Cr')]);
+  const [ledgers, setLedgers] = useState([]);
   const [costCenters, setCostCenters] = useState([]);
-  const [saving,    setSaving]    = useState(false);
-  const [saved,     setSaved]     = useState(false);
-  const [postErr,   setPostErr]   = useState('');
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [postErr, setPostErr] = useState('');
   const [activeRowId, setActiveRowId] = useState(null);
 
   const vNo = useMemo(
-    () => `${vType.slice(0,3).toUpperCase()}-${new Date().getFullYear()}-${String(Math.floor(Math.random()*9000)+1000)}`,
+    () => `${vType.slice(0, 3).toUpperCase()}-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 9000) + 1000)}`,
     [vType]
   );
 
@@ -115,7 +115,7 @@ export default function VoucherEntryView({ onSaveSuccess, onCancel }) {
       if (cid && cid !== sessionStorage.getItem('companyId')) {
         sessionStorage.setItem('companyId', cid);
       }
-    }).catch(() => {});
+    }).catch(() => { });
   }, []);
 
   useEffect(() => {
@@ -159,16 +159,16 @@ export default function VoucherEntryView({ onSaveSuccess, onCancel }) {
     ledgerAPI.getByCompany(cid)
       .then(r => setLedgers(Array.isArray(r.data) ? r.data : []))
       .catch(() => setLedgers([]));
-    
+
     costCenterAPI.getByCompany(cid)
       .then(r => setCostCenters(Array.isArray(r.data) ? r.data : []))
       .catch(() => setCostCenters([]));
   }, []);
 
   /* ── Totals ────────────────────────────────────────────────── */
-  const totalDr = useMemo(() => rows.reduce((s, r) => s + (r.type==='Dr' ? parseFloat(r.amount)||0 : 0), 0), [rows]);
-  const totalCr = useMemo(() => rows.reduce((s, r) => s + (r.type==='Cr' ? parseFloat(r.amount)||0 : 0), 0), [rows]);
-  const diff       = +(Math.abs(totalDr - totalCr).toFixed(2));
+  const totalDr = useMemo(() => rows.reduce((s, r) => s + (r.type === 'Dr' ? parseFloat(r.amount) || 0 : 0), 0), [rows]);
+  const totalCr = useMemo(() => rows.reduce((s, r) => s + (r.type === 'Cr' ? parseFloat(r.amount) || 0 : 0), 0), [rows]);
+  const diff = +(Math.abs(totalDr - totalCr).toFixed(2));
   const isBalanced = diff < 0.01 && totalDr > 0;
   const filledRows = rows.filter(r => r.ledgerId && parseFloat(r.amount) > 0);
 
@@ -217,7 +217,7 @@ export default function VoucherEntryView({ onSaveSuccess, onCancel }) {
           ledgerId: r.ledgerId,
           costCenterId: r.costCenterId || null,
           allocations: r.allocations || [],
-          debit:  r.type === 'Dr' ? parseFloat(r.amount) : 0,
+          debit: r.type === 'Dr' ? parseFloat(r.amount) : 0,
           credit: r.type === 'Cr' ? parseFloat(r.amount) : 0,
         })),
       };
@@ -274,84 +274,84 @@ export default function VoucherEntryView({ onSaveSuccess, onCancel }) {
 
   /* ─────────────────────────────────────────────────────────── */
   return (
-    <div style={{ minHeight:'100vh', background:'#f8fafc' }}>
+    <div style={{ minHeight: '100vh', background: '#f8fafc' }}>
 
       {/* ══ HEADER ═══════════════════════════════════════════ */}
-      <header style={{ background:'#fff', borderBottom:'1px solid #f1f5f9', height:58, display:'flex', alignItems:'center', justifyContent:'space-between', padding:'0 32px', position:'sticky', top:0, zIndex:100, boxShadow:'0 1px 0 #f1f5f9' }}>
-        <div style={{ display:'flex', alignItems:'center', gap:16 }}>
+      <header style={{ background: '#fff', borderBottom: '1px solid #f1f5f9', height: 58, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 32px', position: 'sticky', top: 0, zIndex: 100, boxShadow: '0 1px 0 #f1f5f9' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
           <button onClick={() => onCancel ? onCancel() : navigate('/vouchers')}
             style={btnGhost}>
             <ArrowLeft size={15} /> Back
           </button>
-          <div style={{ width:1, height:20, background:'#e2e8f0' }} />
+          <div style={{ width: 1, height: 20, background: '#e2e8f0' }} />
           <div>
-            <div style={{ fontSize:15, fontWeight:900, color:'#0f172a', lineHeight:1 }}>New {vType} Voucher</div>
-            <div style={{ fontSize:10, color:'#94a3b8', fontWeight:700, textTransform:'uppercase', letterSpacing:'.1em', marginTop:2 }}>Double-Entry · ISO-20022</div>
+            <div style={{ fontSize: 15, fontWeight: 900, color: '#0f172a', lineHeight: 1 }}>New {vType} Voucher</div>
+            <div style={{ fontSize: 10, color: '#94a3b8', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.1em', marginTop: 2 }}>Double-Entry · ISO-20022</div>
           </div>
         </div>
-        <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           {totalDr > 0 && (
-            <div style={{ ...pill, background: isBalanced? '#d1fae5':'#fef3c7', color: isBalanced?'#065f46':'#92400e', border:`1px solid ${isBalanced?'#a7f3d0':'#fde68a'}` }}>
-              {isBalanced ? <CheckCircle2 size={12}/> : <AlertCircle size={12}/>}
-              {isBalanced ? 'BALANCED ✓' : `DIFF ₹${diff.toLocaleString('en-IN',{minimumFractionDigits:2})}`}
+            <div style={{ ...pill, background: isBalanced ? '#d1fae5' : '#fef3c7', color: isBalanced ? '#065f46' : '#92400e', border: `1px solid ${isBalanced ? '#a7f3d0' : '#fde68a'}` }}>
+              {isBalanced ? <CheckCircle2 size={12} /> : <AlertCircle size={12} />}
+              {isBalanced ? 'BALANCED ✓' : `DIFF ₹${diff.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`}
             </div>
           )}
-          <button onClick={reset} style={btnOutline}><RefreshCw size={13}/> Reset</button>
-          <button onClick={handleSmartGST} disabled={saving||saved}
-            style={{ ...btnOutline, color:'#2563eb', border:'1px solid #bfdbfe', background:'#eff6ff' }}>
-            <Zap size={13}/> Smart GST
+          <button onClick={reset} style={btnOutline}><RefreshCw size={13} /> Reset</button>
+          <button onClick={handleSmartGST} disabled={saving || saved}
+            style={{ ...btnOutline, color: '#2563eb', border: '1px solid #bfdbfe', background: '#eff6ff' }}>
+            <Zap size={13} /> Smart GST
           </button>
-          <button onClick={handlePost} disabled={saving||saved||!isBalanced}
-            style={{ ...btnPrimary, background: saved?'#059669': isBalanced?'#1e293b':'#e2e8f0', color: saved||isBalanced?'#fff':'#94a3b8', cursor: isBalanced&&!saving&&!saved?'pointer':'not-allowed', boxShadow: isBalanced&&!saved?'0 4px 14px rgba(30,41,59,.25)':'none' }}>
-            {saving?<><Loader2 size={14} style={{animation:'spin 1s linear infinite'}}/> Posting…</>
-             :saved?<><CheckCircle2 size={14}/> Posted!</>
-                   :<><Save size={14}/> Verify & Post</>}
+          <button onClick={handlePost} disabled={saving || saved || !isBalanced}
+            style={{ ...btnPrimary, background: saved ? '#059669' : isBalanced ? '#1e293b' : '#e2e8f0', color: saved || isBalanced ? '#fff' : '#94a3b8', cursor: isBalanced && !saving && !saved ? 'pointer' : 'not-allowed', boxShadow: isBalanced && !saved ? '0 4px 14px rgba(30,41,59,.25)' : 'none' }}>
+            {saving ? <><Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> Posting…</>
+              : saved ? <><CheckCircle2 size={14} /> Posted!</>
+                : <><Save size={14} /> Verify & Post</>}
           </button>
         </div>
       </header>
 
-      <div style={{ maxWidth:1020, margin:'0 auto', padding:'28px 24px', display:'flex', flexDirection:'column', gap:20 }}>
+      <div style={{ maxWidth: 1020, margin: '0 auto', padding: '28px 24px', display: 'flex', flexDirection: 'column', gap: 20 }}>
 
         {postErr && (
-          <div style={{ background:'#fef2f2', border:'1px solid #fecaca', borderRadius:12, padding:'14px 18px', display:'flex', gap:10 }}>
-            <AlertCircle size={16} style={{ color:'#dc2626', marginTop:1, flexShrink:0 }}/>
-            <div><b style={{ color:'#b91c1c', fontSize:13 }}>Failed to post</b><br/><span style={{ color:'#dc2626', fontSize:12 }}>{postErr}</span></div>
+          <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 12, padding: '14px 18px', display: 'flex', gap: 10 }}>
+            <AlertCircle size={16} style={{ color: '#dc2626', marginTop: 1, flexShrink: 0 }} />
+            <div><b style={{ color: '#b91c1c', fontSize: 13 }}>Failed to post</b><br /><span style={{ color: '#dc2626', fontSize: 12 }}>{postErr}</span></div>
           </div>
         )}
 
         {/* ── VOUCHER HEADER ──────────────────────────────── */}
         <div style={card}>
           <div style={cardHead}>
-            <div style={{ width:32, height:32, borderRadius:9, background:'#1e293b', display:'flex', alignItems:'center', justifyContent:'center' }}>
-              <FileText size={15} color="#fff" strokeWidth={2.5}/>
+            <div style={{ width: 32, height: 32, borderRadius: 9, background: '#1e293b', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <FileText size={15} color="#fff" strokeWidth={2.5} />
             </div>
             <div>
               <div style={cardTitle}>Voucher Header</div>
               <div style={cardSub}>Transaction Metadata</div>
             </div>
           </div>
-          <div style={{ padding:'20px 24px', display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:16 }}>
+          <div style={{ padding: '20px 24px', display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 16 }}>
             <Field label="Voucher Type" required>
-              <div style={{ position:'relative' }}>
-                <select value={vType} onChange={e=>setVType(e.target.value)} style={inp}>
-                  {VOUCHER_TYPES.map(t=><option key={t}>{t}</option>)}
+              <div style={{ position: 'relative' }}>
+                <select value={vType} onChange={e => setVType(e.target.value)} style={inp}>
+                  {VOUCHER_TYPES.map(t => <option key={t}>{t}</option>)}
                 </select>
-                <ChevronDown size={13} style={chevron}/>
+                <ChevronDown size={13} style={chevron} />
               </div>
             </Field>
             <Field label="Voucher No.">
-              <div style={{ ...inp, background:'#f8fafc', color:'#2563eb', fontWeight:800, display:'flex', alignItems:'center', gap:6, cursor:'default' }}>
-                <Hash size={13} style={{ color:'#94a3b8' }}/>{vNo}
+              <div style={{ ...inp, background: '#f8fafc', color: '#2563eb', fontWeight: 800, display: 'flex', alignItems: 'center', gap: 6, cursor: 'default' }}>
+                <Hash size={13} style={{ color: '#94a3b8' }} />{vNo}
               </div>
             </Field>
             <Field label="Date" required>
-              <div style={{ position:'relative' }}>
-                <Calendar size={13} style={{ ...chevron, right:'auto', left:10 }}/>
-                <input type="date" value={date} onChange={e=>setDate(e.target.value)} style={{ ...inp, paddingLeft:30 }}/>
+              <div style={{ position: 'relative' }}>
+                <Calendar size={13} style={{ ...chevron, right: 'auto', left: 10 }} />
+                <input type="date" value={date} onChange={e => setDate(e.target.value)} style={{ ...inp, paddingLeft: 30 }} />
               </div>
             </Field>
             <Field label="Reference / Bill No.">
-              <input type="text" value={refNo} onChange={e=>setRefNo(e.target.value)} placeholder="e.g. INV-001" style={inp}/>
+              <input type="text" value={refNo} onChange={e => setRefNo(e.target.value)} placeholder="e.g. INV-001" style={inp} />
             </Field>
           </div>
         </div>
@@ -369,28 +369,28 @@ export default function VoucherEntryView({ onSaveSuccess, onCancel }) {
               transition: 'all .2s ease',
             }}>
               {/* Icon + title */}
-              <div style={{ display:'flex', alignItems:'center', gap:10, paddingRight:20, borderRight:`1px solid ${g.border}` }}>
-                <span style={{ fontSize:22 }}>{g.emoji}</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, paddingRight: 20, borderRight: `1px solid ${g.border}` }}>
+                <span style={{ fontSize: 22 }}>{g.emoji}</span>
                 <div>
-                  <div style={{ fontSize:11, fontWeight:900, color:g.color, textTransform:'uppercase', letterSpacing:'.08em' }}>{vType}</div>
-                  <div style={{ fontSize:13, fontWeight:800, color:g.color, marginTop:1 }}>{g.title}</div>
-                  <div style={{ fontSize:11, color:g.color, opacity:.75, marginTop:2, fontWeight:500 }}>{g.tip}</div>
+                  <div style={{ fontSize: 11, fontWeight: 900, color: g.color, textTransform: 'uppercase', letterSpacing: '.08em' }}>{vType}</div>
+                  <div style={{ fontSize: 13, fontWeight: 800, color: g.color, marginTop: 1 }}>{g.title}</div>
+                  <div style={{ fontSize: 11, color: g.color, opacity: .75, marginTop: 2, fontWeight: 500 }}>{g.tip}</div>
                 </div>
               </div>
               {/* Dr side */}
               <div>
-                <div style={{ fontSize:9, fontWeight:900, color:g.color, textTransform:'uppercase', letterSpacing:'.12em', opacity:.65, marginBottom:4 }}>✦ Debit (Dr)</div>
-                <div style={{ fontSize:12, fontWeight:700, color:g.color }}>{g.debit}</div>
+                <div style={{ fontSize: 9, fontWeight: 900, color: g.color, textTransform: 'uppercase', letterSpacing: '.12em', opacity: .65, marginBottom: 4 }}>✦ Debit (Dr)</div>
+                <div style={{ fontSize: 12, fontWeight: 700, color: g.color }}>{g.debit}</div>
               </div>
               {/* Cr side */}
               <div>
-                <div style={{ fontSize:9, fontWeight:900, color:g.color, textTransform:'uppercase', letterSpacing:'.12em', opacity:.65, marginBottom:4 }}>✦ Credit (Cr)</div>
-                <div style={{ fontSize:12, fontWeight:700, color:g.color }}>{g.credit}</div>
+                <div style={{ fontSize: 9, fontWeight: 900, color: g.color, textTransform: 'uppercase', letterSpacing: '.12em', opacity: .65, marginBottom: 4 }}>✦ Credit (Cr)</div>
+                <div style={{ fontSize: 12, fontWeight: 700, color: g.color }}>{g.credit}</div>
               </div>
               {/* Examples */}
               <div>
-                <div style={{ fontSize:9, fontWeight:900, color:g.color, textTransform:'uppercase', letterSpacing:'.12em', opacity:.65, marginBottom:4 }}>✦ Examples</div>
-                <div style={{ fontSize:11, fontWeight:600, color:g.color, opacity:.85, lineHeight:1.5 }}>{g.examples}</div>
+                <div style={{ fontSize: 9, fontWeight: 900, color: g.color, textTransform: 'uppercase', letterSpacing: '.12em', opacity: .65, marginBottom: 4 }}>✦ Examples</div>
+                <div style={{ fontSize: 11, fontWeight: 600, color: g.color, opacity: .85, lineHeight: 1.5 }}>{g.examples}</div>
               </div>
             </div>
           );
@@ -398,52 +398,52 @@ export default function VoucherEntryView({ onSaveSuccess, onCancel }) {
 
         {/* ── ENTRIES ─────────────────────────────────────── */}
         <div style={card}>
-          <div style={{ ...cardHead, justifyContent:'space-between' }}>
-            <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-              <div style={{ width:32, height:32, borderRadius:9, background:'#0f172a', display:'flex', alignItems:'center', justifyContent:'center' }}>
-                <TrendingUp size={15} color="#fff" strokeWidth={2.5}/>
+          <div style={{ ...cardHead, justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div style={{ width: 32, height: 32, borderRadius: 9, background: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <TrendingUp size={15} color="#fff" strokeWidth={2.5} />
               </div>
               <div>
                 <div style={cardTitle}>Accounting Entries</div>
                 <div style={cardSub}>Select ledger → choose Dr or Cr → enter amount · Total Dr must = Total Cr to post</div>
               </div>
             </div>
-            {isBalanced && <div style={{ ...pill, background:'#d1fae5', color:'#065f46', border:'1px solid #a7f3d0' }}><CheckCircle2 size={13}/> Balanced ✓</div>}
+            {isBalanced && <div style={{ ...pill, background: '#d1fae5', color: '#065f46', border: '1px solid #a7f3d0' }}><CheckCircle2 size={13} /> Balanced ✓</div>}
           </div>
 
           {/* Column headers */}
-          <div style={{ padding:'14px 24px 4px', display:'grid', gridTemplateColumns:'36px 1fr 150px 120px 150px 1fr 36px', gap:10 }}>
-            {['#','Account / Ledger *','Cost Center','Dr / Cr','Amount (₹)','Line Note',''].map((h,i)=>(
-              <div key={i} style={{ fontSize:10, fontWeight:800, color:'#94a3b8', textTransform:'uppercase', letterSpacing:'.1em', textAlign: i===4?'right':'left' }}>{h}</div>
+          <div style={{ padding: '14px 24px 4px', display: 'grid', gridTemplateColumns: '36px 1fr 150px 120px 150px 1fr 36px', gap: 10 }}>
+            {['#', 'Account / Ledger *', 'Cost Center', 'Dr / Cr', 'Amount (₹)', 'Line Note', ''].map((h, i) => (
+              <div key={i} style={{ fontSize: 10, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.1em', textAlign: i === 4 ? 'right' : 'left' }}>{h}</div>
             ))}
           </div>
 
           {/* Rows */}
-          <div style={{ padding:'4px 24px 8px' }}>
+          <div style={{ padding: '4px 24px 8px' }}>
             {rows.map((row, idx) => (
               <div key={row._id} style={{
-                display:'grid', gridTemplateColumns:'36px 1fr 150px 120px 150px 1fr 36px',
-                gap:10, alignItems:'center',
-                padding:'8px 10px', borderRadius:10, marginBottom:5,
-                background: row.type==='Dr' ? '#f0fdf4' : '#fff7ed',
-                border: `1.5px solid ${row.type==='Dr'?'#bbf7d0':'#fed7aa'}`,
-                transition:'all .15s',
+                display: 'grid', gridTemplateColumns: '36px 1fr 150px 120px 150px 1fr 36px',
+                gap: 10, alignItems: 'center',
+                padding: '8px 10px', borderRadius: 10, marginBottom: 5,
+                background: row.type === 'Dr' ? '#f0fdf4' : '#fff7ed',
+                border: `1.5px solid ${row.type === 'Dr' ? '#bbf7d0' : '#fed7aa'}`,
+                transition: 'all .15s',
               }}>
                 {/* # */}
-                <div style={{ width:28, height:28, borderRadius:7, background:'#f1f5f9', display:'flex', alignItems:'center', justifyContent:'center', fontSize:11, fontWeight:800, color:'#64748b' }}>{idx+1}</div>
+                <div style={{ width: 28, height: 28, borderRadius: 7, background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 800, color: '#64748b' }}>{idx + 1}</div>
 
                 {/* Ledger select */}
-                <div style={{ position:'relative' }}>
-                  <select value={row.ledgerId} onChange={e=>updateRow(row._id,'ledgerId',e.target.value)}
-                    style={{ ...rowInp, borderColor: row.ledgerId?'#e2e8f0':'#fca5a5', background: row.ledgerId?'#fff':'#fff7f7' }}>
+                <div style={{ position: 'relative' }}>
+                  <select value={row.ledgerId} onChange={e => updateRow(row._id, 'ledgerId', e.target.value)}
+                    style={{ ...rowInp, borderColor: row.ledgerId ? '#e2e8f0' : '#fca5a5', background: row.ledgerId ? '#fff' : '#fff7f7' }}>
                     <option value="">← Select account</option>
-                    {ledgers.map(l=><option key={l.id} value={l.id}>{l.name}</option>)}
+                    {ledgers.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
                   </select>
-                  <ChevronDown size={11} style={{ ...chevron }}/>
+                  <ChevronDown size={11} style={{ ...chevron }} />
                 </div>
 
                 {/* Cost Center Allocation Tagging */}
-                <div style={{ position:'relative', display:'flex', alignItems:'center', justifyContent:'center' }}>
+                <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <button
                     type="button"
                     onClick={() => {
@@ -480,39 +480,41 @@ export default function VoucherEntryView({ onSaveSuccess, onCancel }) {
                 </div>
 
                 {/* Dr / Cr toggle */}
-                <div style={{ display:'flex', borderRadius:8, overflow:'hidden', border:'1.5px solid #e2e8f0', height:36 }}>
-                  {['Dr','Cr'].map(t=>(
-                    <button key={t} onClick={()=>updateRow(row._id,'type',t)} style={{
-                      flex:1, border:'none', cursor:'pointer', fontWeight:800, fontSize:12, letterSpacing:'.04em',
-                      background: row.type===t ? (t==='Dr'?'#059669':'#dc2626') : '#f8fafc',
-                      color: row.type===t ? '#fff' : '#94a3b8',
-                      display:'flex', alignItems:'center', justifyContent:'center', gap:3, transition:'all .15s',
+                <div style={{ display: 'flex', borderRadius: 8, overflow: 'hidden', border: '1.5px solid #e2e8f0', height: 36 }}>
+                  {['Dr', 'Cr'].map(t => (
+                    <button key={t} onClick={() => updateRow(row._id, 'type', t)} style={{
+                      flex: 1, border: 'none', cursor: 'pointer', fontWeight: 800, fontSize: 12, letterSpacing: '.04em',
+                      background: row.type === t ? (t === 'Dr' ? '#059669' : '#dc2626') : '#f8fafc',
+                      color: row.type === t ? '#fff' : '#94a3b8',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 3, transition: 'all .15s',
                     }}>
-                      {t==='Dr'?<TrendingUp size={11}/>:<TrendingDown size={11}/>} {t}
+                      {t === 'Dr' ? <TrendingUp size={11} /> : <TrendingDown size={11} />} {t}
                     </button>
                   ))}
                 </div>
 
                 {/* Amount */}
-                <div style={{ position:'relative' }}>
-                  <span style={{ position:'absolute', left:9, top:'50%', transform:'translateY(-50%)', fontSize:12, fontWeight:700, color:'#94a3b8', userSelect:'none' }}>₹</span>
+                <div style={{ position: 'relative' }}>
+                  <span style={{ position: 'absolute', left: 9, top: '50%', transform: 'translateY(-50%)', fontSize: 12, fontWeight: 700, color: '#94a3b8', userSelect: 'none' }}>₹</span>
                   <input type="number" min="0" step="0.01" value={row.amount}
-                    onChange={e=>updateRow(row._id,'amount',e.target.value)} placeholder="0.00"
-                    style={{ ...rowInp, paddingLeft:24, textAlign:'right', fontWeight:800, fontSize:14,
-                      color: row.type==='Dr'?'#059669':'#dc2626',
-                      borderColor: parseFloat(row.amount)>0 ? (row.type==='Dr'?'#86efac':'#fca5a5') : '#e2e8f0' }} />
+                    onChange={e => updateRow(row._id, 'amount', e.target.value)} placeholder="0.00"
+                    style={{
+                      ...rowInp, paddingLeft: 24, textAlign: 'right', fontWeight: 800, fontSize: 14,
+                      color: row.type === 'Dr' ? '#059669' : '#dc2626',
+                      borderColor: parseFloat(row.amount) > 0 ? (row.type === 'Dr' ? '#86efac' : '#fca5a5') : '#e2e8f0'
+                    }} />
                 </div>
 
                 {/* Note */}
-                <input type="text" value={row.note} onChange={e=>updateRow(row._id,'note',e.target.value)}
-                  placeholder="Optional note…" style={{ ...rowInp, color:'#64748b', fontSize:12 }}/>
+                <input type="text" value={row.note} onChange={e => updateRow(row._id, 'note', e.target.value)}
+                  placeholder="Optional note…" style={{ ...rowInp, color: '#64748b', fontSize: 12 }} />
 
                 {/* Delete */}
-                <button onClick={()=>removeRow(row._id)} disabled={rows.length<=2}
-                  style={{ width:28, height:28, borderRadius:6, border:'none', background:'transparent', cursor: rows.length<=2?'not-allowed':'pointer', color:'#cbd5e1', display:'flex', alignItems:'center', justifyContent:'center', transition:'color .15s' }}
-                  onMouseEnter={e=>{ if(rows.length>2) e.currentTarget.style.cssText += 'background:#fee2e2;color:#dc2626;'; }}
-                  onMouseLeave={e=>{ e.currentTarget.style.background='transparent'; e.currentTarget.style.color='#cbd5e1'; }}>
-                  <Trash2 size={13}/>
+                <button onClick={() => removeRow(row._id)} disabled={rows.length <= 2}
+                  style={{ width: 28, height: 28, borderRadius: 6, border: 'none', background: 'transparent', cursor: rows.length <= 2 ? 'not-allowed' : 'pointer', color: '#cbd5e1', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'color .15s' }}
+                  onMouseEnter={e => { if (rows.length > 2) e.currentTarget.style.cssText += 'background:#fee2e2;color:#dc2626;'; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#cbd5e1'; }}>
+                  <Trash2 size={13} />
                 </button>
               </div>
             ))}
@@ -521,23 +523,23 @@ export default function VoucherEntryView({ onSaveSuccess, onCancel }) {
           {/* ── BALANCE NEEDED BANNER ────────────────────────── */}
           {!isBalanced && totalDr > 0 && (
             <div style={{
-              margin:'0 24px 16px',
-              background:'linear-gradient(135deg,#1e3a8a 0%,#2563eb 100%)',
-              borderRadius:12, padding:'16px 20px',
-              display:'flex', alignItems:'center', justifyContent:'space-between', gap:16,
-              boxShadow:'0 4px 16px rgba(37,99,235,.25)',
+              margin: '0 24px 16px',
+              background: 'linear-gradient(135deg,#1e3a8a 0%,#2563eb 100%)',
+              borderRadius: 12, padding: '16px 20px',
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16,
+              boxShadow: '0 4px 16px rgba(37,99,235,.25)',
             }}>
-              <div style={{ display:'flex', alignItems:'center', gap:12 }}>
-                <Zap size={20} color="#fbbf24" strokeWidth={2.5}/>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <Zap size={20} color="#fbbf24" strokeWidth={2.5} />
                 <div>
-                  <div style={{ color:'#fff', fontWeight:800, fontSize:14 }}>
-                    Add a <span style={{ color:'#fbbf24' }}>
+                  <div style={{ color: '#fff', fontWeight: 800, fontSize: 14 }}>
+                    Add a <span style={{ color: '#fbbf24' }}>
                       {balanceType === 'Cr' ? 'CREDIT' : 'DEBIT'}
-                    </span> of <span style={{ color:'#fbbf24' }}>
-                      ₹{diff.toLocaleString('en-IN',{minimumFractionDigits:2})}
+                    </span> of <span style={{ color: '#fbbf24' }}>
+                      ₹{diff.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                     </span> to balance this entry
                   </div>
-                  <div style={{ color:'rgba(255,255,255,.7)', fontSize:12, marginTop:2 }}>
+                  <div style={{ color: 'rgba(255,255,255,.7)', fontSize: 12, marginTop: 2 }}>
                     Current Dr: ₹{totalDr.toFixed(2)} · Current Cr: ₹{totalCr.toFixed(2)} · Difference: ₹{diff.toFixed(2)}
                   </div>
                 </div>
@@ -545,98 +547,100 @@ export default function VoucherEntryView({ onSaveSuccess, onCancel }) {
               <button
                 onClick={() => setRows(p => [...p, newRow(balanceType, diff.toFixed(2))])}
                 style={{
-                  padding:'10px 18px', borderRadius:9, border:'2px solid #fbbf24',
-                  background:'#fbbf24', color:'#1e293b', fontWeight:800, fontSize:13,
-                  cursor:'pointer', display:'flex', alignItems:'center', gap:7,
-                  flexShrink:0, whiteSpace:'nowrap', transition:'all .15s',
-                  boxShadow:'0 2px 8px rgba(251,191,36,.4)',
+                  padding: '10px 18px', borderRadius: 9, border: '2px solid #fbbf24',
+                  background: '#fbbf24', color: '#1e293b', fontWeight: 800, fontSize: 13,
+                  cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 7,
+                  flexShrink: 0, whiteSpace: 'nowrap', transition: 'all .15s',
+                  boxShadow: '0 2px 8px rgba(251,191,36,.4)',
                 }}
-                onMouseEnter={e=>{ e.currentTarget.style.background='#f59e0b'; }}
-                onMouseLeave={e=>{ e.currentTarget.style.background='#fbbf24'; }}
+                onMouseEnter={e => { e.currentTarget.style.background = '#f59e0b'; }}
+                onMouseLeave={e => { e.currentTarget.style.background = '#fbbf24'; }}
               >
-                <Zap size={15}/> Add Balancing {balanceType} Row
+                <Zap size={15} /> Add Balancing {balanceType} Row
               </button>
             </div>
           )}
 
           {/* Add line button */}
-          <div style={{ padding:'0 24px 20px' }}>
+          <div style={{ padding: '0 24px 20px' }}>
             <button onClick={addRow} style={{
-              width:'100%', padding:'10px', borderRadius:10, border:'1.5px dashed #bfdbfe',
-              background:'#eff6ff', cursor:'pointer', color:'#2563eb', fontSize:12, fontWeight:700,
-              display:'flex', alignItems:'center', justifyContent:'center', gap:6, transition:'all .15s',
+              width: '100%', padding: '10px', borderRadius: 10, border: '1.5px dashed #bfdbfe',
+              background: '#eff6ff', cursor: 'pointer', color: '#2563eb', fontSize: 12, fontWeight: 700,
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, transition: 'all .15s',
             }}
-            onMouseEnter={e=>{ e.currentTarget.style.background='#dbeafe'; }}
-            onMouseLeave={e=>{ e.currentTarget.style.background='#eff6ff'; }}>
-              <Plus size={14}/> Add Another Line
+              onMouseEnter={e => { e.currentTarget.style.background = '#dbeafe'; }}
+              onMouseLeave={e => { e.currentTarget.style.background = '#eff6ff'; }}>
+              <Plus size={14} /> Add Another Line
             </button>
           </div>
 
           {/* Totals */}
           <div style={{
-            margin:'0 24px 20px', borderRadius:12, padding:'16px 20px',
-            border:`2px solid ${isBalanced?'#a7f3d0':'#f1f5f9'}`,
-            background: isBalanced?'#f0fdf4':'#f8fafc',
-            display:'grid', gridTemplateColumns:'1fr 1fr 1fr auto',
-            alignItems:'center', gap:16, transition:'all .3s',
+            margin: '0 24px 20px', borderRadius: 12, padding: '16px 20px',
+            border: `2px solid ${isBalanced ? '#a7f3d0' : '#f1f5f9'}`,
+            background: isBalanced ? '#f0fdf4' : '#f8fafc',
+            display: 'grid', gridTemplateColumns: '1fr 1fr 1fr auto',
+            alignItems: 'center', gap: 16, transition: 'all .3s',
           }}>
             <div>
-              <div style={{ fontSize:9, fontWeight:800, color:'#94a3b8', textTransform:'uppercase', letterSpacing:'.1em', marginBottom:3 }}>Total Debit</div>
-              <div style={{ fontSize:22, fontWeight:900, color:'#059669' }}>₹ {totalDr.toLocaleString('en-IN',{minimumFractionDigits:2})}</div>
+              <div style={{ fontSize: 9, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.1em', marginBottom: 3 }}>Total Debit</div>
+              <div style={{ fontSize: 22, fontWeight: 900, color: '#059669' }}>₹ {totalDr.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</div>
             </div>
             <div>
-              <div style={{ fontSize:9, fontWeight:800, color:'#94a3b8', textTransform:'uppercase', letterSpacing:'.1em', marginBottom:3 }}>Total Credit</div>
-              <div style={{ fontSize:22, fontWeight:900, color:'#dc2626' }}>₹ {totalCr.toLocaleString('en-IN',{minimumFractionDigits:2})}</div>
+              <div style={{ fontSize: 9, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.1em', marginBottom: 3 }}>Total Credit</div>
+              <div style={{ fontSize: 22, fontWeight: 900, color: '#dc2626' }}>₹ {totalCr.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</div>
             </div>
             <div>
-              <div style={{ fontSize:9, fontWeight:800, color:'#94a3b8', textTransform:'uppercase', letterSpacing:'.1em', marginBottom:3 }}>Difference</div>
-              <div style={{ fontSize:22, fontWeight:900, color: isBalanced?'#059669':'#f59e0b' }}>
-                ₹ {diff.toLocaleString('en-IN',{minimumFractionDigits:2})}
+              <div style={{ fontSize: 9, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.1em', marginBottom: 3 }}>Difference</div>
+              <div style={{ fontSize: 22, fontWeight: 900, color: isBalanced ? '#059669' : '#f59e0b' }}>
+                ₹ {diff.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
               </div>
             </div>
             <div style={{
-              padding:'10px 18px', borderRadius:10, fontWeight:800, fontSize:13,
-              background: isBalanced?'#059669': totalDr>0?'#f59e0b':'#94a3b8',
-              color:'#fff', whiteSpace:'nowrap',
+              padding: '10px 18px', borderRadius: 10, fontWeight: 800, fontSize: 13,
+              background: isBalanced ? '#059669' : totalDr > 0 ? '#f59e0b' : '#94a3b8',
+              color: '#fff', whiteSpace: 'nowrap',
             }}>
-              {isBalanced?'✓ Ready to Post': totalDr>0?'Not Balanced':'Awaiting input'}
+              {isBalanced ? '✓ Ready to Post' : totalDr > 0 ? 'Not Balanced' : 'Awaiting input'}
             </div>
           </div>
         </div>
 
         {/* ── NARRATION ───────────────────────────────────── */}
-        <div style={{ ...card, padding:'20px 24px' }}>
-          <div style={{ fontSize:13, fontWeight:800, color:'#1e293b', marginBottom:10, display:'flex', alignItems:'center', gap:7 }}>
-            <AlignLeft size={14} style={{ color:'#94a3b8' }}/> Transaction Narration
+        <div style={{ ...card, padding: '20px 24px' }}>
+          <div style={{ fontSize: 13, fontWeight: 800, color: '#1e293b', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 7 }}>
+            <AlignLeft size={14} style={{ color: '#94a3b8' }} /> Transaction Narration
           </div>
-          <textarea value={narration} onChange={e=>setNarration(e.target.value)} rows={3}
+          <textarea value={narration} onChange={e => setNarration(e.target.value)} rows={3}
             placeholder="e.g. Being the amount paid to ABC Suppliers against Invoice No. INV-001 dated 25-03-2026 via NEFT…"
-            style={{ width:'100%', border:'1px solid #e2e8f0', borderRadius:10, padding:'12px 14px', fontSize:13, color:'#1e293b', resize:'none', outline:'none', fontFamily:'inherit', transition:'border-color .15s' }}
-            onFocus={e=>{ e.target.style.borderColor='#2563eb'; }}
-            onBlur={e=>{ e.target.style.borderColor='#e2e8f0'; }}/>
-          <div style={{ fontSize:10, color:'#94a3b8', marginTop:5, fontWeight:600 }}>{narration.length}/500 characters</div>
+            style={{ width: '100%', border: '1px solid #e2e8f0', borderRadius: 10, padding: '12px 14px', fontSize: 13, color: '#1e293b', resize: 'none', outline: 'none', fontFamily: 'inherit', transition: 'border-color .15s' }}
+            onFocus={e => { e.target.style.borderColor = '#2563eb'; }}
+            onBlur={e => { e.target.style.borderColor = '#e2e8f0'; }} />
+          <div style={{ fontSize: 10, color: '#94a3b8', marginTop: 5, fontWeight: 600 }}>{narration.length}/500 characters</div>
         </div>
 
         {/* ── BOTTOM ACTION BAR ────────────────────────────── */}
-        <div style={{ ...card, padding:'18px 24px', display:'flex', alignItems:'center', justifyContent:'space-between', flexWrap:'wrap', gap:14 }}>
-          <div style={{ display:'flex', alignItems:'center', gap:20 }}>
-            <Stat label="Total Debit"   value={`₹ ${totalDr.toLocaleString('en-IN',{minimumFractionDigits:2})}`} color="#059669"/>
-            <div style={{ width:1, height:40, background:'#f1f5f9' }}/>
-            <Stat label="Total Credit" value={`₹ ${totalCr.toLocaleString('en-IN',{minimumFractionDigits:2})}`} color="#dc2626"/>
-            <div style={{ width:1, height:40, background:'#f1f5f9' }}/>
-            <div style={{ padding:'8px 14px', borderRadius:9, fontWeight:800, fontSize:13,
-              background: isBalanced?'#d1fae5': totalDr>0?'#fef3c7':'#f1f5f9',
-              color: isBalanced?'#065f46': totalDr>0?'#92400e':'#94a3b8' }}>
-              {isBalanced?'✓ Balanced — Click Post':'⚠ Make Dr = Cr to Post'}
+        <div style={{ ...card, padding: '18px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 14 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
+            <Stat label="Total Debit" value={`₹ ${totalDr.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`} color="#059669" />
+            <div style={{ width: 1, height: 40, background: '#f1f5f9' }} />
+            <Stat label="Total Credit" value={`₹ ${totalCr.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`} color="#dc2626" />
+            <div style={{ width: 1, height: 40, background: '#f1f5f9' }} />
+            <div style={{
+              padding: '8px 14px', borderRadius: 9, fontWeight: 800, fontSize: 13,
+              background: isBalanced ? '#d1fae5' : totalDr > 0 ? '#fef3c7' : '#f1f5f9',
+              color: isBalanced ? '#065f46' : totalDr > 0 ? '#92400e' : '#94a3b8'
+            }}>
+              {isBalanced ? '✓ Balanced — Click Post' : '⚠ Make Dr = Cr to Post'}
             </div>
           </div>
-          <div style={{ display:'flex', gap:10, alignItems:'center' }}>
-            <button onClick={()=>{ if(onCancel) onCancel(); else navigate('/vouchers'); }} style={btnOutline}>Cancel</button>
-            <button onClick={handlePost} disabled={saving||saved||!isBalanced}
-              style={{ ...btnPrimary, background: saved?'#059669': isBalanced?'#1e293b':'#e2e8f0', color: saved||isBalanced?'#fff':'#94a3b8', cursor: isBalanced&&!saving&&!saved?'pointer':'not-allowed', boxShadow: isBalanced&&!saved?'0 6px 20px rgba(30,41,59,.3)':'none', transform: isBalanced?'translateY(0)':'none' }}>
-              {saving?<><Loader2 size={15} style={{animation:'spin 1s linear infinite'}}/> Posting…</>
-               :saved?<><CheckCircle2 size={15}/> Posted!</>
-                     :<><Save size={15}/> Verify & Post Entry</>}
+          <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+            <button onClick={() => { if (onCancel) onCancel(); else navigate('/vouchers'); }} style={btnOutline}>Cancel</button>
+            <button onClick={handlePost} disabled={saving || saved || !isBalanced}
+              style={{ ...btnPrimary, background: saved ? '#059669' : isBalanced ? '#1e293b' : '#e2e8f0', color: saved || isBalanced ? '#fff' : '#94a3b8', cursor: isBalanced && !saving && !saved ? 'pointer' : 'not-allowed', boxShadow: isBalanced && !saved ? '0 6px 20px rgba(30,41,59,.3)' : 'none', transform: isBalanced ? 'translateY(0)' : 'none' }}>
+              {saving ? <><Loader2 size={15} style={{ animation: 'spin 1s linear infinite' }} /> Posting…</>
+                : saved ? <><CheckCircle2 size={15} /> Posted!</>
+                  : <><Save size={15} /> Verify & Post Entry</>}
             </button>
           </div>
         </div>
@@ -649,7 +653,7 @@ export default function VoucherEntryView({ onSaveSuccess, onCancel }) {
         const activeLedger = ledgers.find(l => l.id === activeRow.ledgerId);
         const ledgerName = activeLedger ? activeLedger.name : 'Unknown Account';
         const lineAmt = parseFloat(activeRow.amount) || 0;
-        
+
         return (
           <CostCenterAllocationModal
             isOpen={true}
@@ -671,8 +675,8 @@ export default function VoucherEntryView({ onSaveSuccess, onCancel }) {
 /* ── Sub-components ─────────────────────────────────────────────── */
 const Field = ({ label, required, children }) => (
   <div>
-    <label style={{ display:'block', fontSize:10, fontWeight:800, color:'#64748b', textTransform:'uppercase', letterSpacing:'.1em', marginBottom:6 }}>
-      {label}{required && <span style={{ color:'#ef4444' }}> *</span>}
+    <label style={{ display: 'block', fontSize: 10, fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '.1em', marginBottom: 6 }}>
+      {label}{required && <span style={{ color: '#ef4444' }}> *</span>}
     </label>
     {children}
   </div>
@@ -680,20 +684,20 @@ const Field = ({ label, required, children }) => (
 
 const Stat = ({ label, value, color }) => (
   <div>
-    <div style={{ fontSize:9, fontWeight:800, color:'#94a3b8', textTransform:'uppercase', letterSpacing:'.1em', marginBottom:3 }}>{label}</div>
-    <div style={{ fontSize:20, fontWeight:900, color }}>{value}</div>
+    <div style={{ fontSize: 9, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.1em', marginBottom: 3 }}>{label}</div>
+    <div style={{ fontSize: 20, fontWeight: 900, color }}>{value}</div>
   </div>
 );
 
 /* ── Style tokens ───────────────────────────────────────────────── */
-const card    = { background:'#fff', borderRadius:16, border:'1px solid #f1f5f9', boxShadow:'0 1px 6px rgba(0,0,0,.05)', overflow:'hidden' };
-const cardHead = { padding:'14px 24px', borderBottom:'1px solid #f8fafc', background:'#fafafa', display:'flex', alignItems:'center', gap:10 };
-const cardTitle = { fontSize:13, fontWeight:800, color:'#1e293b' };
-const cardSub   = { fontSize:11, color:'#94a3b8', fontWeight:600, marginTop:1 };
-const pill      = { padding:'5px 12px', borderRadius:999, fontSize:11, fontWeight:800, display:'flex', alignItems:'center', gap:5 };
-const chevron   = { position:'absolute', right:10, top:'50%', transform:'translateY(-50%)', color:'#94a3b8', pointerEvents:'none' };
-const inp       = { width:'100%', border:'1px solid #e2e8f0', borderRadius:9, padding:'10px 12px', fontSize:13, fontWeight:700, color:'#1e293b', background:'#fff', outline:'none', fontFamily:'inherit', appearance:'none', transition:'border-color .15s' };
-const rowInp    = { width:'100%', border:'1px solid #e2e8f0', borderRadius:8, padding:'8px 10px', fontSize:13, fontWeight:600, color:'#1e293b', background:'#fff', outline:'none', fontFamily:'inherit', appearance:'none', height:36, transition:'border-color .15s' };
-const btnGhost  = { display:'flex', alignItems:'center', gap:6, background:'none', border:'none', cursor:'pointer', color:'#64748b', fontSize:13, fontWeight:700, padding:'6px 10px', borderRadius:8, fontFamily:'inherit' };
-const btnOutline = { display:'flex', alignItems:'center', gap:6, padding:'9px 18px', borderRadius:9, border:'1px solid #e2e8f0', background:'#fff', cursor:'pointer', fontSize:13, fontWeight:700, color:'#64748b', fontFamily:'inherit', transition:'all .15s' };
-const btnPrimary = { display:'flex', alignItems:'center', gap:7, padding:'10px 24px', borderRadius:10, border:'none', fontSize:13, fontWeight:800, fontFamily:'inherit', transition:'all .18s', letterSpacing:'-.01em' };
+const card = { background: '#fff', borderRadius: 16, border: '1px solid #f1f5f9', boxShadow: '0 1px 6px rgba(0,0,0,.05)', overflow: 'hidden' };
+const cardHead = { padding: '14px 24px', borderBottom: '1px solid #f8fafc', background: '#fafafa', display: 'flex', alignItems: 'center', gap: 10 };
+const cardTitle = { fontSize: 13, fontWeight: 800, color: '#1e293b' };
+const cardSub = { fontSize: 11, color: '#94a3b8', fontWeight: 600, marginTop: 1 };
+const pill = { padding: '5px 12px', borderRadius: 999, fontSize: 11, fontWeight: 800, display: 'flex', alignItems: 'center', gap: 5 };
+const chevron = { position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', pointerEvents: 'none' };
+const inp = { width: '100%', border: '1px solid #e2e8f0', borderRadius: 9, padding: '10px 12px', fontSize: 13, fontWeight: 700, color: '#1e293b', background: '#fff', outline: 'none', fontFamily: 'inherit', appearance: 'none', transition: 'border-color .15s' };
+const rowInp = { width: '100%', border: '1px solid #e2e8f0', borderRadius: 8, padding: '8px 10px', fontSize: 13, fontWeight: 600, color: '#1e293b', background: '#fff', outline: 'none', fontFamily: 'inherit', appearance: 'none', height: 36, transition: 'border-color .15s' };
+const btnGhost = { display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', fontSize: 13, fontWeight: 700, padding: '6px 10px', borderRadius: 8, fontFamily: 'inherit' };
+const btnOutline = { display: 'flex', alignItems: 'center', gap: 6, padding: '9px 18px', borderRadius: 9, border: '1px solid #e2e8f0', background: '#fff', cursor: 'pointer', fontSize: 13, fontWeight: 700, color: '#64748b', fontFamily: 'inherit', transition: 'all .15s' };
+const btnPrimary = { display: 'flex', alignItems: 'center', gap: 7, padding: '10px 24px', borderRadius: 10, border: 'none', fontSize: 13, fontWeight: 800, fontFamily: 'inherit', transition: 'all .18s', letterSpacing: '-.01em' };
