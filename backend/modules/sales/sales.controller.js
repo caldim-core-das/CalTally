@@ -203,7 +203,8 @@ exports.createInvoice = async (req, res, next) => {
         items,
         type: 'Sales',
         userId: req.user?.id,
-        projectId
+        projectId,
+        tcsAmount
       }, t);
       await invoice.update({ VoucherId: accountingResult.voucher.id, status: 'Confirmed' }, { transaction: t });
     }
@@ -330,7 +331,8 @@ exports.updateInvoice = async (req, res, next) => {
         items: items || [],
         type: 'Sales',
         userId: req.user?.id,
-        projectId: projectId || invoice.ProjectId
+        projectId: projectId || invoice.ProjectId,
+        tcsAmount: tcsAmount !== undefined ? tcsAmount : invoice.tcsAmount
       }, t);
       await invoice.update({ VoucherId: accountingResult.voucher.id, status: 'Confirmed' }, { transaction: t });
     }
