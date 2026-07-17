@@ -1,5 +1,6 @@
 const { PurchaseOrder, Ledger, Group, sequelize, Voucher, Transaction, VendorCredit, Item, Company } = require('../../models');
 const { Op } = require('sequelize');
+const eventBus = require('../../core/EventBus');
 
 exports.createVendor = async (req, res) => res.status(501).json({ error: 'Not implemented. Use ledgerAPI.' });
 exports.updateVendor = async (req, res) => res.status(501).json({ error: 'Not implemented. Use ledgerAPI.' });
@@ -752,6 +753,10 @@ exports.createBill = async (req, res, next) => {
         }
 
         await t.commit();
+        
+        // Publish Domain Event for Vol 2
+        eventBus.publish('BILL_CREATED', { billId: voucher.id, companyId, totalAmount: total, status: voucher.status }, { userId: req.user?.id, tenantId: companyId });
+
         res.status(201).json(voucher);
     } catch (err) {
         await t.rollback();

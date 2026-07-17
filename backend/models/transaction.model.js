@@ -55,8 +55,8 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: true
     }
   }, {
-    paranoid: true
-  });
+    paranoid: true,
+    });
 
   return Transaction;
 };

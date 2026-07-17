@@ -193,8 +193,6 @@ const NAV = [
       { label: 'Cash Flow',          path: '/reports/cash-flow', icon: TrendingUp },
       { label: 'Inventory Report',   path: '/reports/inventory-report', icon: Package },
       { label: 'Audit Trails',       path: '/reports/audit', icon: Shield },
-      { label: 'Custom Reports',     path: '/reports/custom', icon: Sliders },
-      { label: 'Saved Reports',      path: '/reports/saved', icon: Bookmark },
     ]
   },
   {
@@ -225,6 +223,9 @@ const isPathActive = (itemPath, pathname, location) => {
     return true;
   }
   if (itemPath === '/payments-made' && (pathname.startsWith('/payments-made') || (pathname.startsWith('/bill-payments') && backTo !== 'vendors'))) {
+    return true;
+  }
+  if (itemPath === '/ledgers' && (pathname.startsWith('/ledgers') || pathname.startsWith('/ledger-statement'))) {
     return true;
   }
 

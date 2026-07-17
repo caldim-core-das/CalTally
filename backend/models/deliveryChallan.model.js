@@ -66,7 +66,8 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.UUID,
       allowNull: true
     }
-  });
+  }, {
+    });
 
   DeliveryChallan.associate = (models) => {
     DeliveryChallan.hasMany(models.DeliveryChallanItem, { as: 'items', foreignKey: 'DeliveryChallanId' });

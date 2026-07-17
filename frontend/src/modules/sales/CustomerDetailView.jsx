@@ -35,6 +35,139 @@ const CustomerDetailView = ({ companyId }) => {
   const [isComposeModalOpen, setIsComposeModalOpen] = useState(false);
   const { addNotification } = useNotificationStore();
 
+  const [isContactModalOpen, setIsContactModalOpen] = useState(false);
+  const [editingContactIdx, setEditingContactIdx] = useState(null);
+  const [contactForm, setContactForm] = useState({
+    salutation: 'Salutation',
+    firstName: '',
+    lastName: '',
+    email: '',
+    workPhoneCode: '+91',
+    workPhone: '',
+    mobileCode: '+91',
+    mobile: ''
+  });
+
+  const handleOpenAddContact = () => {
+    setEditingContactIdx(null);
+    setContactForm({
+      salutation: 'Salutation',
+      firstName: '',
+      lastName: '',
+      email: '',
+      workPhoneCode: '+91',
+      workPhone: '',
+      mobileCode: '+91',
+      mobile: ''
+    });
+    setIsContactModalOpen(true);
+  };
+
+  const handleEditContact = (contact, idx) => {
+    setEditingContactIdx(idx);
+    
+    let sal = 'Salutation';
+    let first = '';
+    let last = '';
+    
+    if (contact.name) {
+       const parts = contact.name.split(' ');
+       if (parts.length > 0) {
+          if (['Mr.', 'Mrs.', 'Ms.', 'Dr.'].includes(parts[0])) {
+             sal = parts[0];
+             parts.shift();
+          }
+          if (parts.length > 0) first = parts[0];
+          if (parts.length > 1) last = parts.slice(1).join(' ');
+       }
+    }
+
+    const parsePhone = (p) => {
+       if (!p) return { code: '+91', num: '' };
+       const parts = p.split(' ');
+       if (parts.length > 1 && parts[0].startsWith('+')) {
+          return { code: parts[0], num: parts.slice(1).join(' ') };
+       }
+       return { code: '+91', num: p };
+    };
+
+    const wp = parsePhone(contact.workPhone);
+    const mp = parsePhone(contact.mobile);
+
+    setContactForm({
+      salutation: sal,
+      firstName: first,
+      lastName: last,
+      email: contact.email || '',
+      workPhoneCode: wp.code,
+      workPhone: wp.num,
+      mobileCode: mp.code,
+      mobile: mp.num
+    });
+    setIsContactModalOpen(true);
+  };
+
+  const handleSaveContact = async () => {
+    if (!contactForm.firstName && !contactForm.lastName && !contactForm.email) {
+       addNotification('Please enter at least a name or email', 'error');
+       return;
+    }
+    
+    const newContact = {
+      name: `${contactForm.salutation !== 'Salutation' ? contactForm.salutation + ' ' : ''}${contactForm.firstName} ${contactForm.lastName}`.trim(),
+      email: contactForm.email,
+      workPhone: contactForm.workPhone ? `${contactForm.workPhoneCode} ${contactForm.workPhone}` : '',
+      mobile: contactForm.mobile ? `${contactForm.mobileCode} ${contactForm.mobile}` : ''
+    };
+
+    try {
+      const activeCustomer = customers.find(c => String(c.id) === String(selectedId) || String(c._id) === String(selectedId));
+      if (activeCustomer) {
+        let updatedContacts = [...(activeCustomer.contacts || [])];
+        if (editingContactIdx !== null) {
+          updatedContacts[editingContactIdx] = newContact;
+        } else {
+          updatedContacts.push(newContact);
+        }
+        
+        // Save to database
+        await ledgerAPI.update(activeCustomer.id || activeCustomer._id, {
+          ...activeCustomer,
+          contacts: updatedContacts,
+          contactPersonsJson: JSON.stringify(updatedContacts)
+        });
+
+        // Update local UI
+        setCustomers(prev => prev.map(c => {
+          if (String(c.id) === String(selectedId) || String(c._id) === String(selectedId)) {
+            return {
+              ...c,
+              contacts: updatedContacts
+            };
+          }
+          return c;
+        }));
+      }
+
+      addNotification(editingContactIdx !== null ? 'Contact person updated successfully' : 'Contact person added successfully', 'success');
+      setIsContactModalOpen(false);
+      setContactForm({
+        salutation: 'Salutation',
+        firstName: '',
+        lastName: '',
+        email: '',
+        workPhoneCode: '+91',
+        workPhone: '',
+        mobileCode: '+91',
+        mobile: ''
+      });
+      setEditingContactIdx(null);
+    } catch (err) {
+      console.error(err);
+      addNotification('Failed to add contact person to database', 'error');
+    }
+  };
+
   const user = useMemo(() => { 
     try { return getUser(); } catch { return {}; } 
   }, []);
@@ -128,7 +261,15 @@ const CustomerDetailView = ({ companyId }) => {
         const customerLedgers = allLedgers.filter(l => 
           l.Group?.name?.toLowerCase().includes('debtor') || 
           l.groupName?.toLowerCase().includes('debtor')
-        );
+        ).map(l => {
+          let parsedContacts = [];
+          if (l.contactPersonsJson) {
+            try { parsedContacts = typeof l.contactPersonsJson === 'string' ? JSON.parse(l.contactPersonsJson) : l.contactPersonsJson; } catch (e) {}
+          } else if (l.contacts) {
+            parsedContacts = Array.isArray(l.contacts) ? l.contacts : [];
+          }
+          return { ...l, contacts: parsedContacts };
+        });
 
         // Security check: if the URL ID does not belong to the active company,
         // deny access — never auto-switch company context via URL.
@@ -503,7 +644,7 @@ const CustomerDetailView = ({ companyId }) => {
             {/* Action Buttons */}
             <div className="flex items-center gap-2">
               <button 
-                onClick={() => setIsQuickAddOpen(true)} 
+                onClick={() => navigate('/customers/new')} 
                 className="w-8 h-8 rounded-lg bg-blue-500 hover:bg-blue-600 text-white flex items-center justify-center transition-all hover:scale-105 active:scale-95 shadow-sm shadow-blue-100"
                 title="New Customer"
               >
@@ -983,7 +1124,8 @@ const CustomerDetailView = ({ companyId }) => {
                         customer={customer}
                         onEditAddress={(type) => openAddressDrawer(type)}
                         onInvitePortal={() => addNotification("Portal invitation sent successfully!", "success")}
-                        onAddContact={() => navigate(`/customers/${customer.id}`)}
+                        onAddContact={handleOpenAddContact}
+                        onEditContact={handleEditContact}
                         onSettingsClick={() => setIsSettingsOpen(!isSettingsOpen)}
                         onEnablePortal={() => addNotification("Customer Portal has been enabled!", "success")}
                      />
@@ -1027,7 +1169,6 @@ const CustomerDetailView = ({ companyId }) => {
                            <h3 className="text-[17px] font-bold text-slate-900 leading-tight">{customer.salutation} {customer.firstName} {customer.lastName}</h3>
                            <div className="flex items-center gap-2 text-[13px] text-blue-600 font-bold hover:underline cursor-pointer"><Mail size={14}/> <span>{customer.email}</span></div>
                            <div className="flex items-center gap-2 text-[13px] text-slate-500 font-medium"><Phone size={14}/> <span>{customer.mobile || 'No contact'}</span></div>
-                           <button className="text-[12px] font-bold text-blue-600 hover:text-blue-800 underline decoration-blue-200 underline-offset-4 mt-2">Invite to Portal</button>
                         </div>
 
                         <div className="ml-auto absolute top-0 right-0" ref={settingsRef}>
@@ -1077,7 +1218,7 @@ const CustomerDetailView = ({ companyId }) => {
                        <h4 className="text-[11px] font-bold text-slate-300 uppercase tracking-[0.3em] border-b border-slate-50 pb-3 flex justify-between items-center">
                           <span>CONTACT PERSONS</span>
                           <div className="flex items-center gap-3">
-                             <button onClick={() => navigate(`/customers/${customer.id}`)} className="w-6 h-6 rounded-full bg-blue-600 text-white flex items-center justify-center shadow-lg shadow-blue-100 hover:scale-110 transition-transform"><Plus size={14}/></button>
+                             <button onClick={() => setIsContactModalOpen(true)} className="w-6 h-6 rounded-full bg-blue-600 text-white flex items-center justify-center shadow-lg shadow-blue-100 hover:scale-110 transition-transform"><Plus size={14}/></button>
                              <ChevronDown size={14}/>
                           </div>
                        </h4>
@@ -1094,7 +1235,7 @@ const CustomerDetailView = ({ companyId }) => {
                            </div>
                            <div className="flex flex-col gap-2 shrink-0">
                               <button onClick={() => navigate('/sales-invoices/new')} className="px-6 py-2 bg-white text-blue-600 rounded-lg text-[13px] font-bold hover:bg-blue-50 transition-all shadow-xl shadow-blue-900/10">New Invoice</button>
-                              <button onClick={() => navigate('/quotes/new')} className="px-6 py-2 bg-blue-500/30 text-white border border-white/20 rounded-lg text-[13px] font-bold hover:bg-blue-500/50 transition-all">New Quote</button>
+
                            </div>
                         </div>
                      </div>
@@ -1246,17 +1387,7 @@ const CustomerDetailView = ({ companyId }) => {
               )}
 
               <div className="p-5 space-y-4 overflow-y-auto">
-                {addressType === 'billing' && (
-                  <div className="space-y-1">
-                    <label className="text-[12px] font-medium text-slate-600">Attention</label>
-                    <input 
-                      type="text" 
-                      value={addressForm.attention} 
-                      onChange={e => setAddressForm({...addressForm, attention: e.target.value})}
-                      className="w-full h-[34px] px-3 border border-slate-200 rounded text-[13px] outline-none focus:border-blue-500"
-                    />
-                  </div>
-                )}
+
 
                 <div className="space-y-1">
                   <label className="text-[12px] font-medium text-slate-600">Country/Region</label>
@@ -1490,6 +1621,120 @@ const CustomerDetailView = ({ companyId }) => {
             className="relative z-10 max-w-full max-h-full rounded-2xl shadow-2xl animate-zoom-in" 
             alt="Customer Preview"
           />
+        </div>
+      )}
+
+      {/* Add Contact Person Modal */}
+      {isContactModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-[100] animate-fade-in p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden animate-slide-up">
+            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+              <h2 className="text-[17px] font-bold text-slate-800 tracking-tight">{editingContactIdx !== null ? 'Edit Contact Person' : 'Add Contact Person'}</h2>
+              <button onClick={() => setIsContactModalOpen(false)} className="text-slate-400 hover:text-slate-600 transition-colors">
+                <X size={20} strokeWidth={2.5} />
+              </button>
+            </div>
+            
+            <div className="p-6 space-y-5">
+              <div className="flex items-start gap-4">
+                <label className="w-32 shrink-0 text-[13px] font-medium text-slate-500 mt-2">Name <span className="text-red-500">*</span></label>
+                <div className="flex-1 flex gap-2">
+                  <select 
+                    value={contactForm.salutation}
+                    onChange={e => setContactForm({...contactForm, salutation: e.target.value})}
+                    className="w-28 h-9 px-2 border border-slate-200 rounded text-[13px] outline-none focus:border-blue-500 bg-white"
+                  >
+                    <option value="Salutation">Salutation</option>
+                    <option value="Mr.">Mr.</option>
+                    <option value="Mrs.">Mrs.</option>
+                    <option value="Ms.">Ms.</option>
+                    <option value="Dr.">Dr.</option>
+                  </select>
+                  <input 
+                    type="text" 
+                    placeholder="First Name"
+                    value={contactForm.firstName}
+                    onChange={e => setContactForm({...contactForm, firstName: e.target.value})}
+                    className="flex-1 h-9 px-3 border border-slate-200 rounded text-[13px] outline-none focus:border-blue-500"
+                  />
+                  <input 
+                    type="text" 
+                    placeholder="Last Name"
+                    value={contactForm.lastName}
+                    onChange={e => setContactForm({...contactForm, lastName: e.target.value})}
+                    className="flex-1 h-9 px-3 border border-slate-200 rounded text-[13px] outline-none focus:border-blue-500"
+                  />
+                </div>
+              </div>
+              
+              <div className="flex items-center gap-4">
+                <label className="w-32 shrink-0 text-[13px] font-medium text-slate-500">Email Address <span className="text-red-500">*</span></label>
+                <input 
+                  type="email" 
+                  value={contactForm.email}
+                  onChange={e => setContactForm({...contactForm, email: e.target.value})}
+                  className="flex-1 h-9 px-3 border border-slate-200 rounded text-[13px] outline-none focus:border-blue-500"
+                />
+              </div>
+              
+              <div className="flex items-start gap-4">
+                <label className="w-32 shrink-0 text-[13px] font-medium text-slate-500 mt-2">Phone <span className="text-red-500">*</span></label>
+                <div className="flex-1 space-y-3">
+                  <div className="flex gap-2">
+                    <select 
+                      value={contactForm.workPhoneCode}
+                      onChange={e => setContactForm({...contactForm, workPhoneCode: e.target.value})}
+                      className="w-20 h-9 px-2 border border-slate-200 rounded text-[13px] outline-none focus:border-blue-500 bg-white"
+                    >
+                      <option value="+91">+91</option>
+                      <option value="+1">+1</option>
+                      <option value="+44">+44</option>
+                    </select>
+                    <input 
+                      type="text" 
+                      placeholder="Work Phone"
+                      value={contactForm.workPhone}
+                      onChange={e => setContactForm({...contactForm, workPhone: e.target.value})}
+                      className="flex-1 h-9 px-3 border border-slate-200 rounded text-[13px] outline-none focus:border-blue-500"
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <select 
+                      value={contactForm.mobileCode}
+                      onChange={e => setContactForm({...contactForm, mobileCode: e.target.value})}
+                      className="w-20 h-9 px-2 border border-slate-200 rounded text-[13px] outline-none focus:border-blue-500 bg-white"
+                    >
+                      <option value="+91">+91</option>
+                      <option value="+1">+1</option>
+                      <option value="+44">+44</option>
+                    </select>
+                    <input 
+                      type="text" 
+                      placeholder="Mobile"
+                      value={contactForm.mobile}
+                      onChange={e => setContactForm({...contactForm, mobile: e.target.value})}
+                      className="flex-1 h-9 px-3 border border-slate-200 rounded text-[13px] outline-none focus:border-blue-500"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-3 rounded-b-xl">
+              <button 
+                onClick={() => setIsContactModalOpen(false)}
+                className="px-5 py-2 text-[13px] font-bold text-slate-600 bg-white border border-slate-200 rounded hover:bg-slate-50 hover:text-slate-900 transition-all shadow-sm"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={handleSaveContact}
+                className="px-6 py-2 text-[13px] font-bold text-white bg-blue-600 rounded hover:bg-blue-700 transition-all shadow-sm"
+              >
+                Save
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

@@ -105,17 +105,12 @@ const CustomerForm = ({ onSaveSuccess, onCancel, customerToEdit = null, standalo
   const displayNameOptions = useMemo(() => {
     const options = new Set();
     const fullName = `${firstName} ${lastName}`.trim();
-    const lastFirst = lastName && firstName ? `${lastName}, ${firstName}` : '';
-    const withSalutation = salutation && salutation !== 'Salutation' && fullName ? `${salutation} ${fullName}` : '';
     
-    if (withSalutation) options.add(withSalutation);
     if (fullName) options.add(fullName);
-    if (lastFirst) options.add(lastFirst);
     if (companyName) options.add(companyName);
-    if (firstName) options.add(firstName);
     
     return Array.from(options).filter(opt => opt.length > 0);
-  }, [salutation, firstName, lastName, companyName]);
+  }, [firstName, lastName, companyName]);
 
   // Display name options are shown in dropdown only — no auto-fill
 
@@ -127,14 +122,20 @@ const CustomerForm = ({ onSaveSuccess, onCancel, customerToEdit = null, standalo
   const [shippingStateSearch, setShippingStateSearch] = useState('');
   const shippingStateRef = useRef(null);
 
+  const [isBillingCountryOpen, setIsBillingCountryOpen] = useState(false);
+  const [billingCountrySearch, setBillingCountrySearch] = useState('');
+  const billingCountryRef = useRef(null);
+
+  const [isShippingCountryOpen, setIsShippingCountryOpen] = useState(false);
+  const [shippingCountrySearch, setShippingCountrySearch] = useState('');
+  const shippingCountryRef = useRef(null);
+
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (billingStateRef.current && !billingStateRef.current.contains(event.target)) {
-        setIsBillingStateOpen(false);
-      }
-      if (shippingStateRef.current && !shippingStateRef.current.contains(event.target)) {
-        setIsShippingStateOpen(false);
-      }
+      if (billingStateRef.current && !billingStateRef.current.contains(event.target)) setIsBillingStateOpen(false);
+      if (shippingStateRef.current && !shippingStateRef.current.contains(event.target)) setIsShippingStateOpen(false);
+      if (billingCountryRef.current && !billingCountryRef.current.contains(event.target)) setIsBillingCountryOpen(false);
+      if (shippingCountryRef.current && !shippingCountryRef.current.contains(event.target)) setIsShippingCountryOpen(false);
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
@@ -536,10 +537,62 @@ const CustomerForm = ({ onSaveSuccess, onCancel, customerToEdit = null, standalo
                             <div className="space-y-4">
                                 <div className="space-y-1">
                                     <label className="text-[11px] font-medium text-slate-400">Country/Region</label>
-                                    <select value={billingAddress.country} onChange={e => setBillingAddress({...billingAddress, country: e.target.value})} className="w-full h-9 px-3 border border-slate-100 rounded text-[13px] outline-none bg-white font-medium">
-                                        <option value="">Select Country</option>
-                                        {COUNTRY_CODES.map(c => <option key={c.country} value={c.country}>{c.country}</option>)}
-                                    </select>
+                                    <div className="relative" ref={billingCountryRef}>
+                                        <button 
+                                           type="button"
+                                           onClick={() => {
+                                              setIsBillingCountryOpen(!isBillingCountryOpen);
+                                              setBillingCountrySearch('');
+                                           }}
+                                           className={`w-full h-9 px-3 flex items-center justify-between border rounded text-left outline-none bg-white font-medium ${isBillingCountryOpen ? 'border-blue-500 ring-1 ring-blue-500' : 'border-slate-100 text-slate-800'}`}
+                                        >
+                                           <span className="text-[13px] text-slate-700">{billingAddress.country || 'Select Country'}</span>
+                                           <div className="flex items-center gap-1.5">
+                                              {billingAddress.country && (
+                                                 <X 
+                                                   size={14} 
+                                                   className="text-red-400 hover:text-red-600 transition-colors" 
+                                                   onClick={(e) => {
+                                                      e.stopPropagation();
+                                                      setBillingAddress({...billingAddress, country: ''});
+                                                   }}
+                                                 />
+                                              )}
+                                              <ChevronDown size={14} className={`text-blue-500 transition-transform ${isBillingCountryOpen ? 'rotate-180' : ''}`} />
+                                           </div>
+                                        </button>
+                                        {isBillingCountryOpen && (
+                                           <div className="absolute top-full left-0 mt-1 w-full bg-white border border-slate-200 rounded shadow-lg z-50 overflow-hidden">
+                                              <div className="p-2 border-b border-slate-100">
+                                                 <div className="relative">
+                                                    <Search size={14} className="absolute left-2.5 top-2.5 text-slate-400" />
+                                                    <input 
+                                                       type="text"
+                                                       placeholder="Search country..."
+                                                       value={billingCountrySearch}
+                                                       onChange={e => setBillingCountrySearch(e.target.value)}
+                                                       className="w-full h-9 pl-8 pr-3 bg-slate-50 border border-slate-200 rounded text-[13px] outline-none focus:border-blue-400"
+                                                       onClick={e => e.stopPropagation()}
+                                                    />
+                                                 </div>
+                                              </div>
+                                              <div className="max-h-48 overflow-y-auto py-1">
+                                                 {COUNTRY_CODES.filter(c => c.country.toLowerCase().includes(billingCountrySearch.toLowerCase())).map(c => (
+                                                    <div 
+                                                       key={c.country} 
+                                                       onClick={() => {
+                                                          setBillingAddress({...billingAddress, country: c.country});
+                                                          setIsBillingCountryOpen(false);
+                                                       }}
+                                                       className={`px-3 py-2 text-[13px] cursor-pointer hover:bg-blue-50 ${billingAddress.country === c.country ? 'bg-blue-50 text-blue-700 font-medium' : 'text-slate-700 font-medium'}`}
+                                                    >
+                                                       {c.country}
+                                                    </div>
+                                                 ))}
+                                              </div>
+                                           </div>
+                                        )}
+                                    </div>
                                 </div>
                                 <div className="space-y-1">
                                     <label className="text-[11px] font-medium text-slate-400">Street Address</label>
@@ -584,7 +637,7 @@ const CustomerForm = ({ onSaveSuccess, onCancel, customerToEdit = null, standalo
                                            </div>
                                         </button>
                                         {isBillingStateOpen && (
-                                           <div className="absolute bottom-full left-0 mb-1 w-full bg-white border border-slate-200 rounded shadow-lg z-50 overflow-hidden">
+                                           <div className="absolute top-full left-0 mt-1 w-full bg-white border border-slate-200 rounded shadow-lg z-50 overflow-hidden">
                                               <div className="p-2 border-b border-slate-100">
                                                  <div className="relative">
                                                     <Search size={14} className="absolute left-2.5 top-2.5 text-slate-400" />
@@ -631,10 +684,62 @@ const CustomerForm = ({ onSaveSuccess, onCancel, customerToEdit = null, standalo
                             <div className="space-y-4 opacity-90">
                                 <div className="space-y-1">
                                     <label className="text-[11px] font-medium text-slate-400">Country/Region</label>
-                                    <select value={shippingAddress.country} onChange={e => setShippingAddress({...shippingAddress, country: e.target.value})} className="w-full h-9 px-3 border border-slate-100 rounded text-[13px] outline-none bg-white font-medium">
-                                        <option value="">Select Country</option>
-                                        {COUNTRY_CODES.map(c => <option key={c.country} value={c.country}>{c.country}</option>)}
-                                    </select>
+                                    <div className="relative" ref={shippingCountryRef}>
+                                        <button 
+                                           type="button"
+                                           onClick={() => {
+                                              setIsShippingCountryOpen(!isShippingCountryOpen);
+                                              setShippingCountrySearch('');
+                                           }}
+                                           className={`w-full h-9 px-3 flex items-center justify-between border rounded text-left outline-none bg-white font-medium ${isShippingCountryOpen ? 'border-blue-500 ring-1 ring-blue-500' : 'border-slate-100 text-slate-800'}`}
+                                        >
+                                           <span className="text-[13px] text-slate-700">{shippingAddress.country || 'Select Country'}</span>
+                                           <div className="flex items-center gap-1.5">
+                                              {shippingAddress.country && (
+                                                 <X 
+                                                   size={14} 
+                                                   className="text-red-400 hover:text-red-600 transition-colors" 
+                                                   onClick={(e) => {
+                                                      e.stopPropagation();
+                                                      setShippingAddress({...shippingAddress, country: ''});
+                                                   }}
+                                                 />
+                                              )}
+                                              <ChevronDown size={14} className={`text-blue-500 transition-transform ${isShippingCountryOpen ? 'rotate-180' : ''}`} />
+                                           </div>
+                                        </button>
+                                        {isShippingCountryOpen && (
+                                           <div className="absolute top-full left-0 mt-1 w-full bg-white border border-slate-200 rounded shadow-lg z-50 overflow-hidden">
+                                              <div className="p-2 border-b border-slate-100">
+                                                 <div className="relative">
+                                                    <Search size={14} className="absolute left-2.5 top-2.5 text-slate-400" />
+                                                    <input 
+                                                       type="text"
+                                                       placeholder="Search country..."
+                                                       value={shippingCountrySearch}
+                                                       onChange={e => setShippingCountrySearch(e.target.value)}
+                                                       className="w-full h-9 pl-8 pr-3 bg-slate-50 border border-slate-200 rounded text-[13px] outline-none focus:border-blue-400"
+                                                       onClick={e => e.stopPropagation()}
+                                                    />
+                                                 </div>
+                                              </div>
+                                              <div className="max-h-48 overflow-y-auto py-1">
+                                                 {COUNTRY_CODES.filter(c => c.country.toLowerCase().includes(shippingCountrySearch.toLowerCase())).map(c => (
+                                                    <div 
+                                                       key={c.country} 
+                                                       onClick={() => {
+                                                          setShippingAddress({...shippingAddress, country: c.country});
+                                                          setIsShippingCountryOpen(false);
+                                                       }}
+                                                       className={`px-3 py-2 text-[13px] cursor-pointer hover:bg-blue-50 ${shippingAddress.country === c.country ? 'bg-blue-50 text-blue-700 font-medium' : 'text-slate-700 font-medium'}`}
+                                                    >
+                                                       {c.country}
+                                                    </div>
+                                                 ))}
+                                              </div>
+                                           </div>
+                                        )}
+                                    </div>
                                 </div>
                                 <div className="space-y-1">
                                     <label className="text-[11px] font-medium text-slate-400">Street Address</label>
@@ -679,7 +784,7 @@ const CustomerForm = ({ onSaveSuccess, onCancel, customerToEdit = null, standalo
                                            </div>
                                         </button>
                                         {isShippingStateOpen && (
-                                           <div className="absolute bottom-full left-0 mb-1 w-full bg-white border border-slate-200 rounded shadow-lg z-50 overflow-hidden">
+                                           <div className="absolute top-full left-0 mt-1 w-full bg-white border border-slate-200 rounded shadow-lg z-50 overflow-hidden">
                                               <div className="p-2 border-b border-slate-100">
                                                  <div className="relative">
                                                     <Search size={14} className="absolute left-2.5 top-2.5 text-slate-400" />
@@ -757,49 +862,51 @@ const CustomerForm = ({ onSaveSuccess, onCancel, customerToEdit = null, standalo
                                         <span className={`text-[13px] ${!isGstinApplicable ? 'text-slate-900 font-bold' : 'text-slate-500'}`}>No</span>
                                     </label>
                                 </div>
-                                {isGstinApplicable && (
-                                    <div className="animate-fade-in relative">
-                                        <div className="absolute -top-3 left-2 bg-white px-1 z-10">
-                                            <label className="text-[10px] font-bold text-slate-800 uppercase tracking-widest">GSTIN Number<span className="text-rose-500">*</span></label>
-                                        </div>
-                                <input 
-                                    value={gstNumber} 
-                                    onChange={e => {
-                                      const val = e.target.value.toUpperCase();
-                                      setGstNumber(val);
-                                      if (val.trim() === '') {
-                                        setGstError('');
-                                        return;
-                                      }
-                                      if (val.length !== 15) {
-                                        setGstError('GSTIN must be exactly 15 characters.');
-                                        return;
-                                      }
-                                      const gstRegex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}[Z]{1}[0-9A-Z]{1}$/;
-                                      if (!gstRegex.test(val)) {
-                                        setGstError('Invalid GSTIN format. Expected format: 22AAAAA0000A1Z5');
-                                        return;
-                                      }
-                                      const stateCode = parseInt(val.substring(0, 2), 10);
-                                      if (stateCode < 1 || stateCode > 38) {
-                                        setGstError('Invalid State Code (first 2 digits must be 01-38).');
-                                        return;
-                                      }
-                                      setGstError('');
-                                    }}
-                                    className={`w-full h-9 px-3 border ${gstError ? 'border-red-400 focus:border-red-500 bg-red-50/30' : 'border-slate-200 focus:border-blue-400'} rounded text-[13px] outline-none capitalize font-medium text-slate-700`} 
-                                    placeholder="22AAAAA0000A1Z5"
-                                    maxLength={15}
-                                />
-                                        {gstError && (
-                                          <p className="text-red-500 text-[11px] font-medium mt-1.5 flex items-center gap-1">
-                                            <AlertCircle size={12} /> {gstError}
-                                          </p>
-                                        )}
-                                    </div>
-                                )}
                             </div>
                         </div>
+                        {isGstinApplicable && (
+                            <div className="flex items-start mt-4 animate-fade-in">
+                                <div className="w-48 flex items-center gap-1.5 mt-2.5">
+                                    <label className="text-[11px] font-bold text-slate-800 uppercase tracking-widest">GSTIN Number<span className="text-rose-500">*</span></label>
+                                </div>
+                                <div className="flex-1">
+                                    <input 
+                                        value={gstNumber} 
+                                        onChange={e => {
+                                          const val = e.target.value.toUpperCase();
+                                          setGstNumber(val);
+                                          if (val.trim() === '') {
+                                            setGstError('');
+                                            return;
+                                          }
+                                          if (val.length !== 15) {
+                                            setGstError('GSTIN must be exactly 15 characters.');
+                                            return;
+                                          }
+                                          const gstRegex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}[Z]{1}[0-9A-Z]{1}$/;
+                                          if (!gstRegex.test(val)) {
+                                            setGstError('Invalid GSTIN format. Expected format: 22AAAAA0000A1Z5');
+                                            return;
+                                          }
+                                          const stateCode = parseInt(val.substring(0, 2), 10);
+                                          if (stateCode < 1 || stateCode > 38) {
+                                            setGstError('Invalid State Code (first 2 digits must be 01-38).');
+                                            return;
+                                          }
+                                          setGstError('');
+                                        }}
+                                        className={`w-full h-9 px-3 border ${gstError ? 'border-red-400 focus:border-red-500 bg-red-50/30' : 'border-slate-200 focus:border-blue-400'} rounded text-[13px] outline-none capitalize font-medium text-slate-700`} 
+                                        placeholder="22AAAAA0000A1Z5"
+                                        maxLength={15}
+                                    />
+                                    {gstError && (
+                                      <p className="text-red-500 text-[11px] font-medium mt-1.5 flex items-center gap-1">
+                                        <AlertCircle size={12} /> {gstError}
+                                      </p>
+                                    )}
+                                </div>
+                            </div>
+                        )}
 
                         {/* PAN */}
                         <div className="flex items-center">

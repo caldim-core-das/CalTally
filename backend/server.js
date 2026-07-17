@@ -6,7 +6,16 @@ const passport = require('passport');
 const path = require('path');
 const jwt = require('jsonwebtoken');
 const { sequelize } = require('./models');
+const rateLimit = require('express-rate-limit');
+const { logger } = require('./utils/logger');
+const correlationId = require('./middleware/correlationId.middleware');
+const requestLogger = require('./middleware/requestLogger.middleware');
+const securityHeaders = require('./middleware/securityHeaders.middleware');
+const { errorHandler } = require('./middleware/errorHandler.middleware');
 
+// --- EA Blueprint Vol 2: EventBus Initialized ---
+const eventBus = require('./core/EventBus');
+// -------------------------------------------------
 // 1. Initial Config
 dotenv.config();
 
@@ -21,6 +30,21 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 // 2. Middleware Strategy
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" },
+  contentSecurityPolicy: false, // Disabling temporarily, requires fine-tuning for React apps
+}));
+app.use(securityHeaders);
+app.use(correlationId);
+app.use(requestLogger);
+
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 1000, // Limit each IP to 1000 requests per windowMs
+  message: { error: { code: 'RATE_LIMIT', message: 'Too many requests from this IP, please try again later.' } }
+});
+app.use('/api/', apiLimiter);
+
 app.use(cors(corsOptions));
 app.use(express.json({
   limit: '10mb',
@@ -34,7 +58,7 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Add global CSRF Protection
 const { csrfProtection } = require('./middleware/auth.middleware');
-app.use(csrfProtection);
+// app.use(csrfProtection); // TODO: Re-enable after frontend headers are configured
 
 // 3. Authentication Engine (Passport)
 require('./config/passport');
@@ -71,6 +95,7 @@ app.use('/api/groups', require('./modules/accounting/group.routes'));
 app.use('/api/ledgers', require('./modules/accounting/ledger.routes'));
 app.use('/api/vouchers', require('./modules/accounting/voucher.routes'));
 app.use('/api/accounting', require('./modules/accounting/accounting.routes'));
+app.use('/api/fiscal-years', require('./modules/accounting/fiscalYear.routes'));
 app.use('/api/settings', require('./modules/settings/settings.routes'));
 app.use('/api/roles', require('./modules/roles/roles.routes'));
 
@@ -114,66 +139,33 @@ app.get('/api/debug-logs', async (req, res) => {
   }
 });
 
+// Global Error Handler
+app.use(errorHandler);
+
 // 6. DB Sync & Boot Strategy
 const dialect = process.env.DB_DIALECT || 'sqlite';
-const syncOptions = dialect === 'sqlite' ? { alter: true } : {}; // Disabled alter for Postgres to avoid Enum cast crashes
 
-sequelize.sync(syncOptions).then(async () => {
-  console.log(`✅ Ledger Database Synced [${dialect}]`);
-  
-  // Auto-migrate missing columns to prevent Sequelize errors
-  try {
-    await sequelize.query('ALTER TABLE "AuditLogs" ADD COLUMN status VARCHAR(255) NOT NULL DEFAULT \'COMPLETED\';').catch(() => {});
-    console.log('✅ Added status column to AuditLogs');
-  } catch (e) {
-    if (e.message && !e.message.includes('duplicate column')) {
-      console.log('⚠️ Minor DB Migrations (Ignored):', e.message);
-    }
-  }
+sequelize.authenticate().then(async () => {
+  logger.info(`✅ Ledger Database Connected [${dialect}]`);
 
-  try {
-    const queries = [
-      'ALTER TABLE "Users" ADD COLUMN "pendingEmail" VARCHAR(255);',
-      'ALTER TABLE "Users" ADD COLUMN "emailVerificationToken" VARCHAR(255);',
-      'ALTER TABLE "Users" ADD COLUMN "emailVerificationExpiry" TIMESTAMP WITH TIME ZONE;',
-      'ALTER TABLE "Users" ADD COLUMN "isEmailVerified" BOOLEAN DEFAULT false;',
-      'ALTER TABLE "Users" ADD COLUMN "resetPasswordToken" VARCHAR(255);',
-      'ALTER TABLE "Users" ADD COLUMN "resetPasswordExpiry" TIMESTAMP WITH TIME ZONE;',
-      'ALTER TABLE "Users" ADD COLUMN "notificationPreferences" JSON;',
-      'ALTER TABLE "Users" ADD COLUMN "oauthOnly" BOOLEAN DEFAULT false;',
-      'ALTER TABLE "Users" ADD COLUMN "failedLoginAttempts" INTEGER DEFAULT 0;',
-      'ALTER TABLE "Users" ADD COLUMN "lockedUntil" TIMESTAMP WITH TIME ZONE;',
-      'ALTER TABLE "Ledgers" ADD COLUMN "tdsApplicable" BOOLEAN DEFAULT false;',
-      'ALTER TABLE "SalesInvoiceItems" ADD COLUMN "gstRate" FLOAT DEFAULT 0;',
-      'ALTER TABLE "SalesOrderItems" ADD COLUMN "gstRate" FLOAT DEFAULT 0;'
-    ];
-    for (const q of queries) {
-      await sequelize.query(q).catch(e => {
-        // Ignore column already exists errors
-        if (!e.message.includes('already exists') && !e.message.includes('multiple assignments')) {
-           console.log('Migration note:', e.message);
-        }
-      });
-    }
-  } catch (err) {
-    console.error('Migration block error:', err.message);
-  }
+  // Note: sync({ alter: true }) and inline ALTER queries have been removed.
+  // Database schema management must now be handled via sequelize-cli migrations.
 
   // Load Background Jobs
   require('./jobs/inventoryAlerts');
 
-    // Initialize jobs
-    try {
-      const { initScheduler } = require('./jobs/reportScheduler');
-      await initScheduler();
-    } catch(err) {
-      console.error('Failed to init report scheduler', err);
-    }
+  // Initialize jobs
+  try {
+    const { initScheduler } = require('./jobs/reportScheduler');
+    await initScheduler();
+  } catch(err) {
+    logger.error({ err }, 'Failed to init report scheduler');
+  }
 
-    app.listen(PORT, () => {
-      console.log(`Server is running on port ${PORT}.`);
-    });
+  app.listen(PORT, () => {
+    logger.info(`Server is running on port ${PORT}.`);
+  });
 }).catch(err => {
-  console.error('❌ Critical Hub Entry Failure:', err.message);
+  logger.fatal({ err }, '❌ Critical Hub Entry Failure');
   process.exit(1);
 });

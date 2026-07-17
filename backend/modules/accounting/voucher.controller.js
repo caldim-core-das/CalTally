@@ -2,6 +2,7 @@ const { Voucher, Transaction, Ledger, CostCenterAllocation, CostCenter, Group, s
 const { Op } = require('sequelize');
 const AccountingService = require('../../services/AccountingService');
 const AuditService = require('../../services/AuditService');
+const eventBus = require('../../core/EventBus');
 
 exports.createVoucher = async (req, res, next) => {
   const t = await sequelize.transaction();
@@ -38,6 +39,9 @@ exports.createVoucher = async (req, res, next) => {
     await t.commit();
 
     // The Sequelize afterCreate hook in models/index.js automatically handles AuditLog creation.
+    
+    // Publish Domain Event
+    eventBus.publish('VOUCHER_POSTED', { voucherId: voucher.id, companyId, voucherType, amount: entries[0]?.debit || entries[0]?.credit }, { userId: req.user?.id, tenantId: companyId });
 
     res.status(201).json({ message: 'Voucher posted successfully.', voucher });
   } catch (err) {
@@ -80,6 +84,9 @@ exports.updateVoucher = async (req, res, next) => {
     await t.commit();
 
     // The Sequelize afterUpdate hook in models/index.js automatically handles AuditLog creation.
+
+    // Publish Domain Event
+    eventBus.publish('VOUCHER_UPDATED', { voucherId: voucher.id, companyId, voucherType: voucher.voucherType }, { userId: req.user?.id, tenantId: companyId });
 
     res.json({ message: 'Voucher updated successfully.', voucher });
   } catch (err) {

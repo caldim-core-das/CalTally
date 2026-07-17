@@ -75,7 +75,8 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.UUID,
       allowNull: true
     }
-  });
+  }, {
+    });
 
   VendorCredit.associate = (models) => {
     VendorCredit.hasMany(models.VendorCreditItem, { as: 'items', foreignKey: 'VendorCreditId' });

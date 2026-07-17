@@ -33,7 +33,8 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.ENUM('Active', 'Completed'),
       defaultValue: 'Active'
     }
-  });
+  }, {
+    });
 
   return ProjectTask;
 };

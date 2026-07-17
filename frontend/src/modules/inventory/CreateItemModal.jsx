@@ -14,20 +14,11 @@ const INITIAL_UNITS = [
 ];
 
 const SALES_ACCOUNTS_STRUCTURE = [
-  { category: "Income", accounts: ["Sales", "General Income", "Other Income", "Interest Income", "Discount", "Shipping Charge"] },
-  { category: "Other Current Liability", accounts: ["Unearned Revenue", "Tax Payable", "TDS Payable"] }
+  { category: "Income", accounts: ["Sales"] }
 ];
 
 const PURCHASE_ACCOUNTS_STRUCTURE = [
-  { category: "Expense", accounts: [
-      "Purchase Discounts", "Raw Materials And Consumables", "Office Supplies", 
-      "Advertising And Marketing", "Automobile Expense", "Bad Debt", 
-      "Bank Fees and Charges", "Consultant Expense", "IT and Internet Expenses", 
-      "Salaries and Employee Wages", "Transportation Expense", "Travel Expense", 
-      "Uncategorized"
-    ] 
-  },
-  { category: "Cost Of Goods Sold", accounts: ["Cost of Goods Sold", "Job Costing", "Labor", "Materials", "Subcontractor"] }
+  { category: "Cost Of Goods Sold", accounts: ["Cost of Goods Sold"] }
 ];
 
 const CreateItemModal = ({ isOpen, onClose, onSuccess, companyId }) => {

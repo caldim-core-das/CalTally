@@ -18,7 +18,8 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.DECIMAL(15, 4),
       allowNull: false
     }
-  });
+  }, {
+    });
 
   return BOMItem;
 };

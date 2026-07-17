@@ -145,11 +145,22 @@ const BillEntryView = ({ companyId }) => {
       companyAPI.getById(companyId).then(res => {
         const co = res.data;
         setCurrentCompany(co);
+        if (!id) {
+          setFormData(prev => ({
+            ...prev,
+            deliveryAddressData: {
+              attention: '',
+              street1: co.street1 || co.address || '',
+              street2: co.street2 || '',
+              city: co.city || '',
+              state: co.state || '',
+              zip: co.pincode || '',
+              country: co.location || co.country || 'India',
+              phone: co.phone || ''
+            }
+          }));
+        }
       }).catch(err => console.error('Failed to fetch company details:', err));
-
-      if (!id) {
-        /* Auto bill number logic removed for bills */
-      }
     }
   }, [companyId, id]);
 
@@ -913,7 +924,21 @@ const BillEntryView = ({ companyId }) => {
                    <input 
                      type="date"
                      value={formData.deliveryDate}
-                     onChange={(e) => setFormData({ ...formData, deliveryDate: e.target.value })}
+                     onChange={(e) => {
+                         const newDueDate = e.target.value;
+                         let newTerms = formData.paymentTerms;
+                         if (formData.date && newDueDate) {
+                             const diffTime = new Date(newDueDate) - new Date(formData.date);
+                             const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+                             if (diffDays === 0) newTerms = 'Due on Receipt';
+                             else if (diffDays >= 14 && diffDays <= 16) newTerms = 'Net 15';
+                             else if (diffDays >= 28 && diffDays <= 31) newTerms = 'Net 30';
+                             else if (diffDays >= 44 && diffDays <= 46) newTerms = 'Net 45';
+                             else if (diffDays >= 59 && diffDays <= 62) newTerms = 'Net 60';
+                             else newTerms = 'Custom';
+                         }
+                         setFormData({ ...formData, deliveryDate: newDueDate, paymentTerms: newTerms });
+                     }}
                      className="w-[280px] h-9 px-3 border border-slate-300 rounded text-slate-800 focus:border-blue-500 outline-none"
                    />
                    <div className="flex items-center gap-4">

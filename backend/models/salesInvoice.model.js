@@ -142,7 +142,8 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.STRING,
       allowNull: true
     }
-  });
+  }, {
+    });
 
   SalesInvoice.associate = (models) => {
     SalesInvoice.hasMany(models.SalesInvoiceItem, { as: 'items', foreignKey: 'SalesInvoiceId' });
