@@ -19,7 +19,7 @@ const CustomersListView = ({ companyId }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [isOptionsOpen, setIsOptionsOpen] = useState(false);
   const [activeSubMenu, setActiveSubMenu] = useState(null);
-  const [sortConfig, setSortConfig] = useState({ key: 'name', direction: 'asc' });
+  const [sortConfig, setSortConfig] = useState({ key: 'createdAt', direction: 'asc' });
   const [deleteId, setDeleteId] = useState(null);
   const [deleteName, setDeleteName] = useState('');
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);

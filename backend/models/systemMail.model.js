@@ -41,7 +41,8 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.STRING, // e.g., 'Vendor', 'Customer', 'Quote', 'Statement'
       defaultValue: 'General'
     }
-  });
+  }, {
+    });
 
   return SystemMail;
 };

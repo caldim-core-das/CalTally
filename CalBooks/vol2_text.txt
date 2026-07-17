@@ -1,0 +1,98 @@
+
+ENTERPRISE ARCHITECTURE BLUEPRINT
+Cloud Accounting & Business Management Platform
+(Codename "Ledger" - Zoho Books-class product)
+VOLUME 2 OF 9
+APPLICATION ARCHITECTURE
+Bounded Contexts - C4 Model - Module Dependencies - UML - Sequence Diagrams
+
+
+Table of Contents
+
+1. Introduction & Scope
+1.1 Purpose
+This volume translates the 21 business capability domains (BC-01 through BC-21) and six value streams (VS-01 through VS-06) defined in Volume 1 into an application architecture: bounded contexts, service/module boundaries, the C4 model (context, container, and selected component diagrams), a module dependency graph, core domain UML, and the key cross-service sequence diagrams. Every bounded context defined here is traceable to one or more BC-xx capability IDs (Section 3.2); every downstream volume (data model in Vol. 4, API contracts in Vol. 9, security boundaries in Vol. 6) is expected to align to the same boundaries.
+1.2 What This Volume Does Not Cover
+Concrete technology stack, language, and framework choices - that is Volume 3 (Technical Architecture).
+Physical database schema and ER diagrams - that is Volume 4 (Data Architecture), though this volume fixes the data ownership boundaries Volume 4 must respect.
+Detailed REST/GraphQL endpoint contracts - that is Volume 9 (API Design Document); this volume only sketches the API surface at the bounded-context level (Section 9).
+Deployment topology, scaling, and infrastructure sizing - that is Volume 7.
+
+2. Architectural Style Decision
+2.1 Decision Record: Modular Monolith First, Service-Ready Boundaries
+2.2 Communication Style Between Bounded Contexts
+
+3. Domain-Driven Design: Bounded Contexts
+3.1 Context Consolidation Rationale
+The 21 capability domains from Vol. 1 are consolidated into 16 bounded contexts. Consolidation follows standard DDD guidance: capabilities that share a ubiquitous language, change for the same business reasons, and are usually modified together are merged (e.g. Expense Management folds into Payables since both represent money leaving the business); capabilities with genuinely distinct language and change cadence stay separate (e.g. Tax Compliance is distinct from Ledger even though both touch financial postings, because tax rules change on regulatory schedules, not accounting schedules).
+3.2 Bounded Context Catalog
+3.3 Context Map
+Diagram: Context map - relationships between bounded contexts
+
+Relationship legend: "shared kernel" = every context depends on Identity & Tenant for auth/tenancy context (cannot function without it). "customer/upstream" = the pointing context is upstream and the arrow target adapts to it (e.g. Receivables posts journal entries in the shape Ledger dictates). "conformist" = the dependent context accepts the upstream context's model as-is rather than translating it. "open host service" = Tax publishes a stable public interface multiple contexts call. "anti-corruption layer" = a translation layer isolates the context from an external or volatile model (third-party bank/payment APIs, or user-defined automation rules).
+
+4. C4 Model - Level 1: System Context
+The system context diagram shows the platform as a single box, its human actors (from Vol. 1 Section 4 personas), and the external systems it must integrate with (from Vol. 1 BC-19 and BC-05/06/11).
+Diagram: C4 Level 1 - System Context Diagram
+
+
+5. C4 Model - Level 2: Container Diagram
+Containers represent the deployable/runnable units. Consistent with the Section 2 decision, most business-logic containers are modules within a single "Core Application" process at Release 1, while client apps, the API gateway, event bus, and data stores are always separate containers.
+Diagram: C4 Level 2 - Container Diagram
+
+
+6. C4 Model - Level 3: Component Diagrams
+Component-level detail is shown for the two highest-risk modules identified in Vol. 1 Section 8: Receivables (invoice lifecycle) and Ledger (financial source of truth). Other modules follow the same internal layering (API/Controller -> Domain Service -> Repository -> Event Publisher) and are not separately diagrammed here to avoid redundancy; Volume 9 will detail their API surface.
+6.1 Receivables Module - Components
+Diagram: C4 Level 3 - Receivables Module components
+
+6.2 Ledger Module - Components
+Diagram: C4 Level 3 - Ledger Module components
+
+
+7. Module Dependency Diagram
+This is the authoritative dependency graph for build order and for enforcing "no upward dependency" rules in Volume 3's coding standards (a lower-layer module must never import from a higher-layer module). Layering is derived directly from Section 3's context map.
+Diagram: Module dependency graph (layered)
+
+Rule of thumb enforced by this diagram: a module in Layer N may depend on any module in Layer 0..N-1, and may communicate with modules in the same layer only via domain events (never direct calls), to avoid layer-internal circular dependencies. Reporting (Layer 4) is read-only against every module it points to - it never writes back into Ledger, Receivables, Payables, or Inventory.
+
+8. UML Domain Model (Class Diagrams)
+These class diagrams define the canonical domain vocabulary that Volume 4 (Data Architecture) will turn into schema, and that Volume 9 (API Design) will turn into request/response payloads. Associations shown are domain relationships, not foreign keys - Volume 4 owns the physical implementation, including any denormalization for performance.
+8.1 Ledger Core Domain
+Diagram: UML class diagram - Ledger core domain
+
+8.2 Receivables Core Domain
+Diagram: UML class diagram - Receivables core domain
+
+
+9. Sequence Diagrams - Cross-Context Flows
+These sequence diagrams elaborate the Vol. 1 Section 8 process flows at the module-interaction level, showing exactly which module calls which and where domain events are published versus consumed.
+9.1 Invoice Creation & Ledger Posting
+Diagram: Sequence - invoice send triggers ledger posting
+
+9.2 Payment Received & Bank Reconciliation
+Diagram: Sequence - payment matched during reconciliation
+
+9.3 Purchase 3-Way Match (Choreography)
+Diagram: Sequence - event-driven 3-way match
+
+
+10. Domain Event Catalog
+The event bus (Section 5, 6) is the primary decoupling mechanism between bounded contexts at the same architectural layer. This table is the initial event contract registry; Volume 3 will define the concrete message schema/versioning strategy and Volume 9 will document the webhook-exposed subset for external integrators (BC-19).
+
+11. API Surface Overview (Context-Level)
+Volume 9 will define full endpoint contracts; this section fixes which context owns which resource so Volume 9 does not have to re-derive ownership.
+
+12. Traceability & Next Phase
+12.1 Traceability to Volume 1
+12.2 Forward Contract to Downstream Volumes
+Volume 3 (Technical Architecture) must adopt the 16 bounded contexts as its module/package structure and enforce the layering in Section 7 via lint rules or dependency-graph checks.
+Volume 4 (Data Architecture) must give each bounded context its own schema/namespace per Section 2's "no cross-module direct database access" rule, and use Section 8's class diagrams as the starting entity list.
+Volume 6 (Security Architecture) must derive its service-to-service auth model from the Section 5 container boundaries (which containers are network-reachable from which).
+Volume 9 (API Design) must expand Section 11's resource ownership table into full endpoint contracts, and Section 10's event catalog into the public webhook subset.
+12.3 Open Questions for Sign-off
+Is the modular-monolith-first decision (Section 2.1) acceptable given team size and timeline, or is there an organizational reason to start with separate deployables (e.g. separate teams per context)?
+Should Payments (CTX-06) and Integration Gateway (CTX-16) be built as separate services from day one, given they inherently talk to volatile third-party APIs and benefit from independent deploy cycles even at MVP?
+Confirm the event bus technology preference (if any exists) before Volume 3 - this affects whether Section 10's events are designed for at-least-once or exactly-once delivery semantics.
+12.4 Next Phase
+On approval, Phase 3 begins: Technical Architecture (Volume 3) - concrete technology stack selection with rationale, coding standards, folder/repository structure, logging strategy, caching strategy, and queue processing design, all built on the module boundaries fixed in this volume.

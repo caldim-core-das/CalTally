@@ -93,7 +93,8 @@ module.exports = (sequelize, DataTypes) => {
         appInventory: true
       }
     }
-  });
+  }, {
+    });
 
   return User;
 };

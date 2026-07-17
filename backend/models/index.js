@@ -76,6 +76,9 @@ const FinancialPeriod = require('./financialPeriod.model')(sequelize, DataTypes)
 const UserCompany = require('./userCompany.model')(sequelize, DataTypes);
 const CustomRole = require('./customRole.model')(sequelize, DataTypes);
 const SavedReport = require('./savedReport.model')(sequelize, DataTypes);
+const FiscalYear = require('./fiscalYear.model')(sequelize, DataTypes);
+const ReportSnapshot = require('./reportSnapshot.model')(sequelize, DataTypes);
+const ProcessedEvent = require('./processedEvent.model')(sequelize, DataTypes);
 
 
 // ─── Associations ────────────────────────────────────────────────────────────
@@ -619,6 +622,15 @@ SavedReport.belongsTo(Company, { foreignKey: 'companyId' });
 User.hasMany(SavedReport, { foreignKey: 'createdBy' });
 SavedReport.belongsTo(User, { as: 'Creator', foreignKey: 'createdBy' });
 
+// 26. Fiscal Year & Report Snapshots
+Company.hasMany(FiscalYear, { foreignKey: 'CompanyId', onDelete: 'CASCADE' });
+FiscalYear.belongsTo(Company, { foreignKey: 'CompanyId' });
+
+Company.hasMany(ReportSnapshot, { foreignKey: 'CompanyId', onDelete: 'CASCADE' });
+ReportSnapshot.belongsTo(Company, { foreignKey: 'CompanyId' });
+FiscalYear.hasMany(ReportSnapshot, { foreignKey: 'FiscalYearId', onDelete: 'SET NULL' });
+ReportSnapshot.belongsTo(FiscalYear, { foreignKey: 'FiscalYearId' });
+
 registerAuditHooks(Voucher, 'Voucher');
 registerAuditHooks(Ledger, 'Ledger');
 registerAuditHooks(Company, 'Company');
@@ -632,9 +644,11 @@ registerAuditHooks(Quote, 'Quote');
 registerAuditHooks(SalesOrder, 'SalesOrder');
 registerAuditHooks(PurchaseOrder, 'PurchaseOrder');
 registerAuditHooks(SalesInvoice, 'SalesInvoice');
+registerAuditHooks(FiscalYear, 'FiscalYear');
 
+// Removed getConnection override to prevent infinite loops or connection hanging
 
-module.exports = {
+const db = {
   sequelize,
   User,
   Role,
@@ -709,5 +723,10 @@ module.exports = {
   FinancialPeriod,
   CustomRole,
   UserCompany,
-  SavedReport
+  SavedReport,
+  FiscalYear,
+  ReportSnapshot,
+  ProcessedEvent
 };
+
+module.exports = db;

@@ -1,0 +1,103 @@
+
+ENTERPRISE ARCHITECTURE BLUEPRINT
+Cloud Accounting & Business Management Platform
+(Codename "Ledger" - Zoho Books-class product)
+VOLUME 3 OF 9
+TECHNICAL ARCHITECTURE
+Technology Stack - Coding Standards - Folder Structure - Logging - Caching - Queueing
+
+
+Table of Contents
+
+1. Introduction & Scope
+1.1 Purpose
+This volume selects and justifies the concrete technology stack, and defines the engineering conventions (folder structure, coding standards, logging, caching, queueing, multi-tenancy implementation) needed to start writing code against the bounded contexts fixed in Volume 2. Every decision below is written as a lightweight ADR (Architecture Decision Record): context, decision, and consequences, so it can be revisited explicitly rather than silently drifted from.
+1.2 Constraints Inherited From Earlier Volumes
+Vol. 1 Principle P1: multi-tenancy is first-class - every table, cache key, queue message, and log line carries a tenant identifier (Section 6, 7, 8, 11 of this volume implement this).
+Vol. 1 Principle P3/P4: the ledger is the single source of truth and is append-only/auditable - this constrains the database and ORM choices in Section 2.
+Vol. 2 Section 2 decision: modular monolith first, with enforced module boundaries - this constrains the folder structure (Section 3) and coding standards (Section 4).
+Vol. 2 Section 10 event catalog: the platform needs a durable, ordered-per-key event bus - this constrains Section 8's queueing technology choice.
+
+2. Technology Stack Selection
+Each decision below follows the same format: Context, Options Considered, Decision, Rationale, Consequences. Where the choice affects cost or ops complexity, that trade-off is stated explicitly rather than assumed.
+2.1 Backend Language & Framework
+2.2 Primary Datastore
+2.3 Frontend Framework
+2.4 Cache Layer
+2.5 Event Bus / Message Broker
+2.6 Search & Reporting Index
+2.7 Object/File Storage
+2.8 API Style
+
+3. Repository & Folder Structure
+3.1 Repository Strategy Decision
+3.2 Top-Level Folder Structure
+Folder tree (abbreviated)
+
+3.3 Inside a Module (e.g. /libs/modules/receivables)
+Per-module internal layering (maps to Vol.2 Sec.6 component diagrams)
+
+The index.ts export-surface rule is the enforcement mechanism for Vol. 2's "no cross-module direct database access": a lint rule forbids any import path that reaches past a module's index.ts into its internal folders (e.g. forbidding import ... from '@ledger-platform/receivables/infrastructure/repository' from outside the receivables module).
+
+4. Coding Standards
+4.1 Enforcement Mechanism
+Standards below are enforced automatically wherever possible (linter rules, CI gate) rather than relying on code review discipline alone. Vol. 8 (Testing & QA) defines the CI pipeline gates that run these checks on every pull request.
+4.2 Core Rules
+4.3 Error Handling Convention
+Standard error shape (all modules)
+
+Error codes are namespaced by bounded context (RECEIVABLES., PAYABLES., LEDGER., ...) so client applications and support tooling can route/handle errors predictably. Every error response carries the same correlationId as the structured log entry for that request (Section 6), so a support engineer can go from a user-reported error code straight to the relevant log lines.
+
+5. API Design Conventions (Summary)
+Full endpoint-by-endpoint contracts belong to Volume 9; this section fixes the conventions every endpoint must follow so Volume 9 does not have to re-derive them per bounded context.
+
+6. Logging Strategy
+6.1 Principles
+Structured JSON logging only - no unstructured string logs - so logs are queryable in the observability platform (Vol. 7 will select the concrete tool, e.g. an ELK/OpenSearch or vendor SaaS stack).
+Every log line carries: tenantId, userId (if applicable), correlationId, module (CTX-xx), and a severity level.
+Correlation ID is generated at the API Gateway (Vol. 2 Section 5) on every inbound request and propagated through every internal call and published event, so one user action can be traced end-to-end across modules even inside the monolith.
+Financial-mutation log lines (ledger postings, invoice status changes) are never sampled or dropped - they log at INFO level unconditionally, distinct from high-volume debug logs which may be sampled under load.
+6.2 Log Levels
+Example structured log line
+
+
+7. Caching Strategy
+7.1 Cache Layers
+7.2 Cache Key Convention (Tenant-Safe)
+Cache key pattern - tenant ID is always the first segment
+
+No cache key is ever constructed without a tenant ID prefix - this is a CI-enforced lint rule (Section 4) to prevent the single highest-risk multi-tenancy bug class: cross-tenant cache leakage. A shared cache utility wraps all Redis access so individual modules cannot bypass the key convention.
+
+8. Queue & Asynchronous Processing Strategy
+8.1 Event Bus Topic Design
+Kafka topics are partitioned by tenantId + aggregateId to guarantee per-aggregate ordering (e.g. all events for one invoice arrive in order) while allowing horizontal consumer scaling across tenants.
+8.2 Delivery Semantics & Idempotent Consumers
+At-least-once delivery is assumed for all Kafka consumers (exactly-once is not guaranteed end-to-end across this stack). Every consumer must be idempotent - reprocessing the same event must not double-post a journal entry or double-send a notification.
+Idempotency is achieved by consumers tracking a processed-event-id ledger (keyed by event ID, checked before applying side effects) rather than relying on the broker alone.
+Poison messages (repeatedly failing to process) are routed to a dead-letter topic after a bounded retry count (e.g. 5 attempts with exponential backoff) and surfaced as an operational alert (Vol. 7).
+8.3 Background Jobs vs. Event-Driven Reactions
+
+9. Background Jobs & Scheduling
+Scheduling architecture
+
+
+10. Configuration & Feature Flag Management
+Implements the entitlement-check mechanism anticipated by Vol. 1 Section 9 (Standard/Professional/Enterprise editions) and Vol. 2 Section 12's forward contract.
+
+11. Multi-Tenancy Implementation Strategy
+11.1 Decision
+11.2 Tenant Context Propagation
+Request lifecycle - tenant context
+
+
+12. Performance & Scalability Targets
+Derived from Vol. 1 Section 2.4 business goals; Volume 7 (Infrastructure) will size the deployment to meet these, and Volume 8 (Testing & QA) will define the load-test suite that verifies them.
+
+13. Traceability & Next Phase
+13.1 Traceability to Volumes 1 and 2
+13.2 Open Questions for Sign-off
+Confirm cloud provider preference (AWS/GCP/Azure) if one exists - this affects which managed services (Kafka, Redis, OpenSearch, object storage) Volume 7 will size and price.
+Confirm whether Nx or Turborepo is preferred for the monorepo tooling, or whether the team has an existing preference/expertise to weigh in.
+Confirm the Release 3 tenant-isolation escape hatch (Section 11.1) is an acceptable answer to any known enterprise-customer data-residency requirements, or whether isolation needs to be available earlier.
+13.3 Next Phase
+On approval, Phase 4 begins: Data Architecture (Volume 4) - entity-relationship diagrams, physical schema design (including the tenant_id/RLS pattern from Section 11), indexing and partitioning strategy for high-volume tables, and the migration strategy, all built on the module boundaries (Vol. 2) and stack decisions (this volume).

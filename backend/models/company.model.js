@@ -152,7 +152,8 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.UUID,
       allowNull: true // Can be null if custom or totally free
     }
-  });
+  }, {
+    });
 
   return Company;
 };

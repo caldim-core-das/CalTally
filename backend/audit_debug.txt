@@ -718,3 +718,528 @@ Error
     at async model.save (C:\Users\loges\OneDrive\Desktop\Tally\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2547:7)
     at async Ledger.create (C:\Users\loges\OneDrive\Desktop\Tally\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1362:12)
     at async exports.seedDefaultLedgers (C:\Users\loges\OneDrive\Desktop\Tally\Tally_accounting\backend\modules\company\company.controller.js:71:7)
+2026-07-14T04:50:20.618Z - [Create Ledger] insert or update on table "AuditLogs" violates foreign key constraint "AuditLogs_CompanyId_fkey"
+Error
+    at Query.run (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\dialects\postgres\query.js:50:25)
+    at C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\sequelize.js:315:28
+    at async PostgresQueryInterface.insert (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\dialects\abstract\query-interface.js:308:21)
+    at async model.save (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2490:35)
+    at async AuditLog.create (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1362:12)
+    at async Ledger.<anonymous> (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\models\index.js:537:7)
+    at async Ledger.runHooks (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\hooks.js:96:7)
+    at async model.save (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2547:7)
+    at async Ledger.create (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1362:12)
+    at async exports.seedDefaultLedgers (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\modules\company\company.controller.js:71:7)
+2026-07-14T04:50:21.109Z - [Create Ledger] insert or update on table "AuditLogs" violates foreign key constraint "AuditLogs_CompanyId_fkey"
+Error
+    at Query.run (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\dialects\postgres\query.js:50:25)
+    at C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\sequelize.js:315:28
+    at async PostgresQueryInterface.insert (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\dialects\abstract\query-interface.js:308:21)
+    at async model.save (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2490:35)
+    at async AuditLog.create (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1362:12)
+    at async Ledger.<anonymous> (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\models\index.js:537:7)
+    at async Ledger.runHooks (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\hooks.js:96:7)
+    at async model.save (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2547:7)
+    at async Ledger.create (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1362:12)
+    at async exports.seedDefaultLedgers (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\modules\company\company.controller.js:71:7)
+2026-07-14T04:50:21.610Z - [Create Ledger] insert or update on table "AuditLogs" violates foreign key constraint "AuditLogs_CompanyId_fkey"
+Error
+    at Query.run (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\dialects\postgres\query.js:50:25)
+    at C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\sequelize.js:315:28
+    at async PostgresQueryInterface.insert (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\dialects\abstract\query-interface.js:308:21)
+    at async model.save (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2490:35)
+    at async AuditLog.create (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1362:12)
+    at async Ledger.<anonymous> (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\models\index.js:537:7)
+    at async Ledger.runHooks (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\hooks.js:96:7)
+    at async model.save (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2547:7)
+    at async Ledger.create (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1362:12)
+    at async exports.seedDefaultLedgers (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\modules\company\company.controller.js:71:7)
+2026-07-14T04:50:22.111Z - [Create Ledger] insert or update on table "AuditLogs" violates foreign key constraint "AuditLogs_CompanyId_fkey"
+Error
+    at Query.run (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\dialects\postgres\query.js:50:25)
+    at C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\sequelize.js:315:28
+    at async PostgresQueryInterface.insert (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\dialects\abstract\query-interface.js:308:21)
+    at async model.save (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2490:35)
+    at async AuditLog.create (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1362:12)
+    at async Ledger.<anonymous> (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\models\index.js:537:7)
+    at async Ledger.runHooks (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\hooks.js:96:7)
+    at async model.save (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2547:7)
+    at async Ledger.create (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1362:12)
+    at async exports.seedDefaultLedgers (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\modules\company\company.controller.js:71:7)
+2026-07-14T04:50:22.612Z - [Create Ledger] insert or update on table "AuditLogs" violates foreign key constraint "AuditLogs_CompanyId_fkey"
+Error
+    at Query.run (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\dialects\postgres\query.js:50:25)
+    at C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\sequelize.js:315:28
+    at async PostgresQueryInterface.insert (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\dialects\abstract\query-interface.js:308:21)
+    at async model.save (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2490:35)
+    at async AuditLog.create (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1362:12)
+    at async Ledger.<anonymous> (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\models\index.js:537:7)
+    at async Ledger.runHooks (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\hooks.js:96:7)
+    at async model.save (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2547:7)
+    at async Ledger.create (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1362:12)
+    at async exports.seedDefaultLedgers (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\modules\company\company.controller.js:71:7)
+2026-07-14T04:50:23.116Z - [Create Ledger] insert or update on table "AuditLogs" violates foreign key constraint "AuditLogs_CompanyId_fkey"
+Error
+    at Query.run (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\dialects\postgres\query.js:50:25)
+    at C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\sequelize.js:315:28
+    at async PostgresQueryInterface.insert (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\dialects\abstract\query-interface.js:308:21)
+    at async model.save (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2490:35)
+    at async AuditLog.create (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1362:12)
+    at async Ledger.<anonymous> (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\models\index.js:537:7)
+    at async Ledger.runHooks (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\hooks.js:96:7)
+    at async model.save (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2547:7)
+    at async Ledger.create (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1362:12)
+    at async exports.seedDefaultLedgers (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\modules\company\company.controller.js:71:7)
+2026-07-14T04:50:23.646Z - [Create Ledger] insert or update on table "AuditLogs" violates foreign key constraint "AuditLogs_CompanyId_fkey"
+Error
+    at Query.run (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\dialects\postgres\query.js:50:25)
+    at C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\sequelize.js:315:28
+    at async PostgresQueryInterface.insert (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\dialects\abstract\query-interface.js:308:21)
+    at async model.save (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2490:35)
+    at async AuditLog.create (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1362:12)
+    at async Ledger.<anonymous> (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\models\index.js:537:7)
+    at async Ledger.runHooks (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\hooks.js:96:7)
+    at async model.save (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2547:7)
+    at async Ledger.create (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1362:12)
+    at async exports.seedDefaultLedgers (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\modules\company\company.controller.js:71:7)
+2026-07-14T04:50:24.130Z - [Create Ledger] insert or update on table "AuditLogs" violates foreign key constraint "AuditLogs_CompanyId_fkey"
+Error
+    at Query.run (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\dialects\postgres\query.js:50:25)
+    at C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\sequelize.js:315:28
+    at async PostgresQueryInterface.insert (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\dialects\abstract\query-interface.js:308:21)
+    at async model.save (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2490:35)
+    at async AuditLog.create (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1362:12)
+    at async Ledger.<anonymous> (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\models\index.js:537:7)
+    at async Ledger.runHooks (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\hooks.js:96:7)
+    at async model.save (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2547:7)
+    at async Ledger.create (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1362:12)
+    at async exports.seedDefaultLedgers (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\modules\company\company.controller.js:71:7)
+2026-07-14T04:50:24.618Z - [Create Ledger] insert or update on table "AuditLogs" violates foreign key constraint "AuditLogs_CompanyId_fkey"
+Error
+    at Query.run (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\dialects\postgres\query.js:50:25)
+    at C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\sequelize.js:315:28
+    at async PostgresQueryInterface.insert (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\dialects\abstract\query-interface.js:308:21)
+    at async model.save (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2490:35)
+    at async AuditLog.create (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1362:12)
+    at async Ledger.<anonymous> (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\models\index.js:537:7)
+    at async Ledger.runHooks (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\hooks.js:96:7)
+    at async model.save (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2547:7)
+    at async Ledger.create (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1362:12)
+    at async exports.seedDefaultLedgers (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\modules\company\company.controller.js:71:7)
+2026-07-14T04:50:25.091Z - [Create Ledger] insert or update on table "AuditLogs" violates foreign key constraint "AuditLogs_CompanyId_fkey"
+Error
+    at Query.run (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\dialects\postgres\query.js:50:25)
+    at C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\sequelize.js:315:28
+    at async PostgresQueryInterface.insert (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\dialects\abstract\query-interface.js:308:21)
+    at async model.save (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2490:35)
+    at async AuditLog.create (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1362:12)
+    at async Ledger.<anonymous> (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\models\index.js:537:7)
+    at async Ledger.runHooks (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\hooks.js:96:7)
+    at async model.save (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2547:7)
+    at async Ledger.create (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1362:12)
+    at async exports.seedDefaultLedgers (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\modules\company\company.controller.js:71:7)
+2026-07-16T09:35:05.905Z - [Create Ledger] insert or update on table "AuditLogs" violates foreign key constraint "AuditLogs_CompanyId_fkey"
+Error
+    at Query.run (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\dialects\postgres\query.js:50:25)
+    at C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\sequelize.js:315:28
+    at async PostgresQueryInterface.insert (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\dialects\abstract\query-interface.js:308:21)
+    at async model.save (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2490:35)
+    at async AuditLog.create (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1362:12)
+    at async Ledger.<anonymous> (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\models\index.js:537:7)
+    at async Ledger.runHooks (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\hooks.js:96:7)
+    at async model.save (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2547:7)
+    at async Ledger.create (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1362:12)
+    at async exports.seedDefaultLedgers (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\modules\company\company.controller.js:71:7)
+2026-07-16T09:35:06.420Z - [Create Ledger] insert or update on table "AuditLogs" violates foreign key constraint "AuditLogs_CompanyId_fkey"
+Error
+    at Query.run (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\dialects\postgres\query.js:50:25)
+    at C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\sequelize.js:315:28
+    at async PostgresQueryInterface.insert (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\dialects\abstract\query-interface.js:308:21)
+    at async model.save (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2490:35)
+    at async AuditLog.create (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1362:12)
+    at async Ledger.<anonymous> (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\models\index.js:537:7)
+    at async Ledger.runHooks (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\hooks.js:96:7)
+    at async model.save (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2547:7)
+    at async Ledger.create (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1362:12)
+    at async exports.seedDefaultLedgers (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\modules\company\company.controller.js:71:7)
+2026-07-16T09:35:06.917Z - [Create Ledger] insert or update on table "AuditLogs" violates foreign key constraint "AuditLogs_CompanyId_fkey"
+Error
+    at Query.run (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\dialects\postgres\query.js:50:25)
+    at C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\sequelize.js:315:28
+    at async PostgresQueryInterface.insert (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\dialects\abstract\query-interface.js:308:21)
+    at async model.save (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2490:35)
+    at async AuditLog.create (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1362:12)
+    at async Ledger.<anonymous> (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\models\index.js:537:7)
+    at async Ledger.runHooks (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\hooks.js:96:7)
+    at async model.save (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2547:7)
+    at async Ledger.create (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1362:12)
+    at async exports.seedDefaultLedgers (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\modules\company\company.controller.js:71:7)
+2026-07-16T09:35:07.423Z - [Create Ledger] insert or update on table "AuditLogs" violates foreign key constraint "AuditLogs_CompanyId_fkey"
+Error
+    at Query.run (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\dialects\postgres\query.js:50:25)
+    at C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\sequelize.js:315:28
+    at async PostgresQueryInterface.insert (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\dialects\abstract\query-interface.js:308:21)
+    at async model.save (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2490:35)
+    at async AuditLog.create (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1362:12)
+    at async Ledger.<anonymous> (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\models\index.js:537:7)
+    at async Ledger.runHooks (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\hooks.js:96:7)
+    at async model.save (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2547:7)
+    at async Ledger.create (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1362:12)
+    at async exports.seedDefaultLedgers (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\modules\company\company.controller.js:71:7)
+2026-07-16T09:35:07.938Z - [Create Ledger] insert or update on table "AuditLogs" violates foreign key constraint "AuditLogs_CompanyId_fkey"
+Error
+    at Query.run (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\dialects\postgres\query.js:50:25)
+    at C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\sequelize.js:315:28
+    at async PostgresQueryInterface.insert (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\dialects\abstract\query-interface.js:308:21)
+    at async model.save (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2490:35)
+    at async AuditLog.create (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1362:12)
+    at async Ledger.<anonymous> (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\models\index.js:537:7)
+    at async Ledger.runHooks (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\hooks.js:96:7)
+    at async model.save (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2547:7)
+    at async Ledger.create (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1362:12)
+    at async exports.seedDefaultLedgers (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\modules\company\company.controller.js:71:7)
+2026-07-16T09:35:08.439Z - [Create Ledger] insert or update on table "AuditLogs" violates foreign key constraint "AuditLogs_CompanyId_fkey"
+Error
+    at Query.run (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\dialects\postgres\query.js:50:25)
+    at C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\sequelize.js:315:28
+    at async PostgresQueryInterface.insert (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\dialects\abstract\query-interface.js:308:21)
+    at async model.save (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2490:35)
+    at async AuditLog.create (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1362:12)
+    at async Ledger.<anonymous> (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\models\index.js:537:7)
+    at async Ledger.runHooks (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\hooks.js:96:7)
+    at async model.save (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2547:7)
+    at async Ledger.create (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1362:12)
+    at async exports.seedDefaultLedgers (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\modules\company\company.controller.js:71:7)
+2026-07-16T09:35:08.939Z - [Create Ledger] insert or update on table "AuditLogs" violates foreign key constraint "AuditLogs_CompanyId_fkey"
+Error
+    at Query.run (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\dialects\postgres\query.js:50:25)
+    at C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\sequelize.js:315:28
+    at async PostgresQueryInterface.insert (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\dialects\abstract\query-interface.js:308:21)
+    at async model.save (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2490:35)
+    at async AuditLog.create (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1362:12)
+    at async Ledger.<anonymous> (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\models\index.js:537:7)
+    at async Ledger.runHooks (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\hooks.js:96:7)
+    at async model.save (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2547:7)
+    at async Ledger.create (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1362:12)
+    at async exports.seedDefaultLedgers (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\modules\company\company.controller.js:71:7)
+2026-07-16T09:35:09.457Z - [Create Ledger] insert or update on table "AuditLogs" violates foreign key constraint "AuditLogs_CompanyId_fkey"
+Error
+    at Query.run (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\dialects\postgres\query.js:50:25)
+    at C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\sequelize.js:315:28
+    at async PostgresQueryInterface.insert (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\dialects\abstract\query-interface.js:308:21)
+    at async model.save (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2490:35)
+    at async AuditLog.create (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1362:12)
+    at async Ledger.<anonymous> (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\models\index.js:537:7)
+    at async Ledger.runHooks (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\hooks.js:96:7)
+    at async model.save (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2547:7)
+    at async Ledger.create (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1362:12)
+    at async exports.seedDefaultLedgers (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\modules\company\company.controller.js:71:7)
+2026-07-16T09:35:09.974Z - [Create Ledger] insert or update on table "AuditLogs" violates foreign key constraint "AuditLogs_CompanyId_fkey"
+Error
+    at Query.run (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\dialects\postgres\query.js:50:25)
+    at C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\sequelize.js:315:28
+    at async PostgresQueryInterface.insert (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\dialects\abstract\query-interface.js:308:21)
+    at async model.save (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2490:35)
+    at async AuditLog.create (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1362:12)
+    at async Ledger.<anonymous> (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\models\index.js:537:7)
+    at async Ledger.runHooks (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\hooks.js:96:7)
+    at async model.save (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2547:7)
+    at async Ledger.create (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1362:12)
+    at async exports.seedDefaultLedgers (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\modules\company\company.controller.js:71:7)
+2026-07-16T09:35:10.474Z - [Create Ledger] insert or update on table "AuditLogs" violates foreign key constraint "AuditLogs_CompanyId_fkey"
+Error
+    at Query.run (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\dialects\postgres\query.js:50:25)
+    at C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\sequelize.js:315:28
+    at async PostgresQueryInterface.insert (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\dialects\abstract\query-interface.js:308:21)
+    at async model.save (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2490:35)
+    at async AuditLog.create (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1362:12)
+    at async Ledger.<anonymous> (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\models\index.js:537:7)
+    at async Ledger.runHooks (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\hooks.js:96:7)
+    at async model.save (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2547:7)
+    at async Ledger.create (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1362:12)
+    at async exports.seedDefaultLedgers (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\modules\company\company.controller.js:71:7)
+2026-07-16T12:51:34.946Z - [Create User] new row violates row-level security policy for table "AuditLogs"
+Error
+    at Query.run (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\dialects\postgres\query.js:50:25)
+    at C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\sequelize.js:315:28
+    at async PostgresQueryInterface.insert (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\dialects\abstract\query-interface.js:308:21)
+    at async model.save (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2490:35)
+    at async AuditLog.create (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1362:12)
+    at async User.<anonymous> (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\models\index.js:538:7)
+    at async User.runHooks (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\hooks.js:96:7)
+    at async model.save (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2547:7)
+    at async User.create (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1362:12)
+    at async exports.register (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\modules\auth\auth.controller.js:170:18)
+2026-07-17T04:50:50.970Z - [Create User] new row violates row-level security policy for table "AuditLogs"
+Error
+    at Query.run (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\dialects\postgres\query.js:50:25)
+    at C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\sequelize.js:315:28
+    at async PostgresQueryInterface.insert (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\dialects\abstract\query-interface.js:308:21)
+    at async model.save (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2490:35)
+    at async AuditLog.create (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1362:12)
+    at async User.<anonymous> (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\models\index.js:538:7)
+    at async User.runHooks (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\hooks.js:96:7)
+    at async model.save (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2547:7)
+    at async User.create (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1362:12)
+    at async exports.register (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\modules\auth\auth.controller.js:170:18)
+2026-07-17T04:56:46.775Z - [Create Company] new row violates row-level security policy for table "AuditLogs"
+Error
+    at Query.run (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\dialects\postgres\query.js:50:25)
+    at C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\sequelize.js:315:28
+    at async PostgresQueryInterface.insert (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\dialects\abstract\query-interface.js:308:21)
+    at async model.save (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2490:35)
+    at async AuditLog.create (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1362:12)
+    at async Company.<anonymous> (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\models\index.js:538:7)
+    at async Company.runHooks (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\hooks.js:96:7)
+    at async model.save (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2547:7)
+    at async Company.create (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1362:12)
+    at async exports.createCompany (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\modules\company\company.controller.js:108:21)
+2026-07-17T04:56:47.538Z - [Update User] new row violates row-level security policy for table "AuditLogs"
+Error
+    at Query.run (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\dialects\postgres\query.js:50:25)
+    at C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\sequelize.js:315:28
+    at async PostgresQueryInterface.insert (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\dialects\abstract\query-interface.js:308:21)
+    at async model.save (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2490:35)
+    at async AuditLog.create (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1362:12)
+    at async User.<anonymous> (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\models\index.js:579:7)
+    at async User.runHooks (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\hooks.js:96:7)
+    at async model.save (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2547:7)
+    at async exports.createCompany (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\modules\company\company.controller.js:145:9)
+2026-07-17T05:06:29.415Z - [Create Company] new row violates row-level security policy for table "AuditLogs"
+Error
+    at Query.run (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\dialects\postgres\query.js:50:25)
+    at C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\sequelize.js:315:28
+    at async PostgresQueryInterface.insert (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\dialects\abstract\query-interface.js:308:21)
+    at async model.save (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2490:35)
+    at async AuditLog.create (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1362:12)
+    at async Company.<anonymous> (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\models\index.js:538:7)
+    at async Company.runHooks (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\hooks.js:96:7)
+    at async model.save (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2547:7)
+    at async Company.create (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1362:12)
+    at async exports.createCompany (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\modules\company\company.controller.js:108:21)
+2026-07-17T05:06:29.970Z - [Update User] new row violates row-level security policy for table "AuditLogs"
+Error
+    at Query.run (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\dialects\postgres\query.js:50:25)
+    at C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\sequelize.js:315:28
+    at async PostgresQueryInterface.insert (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\dialects\abstract\query-interface.js:308:21)
+    at async model.save (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2490:35)
+    at async AuditLog.create (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1362:12)
+    at async User.<anonymous> (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\models\index.js:579:7)
+    at async User.runHooks (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\hooks.js:96:7)
+    at async model.save (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2547:7)
+    at async exports.createCompany (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\modules\company\company.controller.js:145:9)
+2026-07-17T05:10:50.779Z - [Create Company] new row violates row-level security policy for table "AuditLogs"
+Error
+    at Query.run (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\dialects\postgres\query.js:50:25)
+    at C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\sequelize.js:315:28
+    at async PostgresQueryInterface.insert (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\dialects\abstract\query-interface.js:308:21)
+    at async model.save (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2490:35)
+    at async AuditLog.create (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1362:12)
+    at async Company.<anonymous> (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\models\index.js:538:7)
+    at async Company.runHooks (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\hooks.js:96:7)
+    at async model.save (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2547:7)
+    at async Company.create (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1362:12)
+    at async exports.createCompany (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\modules\company\company.controller.js:108:21)
+2026-07-17T05:10:51.629Z - [Update User] new row violates row-level security policy for table "AuditLogs"
+Error
+    at Query.run (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\dialects\postgres\query.js:50:25)
+    at C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\sequelize.js:315:28
+    at async PostgresQueryInterface.insert (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\dialects\abstract\query-interface.js:308:21)
+    at async model.save (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2490:35)
+    at async AuditLog.create (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1362:12)
+    at async User.<anonymous> (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\models\index.js:579:7)
+    at async User.runHooks (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\hooks.js:96:7)
+    at async model.save (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2547:7)
+    at async exports.createCompany (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\modules\company\company.controller.js:145:9)
+    at async test (C:\Users\user\Documents\Tally_main_new\Tally_accounting\test_company.js:27:5)
+2026-07-17T05:12:24.642Z - [Create Company] new row violates row-level security policy for table "AuditLogs"
+Error
+    at Query.run (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\dialects\postgres\query.js:50:25)
+    at C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\sequelize.js:315:28
+    at async PostgresQueryInterface.insert (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\dialects\abstract\query-interface.js:308:21)
+    at async model.save (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2490:35)
+    at async AuditLog.create (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1362:12)
+    at async Company.<anonymous> (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\models\index.js:538:7)
+    at async Company.runHooks (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\hooks.js:96:7)
+    at async model.save (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2547:7)
+    at async Company.create (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1362:12)
+    at async exports.createCompany (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\modules\company\company.controller.js:109:21)
+2026-07-17T05:12:25.216Z - [Update User] new row violates row-level security policy for table "AuditLogs"
+Error
+    at Query.run (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\dialects\postgres\query.js:50:25)
+    at C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\sequelize.js:315:28
+    at async PostgresQueryInterface.insert (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\dialects\abstract\query-interface.js:308:21)
+    at async model.save (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2490:35)
+    at async AuditLog.create (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1362:12)
+    at async User.<anonymous> (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\models\index.js:579:7)
+    at async User.runHooks (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\hooks.js:96:7)
+    at async model.save (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2547:7)
+    at async exports.createCompany (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\modules\company\company.controller.js:146:9)
+    at async test (C:\Users\user\Documents\Tally_main_new\Tally_accounting\test_company.js:27:5)
+2026-07-17T05:14:00.838Z - [Create Company] new row violates row-level security policy for table "AuditLogs"
+Error
+    at Query.run (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\dialects\postgres\query.js:50:25)
+    at C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\sequelize.js:315:28
+    at async PostgresQueryInterface.insert (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\dialects\abstract\query-interface.js:308:21)
+    at async model.save (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2490:35)
+    at async AuditLog.create (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1362:12)
+    at async Company.<anonymous> (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\models\index.js:538:7)
+    at async Company.runHooks (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\hooks.js:96:7)
+    at async model.save (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2547:7)
+    at async Company.create (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1362:12)
+    at async exports.createCompany (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\modules\company\company.controller.js:109:21)
+2026-07-17T05:14:01.379Z - [Update User] new row violates row-level security policy for table "AuditLogs"
+Error
+    at Query.run (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\dialects\postgres\query.js:50:25)
+    at C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\sequelize.js:315:28
+    at async PostgresQueryInterface.insert (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\dialects\abstract\query-interface.js:308:21)
+    at async model.save (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2490:35)
+    at async AuditLog.create (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1362:12)
+    at async User.<anonymous> (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\models\index.js:579:7)
+    at async User.runHooks (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\hooks.js:96:7)
+    at async model.save (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2547:7)
+    at async exports.createCompany (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\modules\company\company.controller.js:146:9)
+    at async test (C:\Users\user\Documents\Tally_main_new\Tally_accounting\test_company.js:30:5)
+2026-07-17T05:40:09.885Z - [Create Company] new row violates row-level security policy for table "AuditLogs"
+Error
+    at Query.run (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\dialects\postgres\query.js:50:25)
+    at C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\sequelize.js:315:28
+    at async PostgresQueryInterface.insert (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\dialects\abstract\query-interface.js:308:21)
+    at async model.save (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2490:35)
+    at async AuditLog.create (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1362:12)
+    at async Company.<anonymous> (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\models\index.js:538:7)
+    at async Company.runHooks (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\hooks.js:96:7)
+    at async model.save (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2547:7)
+    at async Company.create (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1362:12)
+    at async exports.createCompany (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\modules\company\company.controller.js:115:21)
+2026-07-17T05:40:10.846Z - [Update User] new row violates row-level security policy for table "AuditLogs"
+Error
+    at Query.run (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\dialects\postgres\query.js:50:25)
+    at C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\sequelize.js:315:28
+    at async PostgresQueryInterface.insert (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\dialects\abstract\query-interface.js:308:21)
+    at async model.save (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2490:35)
+    at async AuditLog.create (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1362:12)
+    at async User.<anonymous> (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\models\index.js:579:7)
+    at async User.runHooks (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\hooks.js:96:7)
+    at async model.save (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2547:7)
+    at async exports.createCompany (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\modules\company\company.controller.js:155:9)
+2026-07-17T05:40:14.298Z - [Create Ledger] new row violates row-level security policy for table "AuditLogs"
+Error
+    at Query.run (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\dialects\postgres\query.js:50:25)
+    at C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\sequelize.js:315:28
+    at async PostgresQueryInterface.insert (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\dialects\abstract\query-interface.js:308:21)
+    at async model.save (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2490:35)
+    at async AuditLog.create (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1362:12)
+    at async Ledger.<anonymous> (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\models\index.js:538:7)
+    at async Ledger.runHooks (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\hooks.js:96:7)
+    at async model.save (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2547:7)
+    at async Ledger.create (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1362:12)
+    at async exports.seedDefaultLedgers (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\modules\company\company.controller.js:77:7)
+2026-07-17T05:40:15.168Z - [Create Ledger] new row violates row-level security policy for table "AuditLogs"
+Error
+    at Query.run (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\dialects\postgres\query.js:50:25)
+    at C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\sequelize.js:315:28
+    at async PostgresQueryInterface.insert (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\dialects\abstract\query-interface.js:308:21)
+    at async model.save (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2490:35)
+    at async AuditLog.create (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1362:12)
+    at async Ledger.<anonymous> (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\models\index.js:538:7)
+    at async Ledger.runHooks (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\hooks.js:96:7)
+    at async model.save (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2547:7)
+    at async Ledger.create (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1362:12)
+    at async exports.seedDefaultLedgers (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\modules\company\company.controller.js:77:7)
+2026-07-17T05:40:16.087Z - [Create Ledger] new row violates row-level security policy for table "AuditLogs"
+Error
+    at Query.run (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\dialects\postgres\query.js:50:25)
+    at C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\sequelize.js:315:28
+    at async PostgresQueryInterface.insert (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\dialects\abstract\query-interface.js:308:21)
+    at async model.save (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2490:35)
+    at async AuditLog.create (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1362:12)
+    at async Ledger.<anonymous> (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\models\index.js:538:7)
+    at async Ledger.runHooks (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\hooks.js:96:7)
+    at async model.save (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2547:7)
+    at async Ledger.create (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1362:12)
+    at async exports.seedDefaultLedgers (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\modules\company\company.controller.js:77:7)
+2026-07-17T05:40:16.805Z - [Create Ledger] new row violates row-level security policy for table "AuditLogs"
+Error
+    at Query.run (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\dialects\postgres\query.js:50:25)
+    at C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\sequelize.js:315:28
+    at async PostgresQueryInterface.insert (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\dialects\abstract\query-interface.js:308:21)
+    at async model.save (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2490:35)
+    at async AuditLog.create (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1362:12)
+    at async Ledger.<anonymous> (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\models\index.js:538:7)
+    at async Ledger.runHooks (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\hooks.js:96:7)
+    at async model.save (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2547:7)
+    at async Ledger.create (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1362:12)
+    at async exports.seedDefaultLedgers (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\modules\company\company.controller.js:77:7)
+2026-07-17T05:40:18.277Z - [Create Ledger] new row violates row-level security policy for table "AuditLogs"
+Error
+    at Query.run (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\dialects\postgres\query.js:50:25)
+    at C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\sequelize.js:315:28
+    at async PostgresQueryInterface.insert (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\dialects\abstract\query-interface.js:308:21)
+    at async model.save (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2490:35)
+    at async AuditLog.create (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1362:12)
+    at async Ledger.<anonymous> (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\models\index.js:538:7)
+    at async Ledger.runHooks (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\hooks.js:96:7)
+    at async model.save (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2547:7)
+    at async Ledger.create (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1362:12)
+    at async exports.seedDefaultLedgers (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\modules\company\company.controller.js:77:7)
+2026-07-17T05:40:19.708Z - [Create Ledger] new row violates row-level security policy for table "AuditLogs"
+Error
+    at Query.run (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\dialects\postgres\query.js:50:25)
+    at C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\sequelize.js:315:28
+    at async PostgresQueryInterface.insert (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\dialects\abstract\query-interface.js:308:21)
+    at async model.save (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2490:35)
+    at async AuditLog.create (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1362:12)
+    at async Ledger.<anonymous> (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\models\index.js:538:7)
+    at async Ledger.runHooks (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\hooks.js:96:7)
+    at async model.save (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2547:7)
+    at async Ledger.create (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1362:12)
+    at async exports.seedDefaultLedgers (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\modules\company\company.controller.js:77:7)
+2026-07-17T05:40:20.709Z - [Create Ledger] new row violates row-level security policy for table "AuditLogs"
+Error
+    at Query.run (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\dialects\postgres\query.js:50:25)
+    at C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\sequelize.js:315:28
+    at async PostgresQueryInterface.insert (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\dialects\abstract\query-interface.js:308:21)
+    at async model.save (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2490:35)
+    at async AuditLog.create (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1362:12)
+    at async Ledger.<anonymous> (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\models\index.js:538:7)
+    at async Ledger.runHooks (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\hooks.js:96:7)
+    at async model.save (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2547:7)
+    at async Ledger.create (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1362:12)
+    at async exports.seedDefaultLedgers (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\modules\company\company.controller.js:77:7)
+2026-07-17T05:40:21.973Z - [Create Ledger] new row violates row-level security policy for table "AuditLogs"
+Error
+    at Query.run (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\dialects\postgres\query.js:50:25)
+    at C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\sequelize.js:315:28
+    at async PostgresQueryInterface.insert (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\dialects\abstract\query-interface.js:308:21)
+    at async model.save (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2490:35)
+    at async AuditLog.create (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1362:12)
+    at async Ledger.<anonymous> (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\models\index.js:538:7)
+    at async Ledger.runHooks (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\hooks.js:96:7)
+    at async model.save (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2547:7)
+    at async Ledger.create (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1362:12)
+    at async exports.seedDefaultLedgers (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\modules\company\company.controller.js:77:7)
+2026-07-17T05:40:22.699Z - [Create Ledger] new row violates row-level security policy for table "AuditLogs"
+Error
+    at Query.run (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\dialects\postgres\query.js:50:25)
+    at C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\sequelize.js:315:28
+    at async PostgresQueryInterface.insert (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\dialects\abstract\query-interface.js:308:21)
+    at async model.save (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2490:35)
+    at async AuditLog.create (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1362:12)
+    at async Ledger.<anonymous> (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\models\index.js:538:7)
+    at async Ledger.runHooks (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\hooks.js:96:7)
+    at async model.save (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2547:7)
+    at async Ledger.create (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1362:12)
+    at async exports.seedDefaultLedgers (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\modules\company\company.controller.js:77:7)
+2026-07-17T05:40:23.186Z - [Create Ledger] new row violates row-level security policy for table "AuditLogs"
+Error
+    at Query.run (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\dialects\postgres\query.js:50:25)
+    at C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\sequelize.js:315:28
+    at async PostgresQueryInterface.insert (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\dialects\abstract\query-interface.js:308:21)
+    at async model.save (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2490:35)
+    at async AuditLog.create (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1362:12)
+    at async Ledger.<anonymous> (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\models\index.js:538:7)
+    at async Ledger.runHooks (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\hooks.js:96:7)
+    at async model.save (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2547:7)
+    at async Ledger.create (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1362:12)
+    at async exports.seedDefaultLedgers (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\modules\company\company.controller.js:77:7)

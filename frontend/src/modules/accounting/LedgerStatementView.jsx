@@ -4,6 +4,8 @@ import {
   ArrowLeft, ChevronLeft, ChevronRight, Download, RefreshCw, BookOpen, AlertCircle, Filter, Search, LayoutDashboard, X
 } from 'lucide-react';
 import { reportsAPI, ledgerAPI } from '../../services/api';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import { getCurrencyDisplay } from '../../utils/currencies';
 
 const fmt = (v, currency) => {
@@ -72,22 +74,81 @@ export default function LedgerStatementView() {
     );
   }, [ledgers, searchQuery]);
 
-  const exportCSV = () => {
+  const handleDownloadPDF = () => {
     if (!data) return;
-    const rows = [
-      ['Date', 'Voucher No', 'Type', 'Narration', 'Debit', 'Credit', 'Balance'],
-      ...data.entries.map(e => [
-        fmtDate(e.date), e.voucherNumber, e.voucherType, e.narration,
-        e.debit || 0, e.credit || 0, e.balance || 0
-      ])
-    ];
-    const csv = rows.map(r => r.join(',')).join('\n');
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${data.ledger?.name || 'ledger'}-statement.csv`;
-    a.click();
+    const doc = new jsPDF();
+    const companyName = sessionStorage.getItem('companyName') || 'CalBooks Company';
+    
+    // Title
+    doc.setFontSize(16);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(30, 41, 59);
+    doc.text('LEDGER STATEMENT', 14, 20);
+    
+    // Sub-header
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(100, 116, 139);
+    doc.text(`Company: ${companyName}`, 14, 26);
+    doc.text(`Ledger: ${data.ledger?.name || 'Unknown'}`, 14, 31);
+    doc.text(`Generated: ${new Date().toLocaleString('en-IN')}`, 14, 36);
+    
+    doc.setDrawColor(226, 232, 240);
+    doc.line(14, 40, 196, 40);
+
+    const fmtPdf = (v, isBalance = false) => {
+      if (v === 0 || v === '0' || !v) return isBalance ? 'Rs. 0.00' : '—';
+      if (isBalance) {
+         const absVal = Math.abs(Number(v));
+         const suffix = Number(v) < 0 ? ' Cr' : ' Dr';
+         return `Rs. ${absVal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}${suffix}`;
+      }
+      return `Rs. ${Number(v).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
+    };
+
+    const tableRows = [];
+    
+    // Opening Balance
+    tableRows.push([
+      { content: 'Opening Balance', colSpan: 4, styles: { fontStyle: 'bold', textColor: [100, 116, 139] } },
+      '—', '—',
+      { content: fmtPdf(data?.ledger?.openingBalance, true), styles: { fontStyle: 'bold' } }
+    ]);
+
+    // Entries
+    data.entries.forEach(e => {
+      tableRows.push([
+        fmtDate(e.date),
+        e.voucherNumber || '—',
+        e.voucherType || '—',
+        e.narration || '—',
+        fmtPdf(e.debit),
+        fmtPdf(e.credit),
+        fmtPdf(e.balance, true)
+      ]);
+    });
+
+    // Closing Balance
+    if (data.entries.length > 0) {
+      const closingBalance = data.entries[data.entries.length - 1].balance;
+      tableRows.push([
+        { content: 'Aggregate Closing Balance', colSpan: 4, styles: { fontStyle: 'bold', textColor: [15, 23, 42], fillColor: [241, 245, 249] } },
+        { content: '', styles: { fillColor: [241, 245, 249] } },
+        { content: '', styles: { fillColor: [241, 245, 249] } },
+        { content: fmtPdf(closingBalance, true), styles: { fontStyle: 'bold', textColor: [37, 99, 235], fillColor: [241, 245, 249] } }
+      ]);
+    }
+    
+    autoTable(doc, {
+      startY: 45,
+      head: [['Date', 'Voucher No', 'Type', 'Narration', 'Debit', 'Credit', 'Balance']],
+      body: tableRows,
+      theme: 'grid',
+      headStyles: { fillColor: [15, 23, 42], textColor: [255, 255, 255] },
+      styles: { fontSize: 8, cellPadding: 3 }
+    });
+    
+    doc.save(`${data.ledger?.name || 'ledger'}_Statement.pdf`);
   };
 
   return (
@@ -97,72 +158,6 @@ export default function LedgerStatementView() {
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
       `}</style>
 
-      {/* ─── SIDEBAR ─────────────────────────────────────── */}
-      <div className={`${isSideListCollapsed ? 'w-0 opacity-0 overflow-hidden' : 'w-[320px]'} border-r border-slate-200 bg-white flex flex-col shrink-0 transition-all duration-300 relative`}>
-        {!isSideListCollapsed && (
-          <button 
-            onClick={() => setIsSideListCollapsed(true)}
-            className="absolute -right-3 top-24 w-6 h-10 bg-white border border-slate-200 rounded-full flex items-center justify-center text-slate-400 hover:text-blue-600 hover:border-blue-300 transition-all shadow-sm z-[60] cursor-pointer"
-          >
-            <ChevronLeft size={14} strokeWidth={3} />
-          </button>
-        )}
-        <div className="p-4 border-b border-slate-100 space-y-3">
-          <div className="flex items-center justify-between">
-            {/* Active Ledgers */}
-            <div className="flex items-center gap-1.5 cursor-pointer hover:opacity-80 transition-opacity">
-              <span className="text-[17px] font-bold text-slate-900 tracking-tight">Active Ledgers</span>
-            </div>
-          </div>
-          
-          {/* Search bar */}
-          <div className="relative">
-             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 stroke-[2]" />
-             <input 
-               type="text" 
-               placeholder="Search Ledgers" 
-               value={searchQuery}
-               onChange={e => setSearchQuery(e.target.value)}
-               className="w-full pl-9 pr-3 py-1.5 text-[13px] bg-slate-50/50 border border-slate-200/80 rounded outline-none transition-all focus:bg-white focus:border-blue-500 focus:ring-1 focus:ring-blue-100" 
-             />
-          </div>
-        </div>
-        
-        {/* Ledgers List */}
-        <div className="flex-1 overflow-y-auto no-scrollbar scroll-smooth">
-          {loadingLedgers ? (
-            <div className="py-20 text-center text-slate-400 text-xs font-bold uppercase tracking-widest animate-pulse">Loading list...</div>
-          ) : filteredLedgers.length === 0 ? (
-            <div className="p-10 text-center text-[12px] text-slate-400 font-semibold uppercase tracking-widest opacity-45 mt-20">NO LEDGERS FOUND</div>
-          ) : filteredLedgers.map(l => (
-            <div 
-              key={l.id} 
-              onClick={() => navigate(`/ledger-statement/${l.id}`)} 
-              className={`px-5 py-4 cursor-pointer border-b border-slate-100/60 transition-all flex items-start gap-3.5 ${String(l.id) === String(id) ? 'bg-[#f4f7fd]' : 'hover:bg-slate-50/60'}`}
-            >
-              {/* Checkbox / Icon on the left */}
-              <div className="pt-0.5" onClick={e => e.stopPropagation()}>
-                <input 
-                  type="checkbox" 
-                  checked={String(l.id) === String(id)}
-                  onChange={() => navigate(`/ledger-statement/${l.id}`)}
-                  className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
-                />
-              </div>
-
-              {/* Text Stack on the right */}
-              <div className="flex-1 min-w-0 space-y-0.5">
-                <p className={`text-[14px] font-medium truncate ${String(l.id) === String(id) ? 'text-slate-900 font-semibold' : 'text-slate-800'}`}>
-                  {l.name}
-                </p>
-                <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">
-                  {l.groupName || l.Group?.name || 'Group'}
-                </p>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
 
       {/* ─── MAIN CONTENT ─────────────────────────────────── */}
       <div className="flex-1 flex flex-col bg-white overflow-hidden shadow-2xl">
@@ -175,15 +170,7 @@ export default function LedgerStatementView() {
               >
                 <ChevronLeft size={18}/>
               </button>
-              {isSideListCollapsed && (
-                <button 
-                  onClick={() => setIsSideListCollapsed(false)}
-                  className="p-2 -ml-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
-                  title="Show Ledgers List"
-                >
-                  <LayoutDashboard size={20} />
-                </button>
-              )}
+
               <h1 className="text-[20px] font-bold text-slate-900 tracking-tight">{data?.ledger?.name || 'Ledger Statement'}</h1>
               {data?.ledger?.group && (
                 <span className="bg-slate-100 text-slate-600 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest">
@@ -195,8 +182,8 @@ export default function LedgerStatementView() {
               <button onClick={fetchData} className="p-2 border border-slate-200 rounded-lg text-slate-500 hover:bg-slate-50 shadow-sm transition-all" title="Refresh">
                  <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
               </button>
-              <button onClick={exportCSV} disabled={!data} className="bg-[#1e61f0] hover:bg-[#1a54d1] text-white px-6 py-2 rounded-xl font-bold text-xs uppercase tracking-wider shadow-lg shadow-blue-500/10 flex items-center gap-2 transition-all disabled:opacity-40">
-                 <Download size={16} /> Export CSV
+              <button onClick={handleDownloadPDF} disabled={!data} className="bg-[#1e61f0] hover:bg-[#1a54d1] text-white px-6 py-2 rounded-xl font-bold text-xs uppercase tracking-wider shadow-lg shadow-blue-500/10 flex items-center gap-2 transition-all disabled:opacity-40">
+                 <Download size={16} /> Export PDF
               </button>
               <div className="w-px h-6 bg-slate-200 mx-1"></div>
               <button className="p-1.5 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-full transition-colors duration-150" onClick={() => navigate('/ledgers')}><X size={20}/></button>

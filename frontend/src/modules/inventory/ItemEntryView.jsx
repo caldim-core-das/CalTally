@@ -28,27 +28,11 @@ const UNIT_KEYWORDS = {
 };
 
 const SALES_ACCOUNTS_STRUCTURE = [
-  { category: "Other Current Asset", accounts: ["Advance Tax", "Employee Advance", "Prepaid Expenses", "TDS Receivable"] },
-  { category: "Fixed Asset", accounts: ["Furniture and Equipment"] },
-  { category: "Other Current Liability", accounts: ["Employee Reimbursements", "Opening Balance Adjustments", "Tax Payable", "TDS Payable", "Unearned Revenue"] },
-  { category: "Income", accounts: ["Discount", "General Income", "Interest Income", "Late Fee Income", "Other Charges", "Sales", "Shipping Charge"] }
+  { category: "Income", accounts: ["Sales"] }
 ];
 
 const PURCHASE_ACCOUNTS_STRUCTURE = [
-  { category: "Other Current Asset", accounts: ["Advance Tax", "Employee Advance", "Prepaid Expenses", "TDS Receivable"] },
-  { category: "Fixed Asset", accounts: ["Furniture and Equipment"] },
-  { category: "Other Current Liability", accounts: ["Employee Reimbursements", "Opening Balance Adjustments", "Tax Payable", "TDS Payable", "Unearned Revenue"] },
-  { category: "Expense", accounts: [
-      "Advertising And Marketing", "Automobile Expense", "Bad Debt", "Bank Fees and Charges", 
-      "Consultant Expense", "Contract Assets", "Depreciation And Amortisation", "Depreciation Expense", 
-      "IT and Internet Expenses", "Janitorial Expense", "Lodging", "Meals and Entertainment", 
-      "Merchandise", "Office Supplies", "Other Expenses", "Postage", "Printing and Stationery", 
-      "Purchase Discounts", "Raw Materials And Consumables", "Rent Expense", "Repairs and Maintenance", 
-      "Salaries and Employee Wages", "Telephone Expense", "Transportation Expense", "Travel Expense", 
-      "Uncategorized"
-    ] 
-  },
-  { category: "Cost Of Goods Sold", accounts: ["Cost of Goods Sold", "Job Costing", "Labor", "Materials", "Subcontractor"] }
+  { category: "Cost Of Goods Sold", accounts: ["Cost of Goods Sold"] }
 ];
 
 const ItemEntryView = ({ onSaveSuccess, onCancel }) => {
@@ -71,21 +55,21 @@ const ItemEntryView = ({ onSaveSuccess, onCancel }) => {
         type: editItem.type || 'Goods',
         unit: editItem.unit && editItem.unit !== 'Select or type to add' ? editItem.unit : '',
         salesInformation: editItem.salesInformation !== undefined ? editItem.salesInformation : true,
-        sellingPrice: editItem.sellingPrice || '',
+        sellingPrice: editItem.sellingPrice ?? '',
         salesAccount: editItem.salesAccount || 'Sales',
         salesDescription: editItem.salesDescription || '',
         purchaseInformation: editItem.purchaseInformation !== undefined ? editItem.purchaseInformation : true,
-        costPrice: editItem.costPrice || '',
+        costPrice: editItem.costPrice ?? '',
         purchaseAccount: editItem.purchaseAccount || 'Cost of Goods Sold',
         purchaseDescription: editItem.purchaseDescription || '',
         preferredVendor: editItem.preferredVendor || '',
         imageUrl: editItem.imageUrl || '',
-        reorderLevel: editItem.reorderLevel || '',
+        reorderLevel: editItem.reorderLevel ?? '',
         stockGroupId: editItem.stockGroupId || '',
         stockCategoryId: editItem.stockCategoryId || '',
         unitOfMeasureId: editItem.unitOfMeasureId || '',
         godownId: editItem.godownId || '',
-        openingStock: editItem.openingStock || '',
+        openingStock: editItem.openingStock ?? '',
         hsnCode: editItem.hsnCode || '',
         gstRate: editItem.gstRate !== undefined ? editItem.gstRate : 18,
         itemCode: editItem.itemCode || ''

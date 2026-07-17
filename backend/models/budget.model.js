@@ -26,7 +26,8 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.ENUM('Monthly', 'Quarterly', 'Half-yearly', 'Yearly'),
       defaultValue: 'Monthly'
     }
-  });
+  }, {
+    });
 
   return Budget;
 };

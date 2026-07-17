@@ -113,6 +113,23 @@ exports.tenantAccess = async (req, res, next) => {
   }
 
   req.companyId = companyIdToCheck;
+  
+  // Populate CLS namespace for audit logs
+  const { getNamespace } = require('./cls.middleware');
+  const ns = getNamespace();
+  if (ns) {
+    ns.set('companyId', companyIdToCheck);
+    ns.set('userId', req.user?.id);
+  }
+
+  // Set the tenant ID for Postgres RLS for the current session
+  try {
+    const { sequelize } = require('../models');
+    await sequelize.query(`SET SESSION "app.current_tenant_id" = '${companyIdToCheck}'`);
+  } catch (err) {
+    console.error('[RLS] Failed to set tenant context:', err.message);
+  }
+
   next();
 };
 

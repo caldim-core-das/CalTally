@@ -70,6 +70,7 @@ const BalanceSheetView = () => {
   const handleDownloadPDF = () => {
     if (!data) return;
     const doc = new jsPDF();
+    const fmtPdf = (v) => v === 0 ? 'Rs. 0.00' : `Rs. ${Number(v || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
     const companyName = sessionStorage.getItem('companyName') || 'CalBooks Company';
     
     // Title
@@ -99,8 +100,8 @@ const BalanceSheetView = () => {
     
     const isBalanced = Math.abs(data.totalAssets - data.totalLiabilities) < 0.01;
     const summaryData = [
-      ['Total Assets', fmt(data.totalAssets)],
-      ['Total Equity & Liabilities', fmt(data.totalLiabilities)],
+      ['Total Assets', fmtPdf(data.totalAssets)],
+      ['Total Equity & Liabilities', fmtPdf(data.totalLiabilities)],
       ['Status', isBalanced ? 'Books Balanced ✓' : 'Imbalance Detected']
     ];
     
@@ -124,14 +125,14 @@ const BalanceSheetView = () => {
     
     const liabilityRows = data.liabilities.map(item => [
       item.ledgerName, 
-      fmt(item.balance)
+      fmtPdf(item.balance)
     ]);
     
     autoTable(doc, {
       startY: yStart + 4,
       head: [['Account Head', 'Balance']],
       body: liabilityRows,
-      foot: [['Total Liabilities', fmt(data.totalLiabilities)]],
+      foot: [['Total Liabilities', fmtPdf(data.totalLiabilities)]],
       theme: 'striped',
       headStyles: { fillColor: [30, 64, 175] }, // blue-800
       footStyles: { fillColor: [239, 246, 255], textColor: [30, 58, 138], fontStyle: 'bold' },
@@ -148,14 +149,14 @@ const BalanceSheetView = () => {
     
     const assetRows = data.assets.map(item => [
       item.ledgerName, 
-      fmt(item.balance)
+      fmtPdf(item.balance)
     ]);
     
     autoTable(doc, {
       startY: yStart + 4,
       head: [['Account Head', 'Balance']],
       body: assetRows,
-      foot: [['Total Assets', fmt(data.totalAssets)]],
+      foot: [['Total Assets', fmtPdf(data.totalAssets)]],
       theme: 'striped',
       headStyles: { fillColor: [4, 120, 87] }, // emerald-700
       footStyles: { fillColor: [236, 253, 245], textColor: [6, 95, 70], fontStyle: 'bold' },
@@ -194,17 +195,6 @@ const BalanceSheetView = () => {
         </div>
         
         <div className="flex items-center gap-3">
-           <div className="flex items-center bg-slate-50 border border-slate-200 rounded-lg p-1">
-             <button className="px-3 py-1.5 text-[11px] font-bold bg-white text-[#1e61f0] shadow-sm rounded transition-all">Equity & Liabilities</button>
-             <button className="px-3 py-1.5 text-[11px] font-bold text-slate-400 hover:text-slate-600 rounded transition-all">Assets</button>
-           </div>
-           <div className="w-px h-6 bg-slate-200 mx-2" />
-           <button onClick={fetchBS} className="p-2 text-slate-400 hover:text-[#1e61f0] transition-colors">
-             <RefreshCcw size={18} className={loading ? 'animate-spin' : ''}/>
-           </button>
-           <button onClick={() => window.print()} className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-lg text-[12px] font-bold text-slate-600 hover:bg-slate-50 transition-all">
-             <Printer size={16}/> Print
-           </button>
            <button onClick={handleDownloadPDF} className="flex items-center gap-2 px-6 py-2 bg-[#1e61f0] text-white rounded-lg text-[12px] font-bold hover:bg-[#1a54d1] transition-all shadow-lg shadow-blue-500/20">
              <Download size={16}/> Export PDF
            </button>
