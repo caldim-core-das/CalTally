@@ -37,5 +37,6 @@ describe('Reports (Unit)', () => {
       
       const payload = res.json.mock.calls[0][0];
       expect(payload).toHaveProperty('trialBalance');
+    });
   });
 });
