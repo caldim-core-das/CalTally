@@ -12,8 +12,8 @@ exports.getTrialBalance = async (req, res, next) => {
     const { companyId } = req.params;
     const { from, to, costCenterId } = req.query;
 
-    const cacheKey = `reports:${companyId}:trial-balance:${from || 'all'}:${to || 'all'}:${costCenterId || 'all'}`;
-    const cachedData = await cacheService.get(cacheKey);
+    const baseKey = `trial-balance:${from || 'all'}:${to || 'all'}:${costCenterId || 'all'}`;
+    const cachedData = await cacheService.get(companyId, baseKey);
     if (cachedData) {
       return res.json(cachedData);
     }
@@ -156,7 +156,7 @@ exports.getTrialBalance = async (req, res, next) => {
         isBalanced: Math.abs(totalDebitBal - totalCreditBal) < 0.01
       }
     };
-    await cacheService.set(cacheKey, result);
+    await cacheService.set(companyId, baseKey, result);
     res.json(result);
   } catch (err) {
     next(err);
@@ -172,8 +172,8 @@ exports.getProfitAndLoss = async (req, res, next) => {
     const { companyId } = req.params;
     const { from, to, costCenterId } = req.query;
 
-    const cacheKey = `reports:${companyId}:profit-loss:${from || 'all'}:${to || 'all'}:${costCenterId || 'all'}`;
-    const cachedData = await cacheService.get(cacheKey);
+    const baseKey = `profit-loss:${from || 'all'}:${to || 'all'}:${costCenterId || 'all'}`;
+    const cachedData = await cacheService.get(companyId, baseKey);
     if (cachedData) {
       return res.json(cachedData);
     }
@@ -305,7 +305,7 @@ exports.getProfitAndLoss = async (req, res, next) => {
       totalExpenses,
       netProfit: totalIncome - totalExpenses
     };
-    await cacheService.set(cacheKey, result);
+    await cacheService.set(companyId, baseKey, result);
     res.json(result);
   } catch (err) {
     next(err);
@@ -321,8 +321,8 @@ exports.getBalanceSheet = async (req, res, next) => {
     const { companyId } = req.params;
     const { from, to } = req.query;
 
-    const cacheKey = `reports:${companyId}:balance-sheet:${from || 'all'}:${to || 'all'}`;
-    const cachedData = await cacheService.get(cacheKey);
+    const baseKey = `balance-sheet:${from || 'all'}:${to || 'all'}`;
+    const cachedData = await cacheService.get(companyId, baseKey);
     if (cachedData) {
       return res.json(cachedData);
     }
@@ -491,7 +491,7 @@ exports.getBalanceSheet = async (req, res, next) => {
       netProfit,
       isBalanced: Math.abs(totalAssets - totalLiabilities) < 0.01
     };
-    await cacheService.set(cacheKey, result);
+    await cacheService.set(companyId, baseKey, result);
     res.json(result);
   } catch (err) {
     next(err);
@@ -1211,8 +1211,8 @@ exports.getCashFlow = async (req, res, next) => {
     const { companyId } = req.params;
     const { from, to } = req.query;
 
-    const cacheKey = `reports:${companyId}:cash-flow:${from || 'all'}:${to || 'all'}`;
-    const cachedData = await cacheService.get(cacheKey);
+    const baseKey = `cash-flow:${from || 'all'}:${to || 'all'}`;
+    const cachedData = await cacheService.get(companyId, baseKey);
     if (cachedData) {
       return res.json(cachedData);
     }
@@ -1428,40 +1428,40 @@ exports.getCashFlow = async (req, res, next) => {
       // Operating (Working Capital) Adjustments
       if (groupName.includes('debtors') || groupName.includes('customer')) {
         operatingItems.push({
-          name: `Decrease / (Increase) in Accounts Receivable - ${ledger.name}`,
+          name: `Money Received from Customers - ${ledger.name}`,
           amount: parseFloat((-delta).toFixed(2))
         });
       } else if (groupName.includes('creditors') || groupName.includes('vendor')) {
         operatingItems.push({
-          name: `Increase / (Decrease) in Accounts Payable - ${ledger.name}`,
-          amount: parseFloat(delta.toFixed(2))
+          name: `Money Paid to Suppliers - ${ledger.name}`,
+          amount: parseFloat((-delta).toFixed(2))
         });
       } else if (groupName.includes('stock') || groupName.includes('inventory') || ledgerName.includes('inventory')) {
         operatingItems.push({
-          name: `Decrease / (Increase) in Inventory - ${ledger.name}`,
+          name: `Inventory Purchases - ${ledger.name}`,
           amount: parseFloat((-delta).toFixed(2))
         });
       } else if (bsName === 'current assets') {
         operatingItems.push({
-          name: `Decrease / (Increase) in Current Assets - ${ledger.name}`,
+          name: `Change in Current Assets - ${ledger.name}`,
           amount: parseFloat((-delta).toFixed(2))
         });
       } else if (bsName === 'current liabilities') {
         operatingItems.push({
-          name: `Increase / (Decrease) in Current Liabilities - ${ledger.name}`,
-          amount: parseFloat(delta.toFixed(2))
+          name: `Change in Current Liabilities - ${ledger.name}`,
+          amount: parseFloat((-delta).toFixed(2))
         });
       }
 
       // Investing
       else if (bsName === 'fixed assets') {
         investingItems.push({
-          name: `Outflow on Fixed Assets - ${ledger.name}`,
+          name: `Purchased Fixed Asset - ${ledger.name}`,
           amount: parseFloat((-delta).toFixed(2))
         });
       } else if (bsName === 'investments') {
         investingItems.push({
-          name: `Outflow on Investments - ${ledger.name}`,
+          name: `Purchased Investment - ${ledger.name}`,
           amount: parseFloat((-delta).toFixed(2))
         });
       }
@@ -1469,13 +1469,13 @@ exports.getCashFlow = async (req, res, next) => {
       // Financing
       else if (bsName === 'loans (liability)') {
         financingItems.push({
-          name: `Net proceeds / (repayments) of Loans - ${ledger.name}`,
-          amount: parseFloat(delta.toFixed(2))
+          name: `Loan Received / (Paid back) - ${ledger.name}`,
+          amount: parseFloat((-delta).toFixed(2))
         });
       } else if (bsName === 'capital account') {
         financingItems.push({
-          name: `Net additions / (drawings) of Capital - ${ledger.name}`,
-          amount: parseFloat(delta.toFixed(2))
+          name: `Money Invested by Owner - ${ledger.name}`,
+          amount: parseFloat((-delta).toFixed(2))
         });
       }
     });
@@ -1522,7 +1522,7 @@ exports.getCashFlow = async (req, res, next) => {
       financingActivities: financingItems
     };
 
-    await cacheService.set(cacheKey, result);
+    await cacheService.set(companyId, baseKey, result);
     res.json(result);
   } catch (err) {
     console.error('Indirect Cash flow report error:', err);

@@ -35,7 +35,8 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: true,
       defaultValue: 0
     }
-  });
+  }, {
+    });
 
   return SalesOrderItem;
 };

@@ -10,13 +10,19 @@ exports.seedDefaultGroups = async (companyId, transaction = null) => {
   const primaryGroups = standardGroups.filter(g => !g.parent);
   const groupMap = {};
   for (const g of primaryGroups) {
-    const created = await GroupModel.create({
-      name: g.name,
-      nature: g.nature,
-      category: 'Primary',
-      CompanyId: companyId
-    }, options);
-    groupMap[g.name] = created.id;
+    try {
+      const created = await GroupModel.create({
+        name: g.name,
+        nature: g.nature,
+        category: 'Primary',
+        CompanyId: companyId
+      }, options);
+      console.log("[DEBUG] Successfully created primary group:", g.name);
+      groupMap[g.name] = created.id;
+    } catch (err) {
+      console.error("[DEBUG] Error creating primary group:", g.name, err.message);
+      throw err;
+    }
   }
   
   const subGroups = standardGroups.filter(g => g.parent);
@@ -83,6 +89,7 @@ exports.seedDefaultLedgers = async (companyId, transaction = null) => {
 exports.createCompany = async (req, res, next) => {
   const transaction = await sequelize.transaction();
   try {
+    await sequelize.query("SET LOCAL app.current_tenant_id TO 'admin_bypass'", { transaction });
     const { 
       name, gstNumber, address, financialYearStart, booksBeginningFrom, userId,
       industry, location, street1, street2, city, pincode, phone, faxNumber,
@@ -133,6 +140,9 @@ exports.createCompany = async (req, res, next) => {
       panNumber,
       userId: req.user?.id || userId
     }, { transaction });
+    
+    // Set tenant id for the current transaction so RLS doesn't fail when seeding Groups and Ledgers
+    await sequelize.query(`SET LOCAL app.current_tenant_id TO '${company.id}'`, { transaction });
     
     const userIdToFind = req.user?.id || userId;
     const userInstance = userIdToFind ? await User.findByPk(userIdToFind, { transaction }) : null;

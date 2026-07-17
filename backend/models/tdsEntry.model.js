@@ -41,7 +41,8 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.UUID,
       allowNull: false
     }
-  });
+  }, {
+    });
 
   TdsEntry.associate = (models) => {
     TdsEntry.belongsTo(models.Company);

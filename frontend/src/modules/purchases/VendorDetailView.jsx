@@ -749,7 +749,7 @@ const VendorDetailView = ({ companyId }) => {
             {/* Action Buttons */}
             <div className="flex items-center gap-2">
               <button 
-                onClick={() => setIsQuickAddOpen(true)} 
+                onClick={() => navigate('/vendors/new')} 
                 className="w-8 h-8 rounded-lg bg-blue-500 hover:bg-blue-600 text-white flex items-center justify-center transition-all hover:scale-105 active:scale-95 shadow-sm shadow-blue-100"
                 title="New Vendor"
               >
@@ -829,7 +829,6 @@ const VendorDetailView = ({ companyId }) => {
 
                   <div className="w-px h-6 bg-slate-200 mx-1"></div>
                   <button onClick={() => navigate(`/vendors/${vendor.id}`)} className="px-4 py-1.5 border border-slate-200 rounded text-[13px] font-bold text-slate-700 hover:bg-white shadow-sm">Edit</button>
-                  <button className="p-2 border border-slate-200 rounded text-slate-400 hover:text-slate-600"><Paperclip size={16}/></button>
                   <div className="relative" ref={newTxnRef}>
                      <div className="bg-blue-600 text-white rounded-md flex items-center shadow-lg shadow-blue-100 overflow-hidden">
                         <button 
@@ -880,9 +879,7 @@ const VendorDetailView = ({ companyId }) => {
                         </div>
                      )}
                   </div>
-                  <button className="px-4 py-1.5 border border-slate-200 rounded text-[13px] font-bold text-slate-700 flex items-center gap-1.5 hover:bg-white shadow-sm">
-                     More <ChevronDown size={14}/>
-                  </button>
+
                   <button type="button" className="p-1.5 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-full transition-colors duration-150 cursor-pointer relative z-10" onClick={() => navigate('/vendors')} title="Close and go back"><X size={20}/></button>
                </div>
             </header>

@@ -1,0 +1,110 @@
+
+ENTERPRISE ARCHITECTURE BLUEPRINT
+Cloud Accounting & Business Management Platform
+(Codename "Ledger" - Zoho Books-class product)
+VOLUME 1 OF 9
+BUSINESS ARCHITECTURE
+Business Capability Model - Personas - Value Streams - Module Scope Catalog
+
+
+Table of Contents
+
+1. Introduction & Program Overview
+1.1 Purpose of This Document
+This volume is the Business Architecture layer of a nine-volume Enterprise Architecture Blueprint for a cloud accounting and business-management platform positioned as a functional peer to Zoho Books. It establishes the business capability model, stakeholder personas, value streams, and scoped module catalog that every downstream artifact - the BRD, SRS, FRS, Database Design Document, UI/UX Specification, API Design Document, Security Architecture, Testing & QA Specification, and Deployment & DevOps Guide - must trace back to.
+Enterprise architecture programs at this scale fail most often not from a lack of diagrams but from an absence of a shared, unambiguous definition of "what the business does" before anyone designs "how the system does it." This document exists to remove that ambiguity. Every capability, persona, and value stream defined here becomes a first-class, numbered reference (e.g. BC-04.2, VS-03, PER-06) that later volumes cite directly, so a requirement in the SRS or a table in the DDD can always be traced back to a business reason for existing.
+1.2 Relationship to the Full Blueprint
+The full blueprint is being produced in phases, one architectural domain at a time, with review and sign-off between phases so each subsequent volume builds on agreed, stable foundations rather than assumptions. The nine volumes and their dependency order are:
+The BRD, SRS, and FRS are intentionally not listed as separate volumes: in this blueprint their content is absorbed into Volumes 1-2 (business and functional scope) and Volume 9 (interface-level detail), which avoids the duplication that typically causes an SRS and an architecture document to drift out of sync in real enterprise programs. If a standalone SRS/FRS/BRD deliverable is still required for procurement or compliance reasons, Section 12 of this document shows exactly how to extract one from the numbered items here.
+1.3 How to Read This Document
+Section 4 (Business Capability Model) is the master index - every other section refers back to a capability ID such as BC-07.
+Section 6 (Module & Feature Scope Catalog) is the working scope document - treat it as the object of change control going forward.
+Section 7-8 (Value Streams & Process Flows) contain Mermaid diagram source blocks. They are intentionally kept as editable text rather than static images so they can be pasted directly into any Mermaid-compatible renderer, version-controlled, or regenerated as the design evolves.
+Section 11 (Traceability Matrix) is what Vol. 2 onward will cite - do not renumber capability IDs after this document is approved without a corresponding renumber pass across all volumes.
+
+2. Business Context & Product Vision
+2.1 Vision Statement
+Deliver a cloud-native, multi-tenant accounting and business-operations platform that lets small and mid-sized businesses run receivables, payables, banking, inventory, projects, and compliance from one system of record - matching the functional depth of Zoho Books while being architected, from day one, for API-first extensibility and horizontal scale.
+2.2 Competitive Frame
+The product is scoped against three incumbents whose feature sets define the addressable functional baseline: Zoho Books (primary reference - see Section 5 module catalog, derived from its published feature set as of July 2026), QuickBooks Online, and Xero. The competitive intent is functional parity on core accounting, receivables, payables, banking, and inventory within the first two release phases, with AI-assisted workflows (Section 5, BC-18) and open API/integration architecture (Volume 5) as differentiation vectors rather than table-stakes features.
+2.3 Target Market Segments
+2.4 Business Goals & Success Measures
+
+3. Business Architecture Principles
+These principles are binding constraints on every downstream volume. Where a later architectural decision conflicts with one of these, the conflict must be raised and resolved explicitly (an ADR in Volume 2 or 3), not silently overridden.
+
+4. Stakeholder & Persona Map
+Personas drive both the module priority (Section 2.3) and the permission model that Volume 6 (Security Architecture) will formalize into roles. Each persona is tagged with the value streams (Section 7) it participates in.
+
+5. Business Capability Model
+The capability model is organized in two levels: Level-1 capability domains (BC-01 through BC-21) and Level-2 sub-capabilities. This is the canonical numbering that Volume 2 (Application Architecture) will map 1:1 onto bounded contexts / services, and that Volume 4 (Data Architecture) will map onto schema boundaries.
+5.1 Capability Domain Map
+
+6. Module & Feature Scope Catalog
+This section resolves each capability domain into a release-scoped feature list. "MVP" = required for the first production release to be usable and credible against Zoho Books' Standard edition. "R2" = second release, aligned to Zoho Books' Professional-tier depth. "R3" = third release / Enterprise-tier depth. This table is the primary object of change control - any scope change should be proposed as an edit to this table with a rationale, not decided ad hoc in a later volume.
+
+7. Value Streams
+A value stream is the end-to-end sequence of activities that delivers value to a persona, cutting across multiple capability domains. Volume 2 will decompose each value stream into service interactions; this section fixes the business-level shape so that decomposition has a stable target.
+VS-01 - Order-to-Cash
+Persona: PER-04 (Sales Clerk), PER-09 (Customer), PER-06 (Inventory Manager). Capabilities touched: BC-02, BC-05, BC-06, BC-07, BC-15.
+Diagram: Order-to-Cash value stream
+
+VS-02 - Procure-to-Pay
+Persona: PER-05 (Purchasing Clerk), PER-10 (Vendor), PER-06 (Inventory Manager). Capabilities touched: BC-03, BC-05, BC-07, BC-15.
+Diagram: Procure-to-Pay value stream
+
+VS-03 - Record-to-Report
+Persona: PER-02 (Bookkeeper), PER-03 (External Accountant), PER-01 (Owner). Capabilities touched: BC-01, BC-05, BC-13, BC-20.
+Diagram: Record-to-Report value stream
+
+VS-04 - Project-to-Bill
+Persona: PER-07 (Project Manager). Capabilities touched: BC-09, BC-02, BC-04.
+Diagram: Project-to-Bill value stream
+
+VS-05 - Hire-to-Pay (Payroll)
+Persona: PER-08 (Payroll Admin), PER-01 (Owner). Capabilities touched: BC-10, BC-01, BC-11. (Release 3 scope - see Section 6.)
+Diagram: Hire-to-Pay value stream
+
+VS-06 - Close-the-Books
+Persona: PER-02, PER-03. Capabilities touched: BC-01, BC-05, BC-08, BC-13, BC-20.
+Diagram: Close-the-Books value stream
+
+
+8. Critical Business Process Flows (Detailed)
+Where Section 7 shows the end-to-end value stream, this section drills into the three highest-risk processes at decision-branch level of detail - these are the flows Volume 2 must decompose into service contracts first, since errors here have direct financial-integrity consequences.
+8.1 Invoice Lifecycle & Revenue Recognition
+Diagram: Invoice lifecycle state machine
+
+8.2 Purchase Bill 3-Way Match
+Diagram: 3-way match decision flow
+
+8.3 Bank Reconciliation
+Diagram: Bank reconciliation flow
+
+
+9. Editions & Packaging Strategy
+Mirroring the Zoho Books tiering model (Standard / Professional / Enterprise), editions are an entitlement layer over the capability model in Section 5 - not a separate codebase. Volume 3 will define the entitlement-check mechanism (feature flags evaluated per tenant).
+
+10. Compliance & Regulatory Scope
+
+11. Traceability Matrix - Business to Downstream Volumes
+This table is the contract between this document and everything that follows. Every capability ID must appear in Volume 2's bounded-context map and Volume 4's schema domain map before either of those volumes can be considered complete.
+
+12. Note on BRD / SRS / FRS Extraction
+If a standalone Business Requirements Document, Software Requirements Specification, or Functional Requirements Specification is required (for example, for a vendor RFP, investor due diligence, or a compliance filing), it can be generated directly from this blueprint without re-deriving scope:
+This is intentional: producing them as extractions rather than independently authored documents guarantees they cannot drift from the architecture, which is the single most common documentation failure in enterprise programs of this size.
+
+13. Open Questions & Assumptions
+13.1 Assumptions Made in This Draft
+Target initial markets are US, India, and EU (drives BC-11/BC-12 scope) - confirm or adjust before Vol. 5.
+Payroll (BC-10) is scoped as Release 3 given its heavy per-country statutory complexity - confirm this is acceptable given business timeline.
+"Enterprise-class" is interpreted as multi-tenant SaaS with per-tenant data isolation, not single-tenant on-prem deployments. If on-prem/self-hosted is required, Vol. 4 and Vol. 7 scope changes substantially.
+AI features (BC-18) are scoped as a differentiator, not MVP-blocking - confirm priority relative to core accounting parity.
+13.2 Open Questions for Stakeholder Sign-off
+Which countries must be supported for tax compliance at MVP vs. later releases?
+Is a native mobile app required at MVP, or is a responsive web app sufficient for Release 1?
+Should the accountant/bookkeeper multi-client experience (PER-03) be a Release 1 requirement, given it materially affects the tenant/org data model in Vol. 4?
+What is the expected initial tenant scale (100s vs. 10,000s of organizations) - this directly sizes the infrastructure targets in Vol. 7?
+Is white-labeling / reseller packaging in scope for any edition?
+13.3 Next Phase
+On approval of this volume, Phase 2 begins: Application Architecture (Volume 2), which will take the 21 capability domains from Section 5 and produce the module dependency diagram, C4 context/container/component diagrams, domain-driven design bounded contexts, and UML class/sequence diagrams needed to hand off to database and API design. Please review Sections 4-8 in particular, since capability IDs and value-stream names defined there become permanent references from this point forward.

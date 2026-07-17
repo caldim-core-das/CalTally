@@ -69,7 +69,8 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: false,
       defaultValue: 'COMPLETED'
     }
-  });
+  }, {
+    });
 
   return AuditLog;
 };

@@ -69,7 +69,7 @@ const VendorForm = ({ editId, standalone = true, onSaveSuccess, onCancel, compan
   const [paymentTerms, setPaymentTerms] = useState('Due on Receipt');
   const [gstNumber, setGstNumber] = useState('');
   const [gstError, setGstError] = useState('');
-  const [isGstRegistered, setIsGstRegistered] = useState('No');
+  const [isGstRegistered, setIsGstRegistered] = useState('');
   const [tdsTax, setTdsTax] = useState('');
   const [tdsConfigs, setTdsConfigs] = useState([]);
   
@@ -311,6 +311,11 @@ const VendorForm = ({ editId, standalone = true, onSaveSuccess, onCancel, compan
 
     if (!pan) {
       addNotification('PAN Number is compulsory.', 'error');
+      return;
+    }
+
+    if (!isGstRegistered) {
+      addNotification('GST Registered selection is compulsory.', 'error');
       return;
     }
 
@@ -661,7 +666,7 @@ const VendorForm = ({ editId, standalone = true, onSaveSuccess, onCancel, compan
                                            </div>
                                         </button>
                                         {isBillingStateOpen && (
-                                           <div className="absolute bottom-full left-0 mb-1 w-full bg-white border border-slate-200 rounded shadow-lg z-50 overflow-hidden">
+                                           <div className="absolute top-full left-0 mt-1 w-full bg-white border border-slate-200 rounded shadow-lg z-50 overflow-hidden">
                                               <div className="p-2 border-b border-slate-100">
                                                  <div className="relative">
                                                     <Search size={14} className="absolute left-2.5 top-2.5 text-slate-400" />
@@ -819,7 +824,7 @@ const VendorForm = ({ editId, standalone = true, onSaveSuccess, onCancel, compan
                                            </div>
                                         </button>
                                         {isShippingStateOpen && (
-                                           <div className="absolute bottom-full left-0 mb-1 w-full bg-white border border-slate-200 rounded shadow-lg z-50 overflow-hidden">
+                                           <div className="absolute top-full left-0 mt-1 w-full bg-white border border-slate-200 rounded shadow-lg z-50 overflow-hidden">
                                               <div className="p-2 border-b border-slate-100">
                                                  <div className="relative">
                                                     <Search size={14} className="absolute left-2.5 top-2.5 text-slate-400" />
@@ -897,8 +902,9 @@ const VendorForm = ({ editId, standalone = true, onSaveSuccess, onCancel, compan
                 </div>
 
                 <div className="flex items-center">
-                    <label className="w-48 text-[13px] font-medium text-slate-500">GST Registered?</label>
+                    <label className="w-48 text-[13px] font-medium text-slate-500">GST Registered?<span className="text-red-500">*</span></label>
                     <select value={isGstRegistered} onChange={e => { setIsGstRegistered(e.target.value); if(e.target.value==='No'){setGstNumber(''); setGstError('');} }} className="flex-1 max-w-lg h-9 px-3 border border-slate-200 rounded text-[13px] outline-none bg-white">
+                        <option value="">Select</option>
                         <option value="Yes">Yes</option>
                         <option value="No">No</option>
                     </select>

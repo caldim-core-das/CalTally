@@ -71,6 +71,10 @@ const TrialBalanceView = () => {
   const handleDownloadPDF = () => {
     if (!data || !summary) return;
     const doc = new jsPDF();
+    const fmtPdf = (v) => {
+      if (v === 0 || v === '0' || !v) return '—';
+      return `Rs. ${Number(v).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
+    };
     const companyName = sessionStorage.getItem('companyName') || 'CalBooks Company';
     
     // Title
@@ -98,8 +102,8 @@ const TrialBalanceView = () => {
     doc.text('Trial Balance Summary', 14, 50);
     
     const summaryData = [
-      ['Total Debit', fmt(summary.totalDebit)],
-      ['Total Credit', fmt(summary.totalCredit)],
+      ['Total Debit', fmtPdf(summary.totalDebit)],
+      ['Total Credit', fmtPdf(summary.totalCredit)],
       ['Status', summary.isBalanced ? 'Balanced ✓' : 'Imbalance Detected']
     ];
     
@@ -121,20 +125,20 @@ const TrialBalanceView = () => {
         // Group Header Row
         tableRows.push([
           { content: groupName, colSpan: 2, styles: { fontStyle: 'bold', textColor: [30, 97, 240] } },
-          fmt(groupData.totalTransactionDebits),
-          fmt(groupData.totalTransactionCredits),
-          fmt(groupData.totalDebitBalance),
-          fmt(groupData.totalCreditBalance)
+          fmtPdf(groupData.totalTransactionDebits),
+          fmtPdf(groupData.totalTransactionCredits),
+          fmtPdf(groupData.totalDebitBalance),
+          fmtPdf(groupData.totalCreditBalance)
         ]);
         
         groupData.ledgers.forEach(row => {
           tableRows.push([
             row.name,
             row.nature || '—',
-            fmt(row.transactionDebits),
-            fmt(row.transactionCredits),
-            fmt(row.debitBalance),
-            fmt(row.creditBalance)
+            fmtPdf(row.transactionDebits),
+            fmtPdf(row.transactionCredits),
+            fmtPdf(row.debitBalance),
+            fmtPdf(row.creditBalance)
           ]);
         });
       });
@@ -144,10 +148,10 @@ const TrialBalanceView = () => {
         tableRows.push([
           row.name,
           row.nature || '—',
-          fmt(row.transactionDebits),
-          fmt(row.transactionCredits),
-          fmt(row.debitBalance),
-          fmt(row.creditBalance)
+          fmtPdf(row.transactionDebits),
+          fmtPdf(row.transactionCredits),
+          fmtPdf(row.debitBalance),
+          fmtPdf(row.creditBalance)
         ]);
       });
     }
@@ -156,10 +160,10 @@ const TrialBalanceView = () => {
     const footRow = [
       'Grand Totals',
       summary.isBalanced ? 'Balanced ✓' : 'Imbalance',
-      fmt(totalTransDebitsSum),
-      fmt(totalTransCreditsSum),
-      fmt(summary.totalDebit),
-      fmt(summary.totalCredit)
+      fmtPdf(totalTransDebitsSum),
+      fmtPdf(totalTransCreditsSum),
+      fmtPdf(summary.totalDebit),
+      fmtPdf(summary.totalCredit)
     ];
     
     autoTable(doc, {
@@ -236,27 +240,7 @@ const TrialBalanceView = () => {
         </div>
         
         <div className="flex items-center gap-3">
-           <div className="flex items-center bg-slate-50 border border-slate-200 rounded-lg p-1">
-             <button 
-               onClick={() => setViewType('Report')}
-               className={`px-3 py-1.5 text-[11px] font-bold rounded transition-all ${viewType === 'Report' ? 'bg-white text-[#1e61f0] shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
-             >
-               Report
-             </button>
-             <button 
-               onClick={() => setViewType('Ledger Wise')}
-               className={`px-3 py-1.5 text-[11px] font-bold rounded transition-all ${viewType === 'Ledger Wise' ? 'bg-white text-[#1e61f0] shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
-             >
-               Ledger Wise
-             </button>
-           </div>
-           <div className="w-px h-6 bg-slate-200 mx-2" />
-           <button onClick={fetchReport} className="p-2 text-slate-400 hover:text-[#1e61f0] transition-colors">
-             <RefreshCcw size={18} className={loading ? 'animate-spin' : ''}/>
-           </button>
-           <button onClick={() => window.print()} className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-lg text-[12px] font-bold text-slate-600 hover:bg-slate-50 transition-all">
-             <Printer size={16}/> Print
-           </button>
+
            <button onClick={handleDownloadPDF} className="flex items-center gap-2 px-6 py-2 bg-[#1e61f0] text-white rounded-lg text-[12px] font-bold hover:bg-[#1a54d1] transition-all shadow-lg shadow-blue-500/20">
              <Download size={16}/> Export PDF
            </button>

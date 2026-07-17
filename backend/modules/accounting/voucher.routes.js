@@ -22,6 +22,6 @@ router.put('/:id/cancel', authorizeRoles('MANAGER', 'ADMIN', 'SUPER_ADMIN'), vou
 router.get('/transactions/:companyId', voucherController.getTransactions);
 router.get('/:companyId', voucherController.getVouchers);
 router.get('/detail/:id', voucherController.getVoucherById);
-router.put('/:id/narration', guardLockedVoucher, authorizeRoles('EMPLOYEE', 'ACCOUNTANT', 'ADMIN', 'SUPER_ADMIN', 'DATA_ENTRY'), voucherController.updateVoucherNarration);
+router.put('/:id/narration', guardLockedVoucher, authorizeRoles('EMPLOYEE', 'ACCOUNTANT', 'ADMIN', 'SUPER_ADMIN'), voucherController.updateVoucherNarration);
 
 module.exports = router;

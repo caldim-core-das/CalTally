@@ -12,6 +12,13 @@ import ConfirmModal from '../../components/ConfirmModal';
 import useNotificationStore from '../../store/notificationStore';
 import UserManagement from '../settings/UserManagement';
 
+const extractErrorMsg = (err, defaultMsg) => {
+  const errData = err.response?.data?.error;
+  if (typeof errData === 'string') return errData;
+  if (errData?.message && typeof errData.message === 'string') return errData.message;
+  return err.message || defaultMsg;
+};
+
 const validateGSTIN = (gstin) => {
   if (!gstin) return true;
   const regex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
@@ -197,7 +204,7 @@ const CompanyInfoView = ({ firstTime = false, onCompanyCreated }) => {
       fetchCompanyUsers();
       setTimeout(() => setStatus(null), 2000);
     } catch (err) {
-      setErrorMsg(err.response?.data?.error || 'Failed to invite user');
+      setErrorMsg(extractErrorMsg(err, 'Failed to invite user'));
       setStatus('error');
     }
     setLoading(false);
@@ -413,7 +420,7 @@ const CompanyInfoView = ({ firstTime = false, onCompanyCreated }) => {
     } catch (err) {
       console.error(err);
       setStatus('error');
-      setErrorMsg(err.response?.data?.error || err.message || 'Failed to save settings.');
+      setErrorMsg(extractErrorMsg(err, 'Failed to save settings.'));
     }
     setLoading(false);
   };
@@ -508,7 +515,7 @@ const CompanyInfoView = ({ firstTime = false, onCompanyCreated }) => {
     } catch (err) {
       console.error(err);
       setStatus('error');
-      setErrorMsg(err.response?.data?.error || err.message || 'Failed to create company.');
+      setErrorMsg(extractErrorMsg(err, 'Failed to create company.'));
     }
     setLoading(false);
   };

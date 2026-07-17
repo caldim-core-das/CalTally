@@ -28,7 +28,8 @@ module.exports = (sequelize, DataTypes) => {
     },
     itemId: DataTypes.UUID,
     DeliveryChallanId: DataTypes.UUID
-  });
+  }, {
+    });
 
   DeliveryChallanItem.associate = (models) => {
     DeliveryChallanItem.belongsTo(models.DeliveryChallan);

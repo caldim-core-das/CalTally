@@ -106,7 +106,8 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.UUID,
       allowNull: true
     }
-  });
+  }, {
+    });
 
   SalesOrder.associate = (models) => {
     SalesOrder.belongsTo(models.Company, { foreignKey: 'CompanyId' });

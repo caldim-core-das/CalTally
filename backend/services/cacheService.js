@@ -100,7 +100,7 @@ const initRedis = () => {
 // Flush cache locally in Node memory
 const invalidateLocalCache = (companyId) => {
   console.log(`Invalidating memory cache for company: ${companyId}`);
-  const prefix = `reports:${companyId}:`;
+  const prefix = `tenant:${companyId}:`;
   for (const key of localCache.keys()) {
     if (key.startsWith(prefix)) {
       localCache.delete(key);
@@ -113,7 +113,7 @@ const invalidateRedisCache = async (companyId) => {
   if (!isRedisConnected || !redisClient) return;
   console.log(`Invalidating Redis cache keys for company: ${companyId}`);
   try {
-    const pattern = `reports:${companyId}:*`;
+    const pattern = `tenant:${companyId}:*`;
     const keys = await redisClient.keys(pattern);
     if (keys && keys.length > 0) {
       await redisClient.del(...keys);
@@ -135,7 +135,9 @@ if (REDIS_ENABLED) {
 }
 
 
-const get = async (key) => {
+const get = async (tenantId, baseKey) => {
+  if (!tenantId) throw new Error('SECURITY ERROR: Cache access strictly requires a tenantId.');
+  const key = `tenant:${tenantId}:${baseKey}`;
   // 1. Try Redis
   if (isRedisConnected && redisClient) {
     try {
@@ -160,7 +162,9 @@ const get = async (key) => {
   return null;
 };
 
-const set = async (key, value, ttl = CACHE_TTL) => {
+const set = async (tenantId, baseKey, value, ttl = CACHE_TTL) => {
+  if (!tenantId) throw new Error('SECURITY ERROR: Cache access strictly requires a tenantId.');
+  const key = `tenant:${tenantId}:${baseKey}`;
   // Always set in Local Memory Cache first for speed & safety
   localCache.set(key, {
     value,

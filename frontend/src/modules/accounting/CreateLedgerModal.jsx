@@ -79,7 +79,13 @@ export default function CreateLedgerModal({ isOpen, onClose, onSuccess, ledgerTo
   // Find selected group details when groupId changes
   useEffect(() => {
     if (groupId) {
-      setSelectedGroup(groups.find(g => g.id === groupId) || null);
+      const grp = groups.find(g => g.id === groupId) || null;
+      setSelectedGroup(grp);
+      // Auto-set Dr/Cr based on group nature
+      if (grp) {
+        const nature = grp.nature || '';
+        setBalanceType(['Assets', 'Expenses'].includes(nature) ? 'Dr' : 'Cr');
+      }
     } else {
       setSelectedGroup(null);
     }

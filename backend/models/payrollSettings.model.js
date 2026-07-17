@@ -92,7 +92,8 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.UUID,
       allowNull: false
     }
-  });
+  }, {
+    });
 
   PayrollSettings.associate = function(models) {
     PayrollSettings.belongsTo(models.Company);

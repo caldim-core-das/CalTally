@@ -13,7 +13,7 @@ import useNotificationStore from '../../store/notificationStore';
 import { getCurrencyDisplay } from '../../utils/currencies';
 import { getUser } from '../../stores/authStore';
 import usePermissions from '../../hooks/usePermissions';
-
+import html2pdf from 'html2pdf.js';
 // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // MANAGE SALESPERSONS MODAL (Internal)
 // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -1230,6 +1230,27 @@ const SalesOrdersView = ({ companyId }) => {
         const totalBreakdownTax = Object.values(breakdown).reduce((sum, v) => sum + v, 0);
         const hasBreakdown = totalBreakdownTax > 0.01;
 
+        const handleDownloadPDF = async (e) => {
+            if (e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+            try {
+                const element = document.getElementById('printable-order');
+                if (!element) return;
+                const opt = {
+                  margin:       0.5,
+                  filename:     `${order?.orderNumber || 'SalesOrder'}.pdf`,
+                  image:        { type: 'jpeg', quality: 0.98 },
+                  html2canvas:  { scale: 2 },
+                  jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
+                };
+                html2pdf().set(opt).from(element).save();
+            } catch (error) {
+                console.error('Failed to generate PDF', error);
+            }
+        };
+
         return (
             <div className="flex-1 flex flex-col h-full bg-[#f8fafc] animate-fade-in shadow-inner overflow-hidden">
                 <div className="bg-[#fcfdfe] border-b border-slate-200 px-8 py-2.5 flex items-center justify-between sticky top-0 z-10 no-print">
@@ -1249,7 +1270,15 @@ const SalesOrdersView = ({ companyId }) => {
                 <div className="bg-white border-b border-slate-100 px-8 py-2 flex items-center justify-between shadow-sm no-print">
                     <div className="flex items-center gap-1">
                         <button onClick={() => openForm(order)} className="px-3 py-1.5 text-slate-600 hover:bg-slate-50 rounded-none flex items-center gap-1.5 text-[12px] font-bold border border-transparent hover:border-slate-100 transition-all"><Edit2 size={14}/> Modify</button>
-                        <button onClick={() => window.print()} className="px-3 py-1.5 text-slate-600 hover:bg-slate-50 rounded-none flex items-center gap-1.5 text-[12px] font-bold transition-all"><Printer size={14}/> PDF / Print</button>
+                        <div className="relative group">
+                            <button className="px-3 py-1.5 text-slate-600 hover:bg-slate-50 rounded-md flex items-center gap-1.5 text-[13px] border border-transparent group-hover:border-slate-200 transition-all">
+                                <Printer size={14}/> PDF/Print <ChevronDown size={12}/>
+                            </button>
+                            <div className="absolute top-full left-0 mt-0.5 w-28 bg-white border border-slate-200 shadow-lg rounded-md overflow-hidden hidden group-hover:block z-50">
+                                <button onClick={handleDownloadPDF} className="w-full text-left px-3 py-1.5 text-[13px] text-slate-700 hover:bg-blue-500 hover:text-white transition-colors">PDF</button>
+                                <button onClick={() => window.print()} className="w-full text-left px-3 py-1.5 text-[13px] text-slate-700 hover:bg-blue-500 hover:text-white transition-colors">Print</button>
+                            </div>
+                        </div>
                         <button onClick={() => setIsEmailModalOpen(true)} className="px-3 py-1.5 text-blue-600 hover:bg-blue-50 rounded-none flex items-center gap-1.5 text-[12px] font-bold border border-transparent hover:border-blue-100 transition-all"><Mail size={14}/> Send Email</button>
                     </div>
                 </div>

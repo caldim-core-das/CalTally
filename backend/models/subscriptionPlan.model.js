@@ -28,7 +28,8 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.JSON,
       defaultValue: [] // e.g., ['INVENTORY', 'MULTI_CURRENCY', 'COST_CENTERS']
     }
-  });
+  }, {
+    });
 
   return SubscriptionPlan;
 };

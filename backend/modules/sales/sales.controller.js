@@ -3,6 +3,7 @@ const {
   SalesInvoice, SalesInvoiceItem, sequelize 
 } = require('../../models');
 const AccountingService = require('../../services/AccountingService');
+const eventBus = require('../../core/EventBus');
 
 exports.createOrder = async (req, res, next) => {
   const t = await sequelize.transaction();
@@ -210,6 +211,10 @@ exports.createInvoice = async (req, res, next) => {
     }
 
     await t.commit();
+    
+    // Publish Domain Event
+    eventBus.publish('INVOICE_CREATED', { invoiceId: invoice.id, companyId, totalAmount, status: invoice.status }, { userId: req.user?.id, tenantId: companyId });
+    
     res.status(201).json(invoice);
   } catch (err) {
     if (t) await t.rollback();
