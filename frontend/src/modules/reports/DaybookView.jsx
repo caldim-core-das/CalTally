@@ -100,7 +100,7 @@ const DaybookView = () => {
     const summaryData = [
       ['Total Debits Volume', fmt(totalDebits)],
       ['Total Credits Volume', fmt(totalCredits)],
-      ['Status', Math.abs(totalDebits - totalCredits) < 0.01 ? 'Books Balanced ✓' : 'Imbalance Detected']
+      ['Status', Math.abs(totalDebits - totalCredits) < 0.01 ? 'Books Balanced' : 'Imbalance Detected']
     ];
     
     autoTable(doc, {

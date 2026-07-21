@@ -104,7 +104,7 @@ const TrialBalanceView = () => {
     const summaryData = [
       ['Total Debit', fmtPdf(summary.totalDebit)],
       ['Total Credit', fmtPdf(summary.totalCredit)],
-      ['Status', summary.isBalanced ? 'Balanced ✓' : 'Imbalance Detected']
+      ['Status', summary.isBalanced ? 'Balanced' : 'Imbalance Detected']
     ];
     
     autoTable(doc, {
@@ -159,7 +159,7 @@ const TrialBalanceView = () => {
     // Footer row
     const footRow = [
       'Grand Totals',
-      summary.isBalanced ? 'Balanced ✓' : 'Imbalance',
+      summary.isBalanced ? 'Balanced' : 'Imbalance',
       fmtPdf(totalTransDebitsSum),
       fmtPdf(totalTransCreditsSum),
       fmtPdf(summary.totalDebit),
