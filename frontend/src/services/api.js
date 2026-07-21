@@ -145,6 +145,25 @@ api.interceptors.response.use(
       }
     }
 
+    // Map namespaced error codes (Volume 9 Section 10)
+    if (error.response?.data?.error) {
+      const errMsg = error.response.data.error;
+      let friendly = null;
+      if (errMsg.includes('PERIOD LOCKED')) {
+        friendly = 'The transaction date falls within a locked financial period. Please select an active period or contact your administrator.';
+      } else if (errMsg.includes('INTEGRITY ERROR: Unbalanced journal entry')) {
+        friendly = 'The journal entry is unbalanced. Total debits must equal total credits.';
+      } else if (errMsg.includes('SECURITY ERROR')) {
+        friendly = 'You do not have the required permissions to perform this action.';
+      } else if (errMsg.includes('INTEGRITY ERROR: Ledgers are append-only')) {
+        friendly = 'Ledger entries are append-only. Modification and deletions are strictly blocked to ensure accounting audit trails.';
+      }
+      
+      if (friendly) {
+        error.friendlyMessage = friendly;
+      }
+    }
+
     return Promise.reject(error);
   }
 );

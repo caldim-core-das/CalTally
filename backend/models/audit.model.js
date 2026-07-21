@@ -68,6 +68,14 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.STRING,
       allowNull: false,
       defaultValue: 'COMPLETED'
+    },
+    hash: {
+      type: DataTypes.STRING,
+      allowNull: true
+    },
+    previousHash: {
+      type: DataTypes.STRING,
+      allowNull: true
     }
   }, {
     });

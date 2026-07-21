@@ -2,14 +2,15 @@
   "name": "tally_replica",
   "type": "commonjs",
   "version": "1.0.0",
-  "description": "",
+  "description": "FCCF Month-End Closures & Compliance Ledger System Hub",
   "main": "index.js",
   "scripts": {
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "dev": "nodemon server.js",
-    "start": "node server.js"
+    "start": "node server.js",
+    "lint": "eslint ."
   },
   "keywords": [],
   "author": "",

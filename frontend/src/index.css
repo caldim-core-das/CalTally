@@ -200,18 +200,65 @@ body {
   animation: slide-in-right 0.35s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+.print-only {
+  display: none;
+}
+
 @media print {
+  @page {
+    size: landscape;
+    margin: 6mm;
+  }
   .no-print {
     display: none !important;
   }
-  body, html, #root, main, .flex-1, .overflow-y-auto, .overflow-x-auto, [style*="overflow: hidden"], [style*="overflow-y: auto"], [style*="height: 100vh"], [style*="height: 100%"] {
+  .print-only {
+    display: block !important;
+  }
+  body, html, #root, main, .flex-1, .overflow-y-auto, .overflow-x-auto, div {
     height: auto !important;
     min-height: auto !important;
     overflow: visible !important;
     position: static !important;
+    background: white !important;
+    color: black !important;
+    max-width: 100% !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
   }
   tr, .card, .bg-white {
     page-break-inside: avoid;
+  }
+  .overflow-x-auto {
+    overflow: visible !important;
+  }
+  table {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    table-layout: auto !important;
+    border-collapse: collapse !important;
+    margin-top: 6px !important;
+    font-size: 9px !important;
+  }
+  th, td {
+    border: 1px solid #94a3b8 !important;
+    padding: 4px 4px !important;
+    font-size: 9px !important;
+  }
+  thead th {
+    background-color: #f1f5f9 !important;
+    color: #0f172a !important;
+    font-weight: 800 !important;
+    font-size: 8.5px !important;
+    text-transform: uppercase !important;
+    white-space: nowrap !important;
+  }
+  tfoot tr {
+    background-color: #0f172a !important;
+    color: white !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 }
 

@@ -24,7 +24,7 @@ module.exports = (sequelize, DataTypes) => {
       comment: 'Optional link to the FiscalYear this snapshot belongs to',
     },
     reportType: {
-      type: DataTypes.ENUM('TrialBalance', 'ProfitAndLoss', 'BalanceSheet', 'CashFlow', 'DayBook'),
+      type: DataTypes.STRING(50),
       allowNull: false,
     },
     periodStart: {

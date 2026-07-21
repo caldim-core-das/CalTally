@@ -10,6 +10,16 @@ exports.createRole = async (req, res, next) => {
       return res.status(400).json({ error: 'Name and base role are required' });
     }
 
+    const VALID_BASE_ROLES = ['ADMIN', 'ACCOUNTANT', 'MANAGER', 'AUDITOR', 'VIEWER', 'EMPLOYEE'];
+    if (!VALID_BASE_ROLES.includes(baseRole)) {
+      return res.status(400).json({ error: `Invalid base role. Must be one of: ${VALID_BASE_ROLES.join(', ')}` });
+    }
+
+    // Ceiling Rule: Cannot exceed the privilege of the creator (non-SUPER_ADMINs cannot select SUPER_ADMIN)
+    if (req.user.role !== 'SUPER_ADMIN' && baseRole === 'SUPER_ADMIN') {
+      return res.status(403).json({ error: 'Permission Denied: Custom role base cannot exceed your own privilege ceiling (SUPER_ADMIN is restricted).' });
+    }
+
     // Duplicate protection
     const existing = await CustomRole.findOne({
       where: { CompanyId: companyId, name: name.trim() }
@@ -60,6 +70,18 @@ exports.updateRole = async (req, res, next) => {
 
     if (!role) {
       return res.status(404).json({ error: 'Role not found.' });
+    }
+
+    if (baseRole) {
+      const VALID_BASE_ROLES = ['ADMIN', 'ACCOUNTANT', 'MANAGER', 'AUDITOR', 'VIEWER', 'EMPLOYEE'];
+      if (!VALID_BASE_ROLES.includes(baseRole)) {
+        return res.status(400).json({ error: `Invalid base role. Must be one of: ${VALID_BASE_ROLES.join(', ')}` });
+      }
+
+      // Ceiling Rule: Cannot exceed the privilege of the creator (non-SUPER_ADMINs cannot select SUPER_ADMIN)
+      if (req.user.role !== 'SUPER_ADMIN' && baseRole === 'SUPER_ADMIN') {
+        return res.status(403).json({ error: 'Permission Denied: Custom role base cannot exceed your own privilege ceiling (SUPER_ADMIN is restricted).' });
+      }
     }
 
     // Duplicate check if name changed

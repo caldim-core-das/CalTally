@@ -25,6 +25,7 @@ router.get('/stock-aging/:companyId', authorizeRoles(...ALL_ROLES), reportsContr
 router.get('/cost-centers/:companyId', authorizeRoles(...ALL_ROLES), reportsController.getCostCenterReport);
 // Audit logs are restricted to privileged roles
 router.get('/audit/:companyId', authorizeRoles(...AUDIT_ROLES), reportsController.getAuditLogs);
+router.get('/audit-verify/:companyId', authorizeRoles(...AUDIT_ROLES), reportsController.verifyAuditLogs);
 
 // Custom Reports & Saved Reports
 const customReportController = require('./customReport.controller');

@@ -34,11 +34,27 @@ jobs:
         with:
           node-version: 20.x
           cache: 'npm'
-          cache-dependency-path: backend/package-lock.json
+          cache-dependency-path: |
+            backend/package-lock.json
+            frontend/package-lock.json
           
-      - name: Install Dependencies
+      - name: Run Gitleaks Secret Scan
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        continue-on-error: true # Prevents hard crashes if tokens/actions-keys aren't set in dev forks
+
+      - name: Install Backend Dependencies
         working-directory: ./backend
         run: npm ci
+
+      - name: Run Backend Dependency Audit
+        working-directory: ./backend
+        run: npm audit --audit-level=high
+
+      - name: Run Backend Lint
+        working-directory: ./backend
+        run: npm run lint
         
       - name: Run Jest Tests
         working-directory: ./backend
@@ -52,3 +68,15 @@ jobs:
         uses: codecov/codecov-action@v3
         with:
           directory: ./backend/coverage/
+
+      - name: Install Frontend Dependencies
+        working-directory: ./frontend
+        run: npm ci
+
+      - name: Run Frontend Lint
+        working-directory: ./frontend
+        run: npm run lint
+
+      - name: Build Frontend Application
+        working-directory: ./frontend
+        run: npm run build

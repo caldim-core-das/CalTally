@@ -61,10 +61,53 @@ module.exports = (sequelize, DataTypes) => {
     UserId: {
       type: DataTypes.UUID,
       allowNull: true
+    },
+    eventId: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      unique: true
     }
   }, {
     paranoid: true,
-    });
+    hooks: {
+      beforeSave: async (voucher) => {
+        if (!voucher.CompanyId) return;
+        const { FinancialPeriod } = sequelize.models;
+        if (!FinancialPeriod) return;
+
+        const lockedPeriod = await FinancialPeriod.findOne({
+          where: {
+            CompanyId: voucher.CompanyId,
+            startDate: { [sequelize.Sequelize.Op.lte]: voucher.date },
+            endDate: { [sequelize.Sequelize.Op.gte]: voucher.date },
+            isLocked: true
+          }
+        });
+
+        if (lockedPeriod) {
+          throw new Error(`Regulatory Violation: Cannot create or modify transaction voucher in locked financial period (${lockedPeriod.periodName}).`);
+        }
+      },
+      beforeDestroy: async (voucher) => {
+        if (!voucher.CompanyId) return;
+        const { FinancialPeriod } = sequelize.models;
+        if (!FinancialPeriod) return;
+
+        const lockedPeriod = await FinancialPeriod.findOne({
+          where: {
+            CompanyId: voucher.CompanyId,
+            startDate: { [sequelize.Sequelize.Op.lte]: voucher.date },
+            endDate: { [sequelize.Sequelize.Op.gte]: voucher.date },
+            isLocked: true
+          }
+        });
+
+        if (lockedPeriod) {
+          throw new Error(`Regulatory Violation: Cannot delete transaction voucher in locked financial period (${lockedPeriod.periodName}).`);
+        }
+      }
+    }
+  });
 
   return Voucher;
 };
