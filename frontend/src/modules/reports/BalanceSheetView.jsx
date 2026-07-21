@@ -102,7 +102,7 @@ const BalanceSheetView = () => {
     const summaryData = [
       ['Total Assets', fmtPdf(data.totalAssets)],
       ['Total Equity & Liabilities', fmtPdf(data.totalLiabilities)],
-      ['Status', isBalanced ? 'Books Balanced ✓' : 'Imbalance Detected']
+      ['Status', isBalanced ? 'Books Balanced' : 'Imbalance Detected']
     ];
     
     autoTable(doc, {
