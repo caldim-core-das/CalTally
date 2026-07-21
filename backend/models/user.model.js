@@ -79,6 +79,23 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.DATE,
       allowNull: true
     },
+    // Department tracking (e.g. Accounts, Sales, Purchase, Management)
+    department: {
+      type: DataTypes.STRING,
+      defaultValue: 'Accounts',
+      allowNull: true
+    },
+    // Account Status: ACTIVE, INVITED, INACTIVE, LOCKED, SUSPENDED
+    status: {
+      type: DataTypes.STRING,
+      defaultValue: 'ACTIVE',
+      allowNull: false
+    },
+    // Last login timestamp
+    lastLoginAt: {
+      type: DataTypes.DATE,
+      allowNull: true
+    },
     // Per-user notification preferences (JSON blob)
     notificationPreferences: {
       type: DataTypes.JSON,

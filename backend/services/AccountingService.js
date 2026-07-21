@@ -8,7 +8,7 @@ class AccountingService {
    */
   static async recordJournalEntry({
     companyId, date, narration, reference, voucherType = 'Journal', entries, userId, voucherNumber: customVoucherNumber,
-    reportingMethod, currency, projectId
+    reportingMethod, currency, projectId, eventId
   }, dbTransaction = null) {
     const { AuditLog } = require('../models');
     const options = dbTransaction ? { transaction: dbTransaction } : {};
@@ -16,6 +16,18 @@ class AccountingService {
     // 0. Validate CompanyId explicitly
     if (!companyId) {
       throw new Error('SECURITY ERROR: companyId is strictly required to record a journal entry.');
+    }
+
+    // Idempotency / Duplicate Check
+    if (eventId) {
+      const existingVoucher = await Voucher.findOne({
+        where: { CompanyId: companyId, eventId },
+        ...options
+      });
+      if (existingVoucher) {
+        console.log(`[Idempotency] Duplicate request detected for eventId: ${eventId}. Returning existing voucher.`);
+        return existingVoucher;
+      }
     }
 
     // Period Locking Validation
@@ -110,7 +122,8 @@ class AccountingService {
       narration: narration || `Auto-generated ${voucherType} entry`,
       reportingMethod,
       currency,
-      ProjectId: projectId || null
+      ProjectId: projectId || null,
+      eventId: eventId || null
     }, options);
 
     // 3. Create Transaction Lines & Update Ledger Balances
@@ -684,6 +697,49 @@ class AccountingService {
     });
 
     return result;
+  }
+
+  /**
+   * Reverses a posted journal entry by swapping its debits and credits.
+   */
+  static async reverseJournalEntry({ companyId, voucherId, narration, userId }) {
+    const { Transaction: ModelTransaction } = require('../models');
+    
+    return await sequelize.transaction(async (t) => {
+      // Find the original Voucher with its transaction lines
+      const originalVoucher = await Voucher.findOne({
+        where: { id: voucherId, CompanyId: companyId },
+        include: [{ model: ModelTransaction }],
+        transaction: t
+      });
+
+      if (!originalVoucher) {
+        throw new Error('INTEGRITY ERROR: Original voucher not found for reversal.');
+      }
+
+      // Swap debits and credits for all transaction lines
+      const reversedEntries = originalVoucher.Transactions.map(tx => ({
+        ledgerId: tx.LedgerId,
+        debit: parseFloat(tx.credit || 0),
+        credit: parseFloat(tx.debit || 0),
+        costCenterId: tx.CostCenterId,
+        description: tx.description,
+        contactId: tx.contactId
+      }));
+
+      // Post the new reversing entry using recordJournalEntry
+      const reversingVoucher = await this.recordJournalEntry({
+        companyId,
+        date: new Date(),
+        narration: narration || `Reversal of Voucher ${originalVoucher.voucherNumber}`,
+        reference: originalVoucher.voucherNumber,
+        voucherType: originalVoucher.voucherType,
+        entries: reversedEntries,
+        userId
+      }, t);
+
+      return reversingVoucher;
+    });
   }
 }
 

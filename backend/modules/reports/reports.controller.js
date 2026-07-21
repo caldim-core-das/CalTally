@@ -561,6 +561,16 @@ exports.getAuditLogs = async (req, res, next) => {
   }
 };
 
+exports.verifyAuditLogs = async (req, res, next) => {
+  try {
+    const AuditVerifier = require('../../jobs/auditVerifier');
+    const results = await AuditVerifier.verifyTenantAuditLogs(req.params.companyId);
+    res.json(results);
+  } catch (err) {
+    next(err);
+  }
+};
+
 /**
  * DASHBOARD STATS — Comprehensive real-time financial data
  * Returns: financials, receivables, payables, bank accounts,

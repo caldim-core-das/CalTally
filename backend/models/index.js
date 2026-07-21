@@ -68,6 +68,7 @@ const MfaSecret = require('./mfaSecret.model')(sequelize, DataTypes);
 const PaymentGateway = require('./paymentGateway.model')(sequelize, DataTypes);
 const PaymentTransaction = require('./paymentTransaction.model')(sequelize, DataTypes);
 const InvoicePayment = require('./invoicePayment.model')(sequelize, DataTypes);
+const VoucherSettlement = require('./voucherSettlement.model')(sequelize, DataTypes);
 const PaymentWebhookLog = require('./paymentWebhookLog.model')(sequelize, DataTypes);
 const StockMovement = require('./stockMovement.model')(sequelize, DataTypes);
 const AppNotification = require('./appNotification.model')(sequelize, DataTypes);
@@ -79,6 +80,10 @@ const SavedReport = require('./savedReport.model')(sequelize, DataTypes);
 const FiscalYear = require('./fiscalYear.model')(sequelize, DataTypes);
 const ReportSnapshot = require('./reportSnapshot.model')(sequelize, DataTypes);
 const ProcessedEvent = require('./processedEvent.model')(sequelize, DataTypes);
+const MonthlyTaxSummary = require('./monthlyTaxSummary.model')(sequelize, DataTypes);
+const TdsEntry = require('./tdsEntry.model')(sequelize, DataTypes);
+const UserSession = require('./userSession.model')(sequelize, DataTypes);
+const UserActivityLog = require('./userActivityLog.model')(sequelize, DataTypes);
 
 
 // ─── Associations ────────────────────────────────────────────────────────────
@@ -631,6 +636,16 @@ ReportSnapshot.belongsTo(Company, { foreignKey: 'CompanyId' });
 FiscalYear.hasMany(ReportSnapshot, { foreignKey: 'FiscalYearId', onDelete: 'SET NULL' });
 ReportSnapshot.belongsTo(FiscalYear, { foreignKey: 'FiscalYearId' });
 
+Company.hasMany(MonthlyTaxSummary, { foreignKey: 'CompanyId', onDelete: 'CASCADE' });
+MonthlyTaxSummary.belongsTo(Company, { foreignKey: 'CompanyId' });
+
+Company.hasMany(TdsEntry, { foreignKey: 'CompanyId', onDelete: 'CASCADE' });
+TdsEntry.belongsTo(Company, { foreignKey: 'CompanyId' });
+Ledger.hasMany(TdsEntry, { foreignKey: 'vendorId' });
+TdsEntry.belongsTo(Ledger, { as: 'Vendor', foreignKey: 'vendorId' });
+Voucher.hasMany(TdsEntry, { foreignKey: 'paymentVoucherId' });
+TdsEntry.belongsTo(Voucher, { as: 'PaymentVoucher', foreignKey: 'paymentVoucherId' });
+
 registerAuditHooks(Voucher, 'Voucher');
 registerAuditHooks(Ledger, 'Ledger');
 registerAuditHooks(Company, 'Company');
@@ -716,6 +731,7 @@ const db = {
   PaymentGateway,
   PaymentTransaction,
   InvoicePayment,
+  VoucherSettlement,
   PaymentWebhookLog,
   StockMovement,
   AppNotification,
@@ -726,7 +742,11 @@ const db = {
   SavedReport,
   FiscalYear,
   ReportSnapshot,
-  ProcessedEvent
+  ProcessedEvent,
+  MonthlyTaxSummary,
+  TdsEntry,
+  UserSession,
+  UserActivityLog
 };
 
 module.exports = db;

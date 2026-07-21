@@ -1,0 +1,109 @@
+Defaulting to user installation because normal site-packages is not writeable
+Collecting python-docx
+  Downloading python_docx-1.2.0-py3-none-any.whl.metadata (2.0 kB)
+Collecting lxml>=3.1.0 (from python-docx)
+  Downloading lxml-6.1.1-cp312-cp312-win_amd64.whl.metadata (3.6 kB)
+Requirement already satisfied: typing_extensions>=4.9.0 in c:\users\loges\appdata\local\packages\pythonsoftwarefoundation.python.3.12_qbz5n2kfra8p0\localcache\local-packages\python312\site-packages (from python-docx) (4.12.2)
+Downloading python_docx-1.2.0-py3-none-any.whl (252 kB)
+Downloading lxml-6.1.1-cp312-cp312-win_amd64.whl (4.0 MB)
+   ---------------------------------------- 4.0/4.0 MB 4.9 MB/s eta 0:00:00
+Installing collected packages: lxml, python-docx
+Successfully installed lxml-6.1.1 python-docx-1.2.0
+
+ENTERPRISE ARCHITECTURE BLUEPRINT
+Cloud Accounting & Business Management Platform
+(Codename "Ledger" - Zoho Books-class product)
+VOLUME 8 OF 9
+TESTING & QA SPECIFICATION
+Test Strategy - Security & Load Testing - Multi-Tenancy Integrity - UAT - Release Gates
+
+
+Table of Contents
+
+1. Introduction & Scope
+1.1 Purpose
+This volume defines the complete test strategy needed to ship the platform with confidence: the test pyramid and ownership model, concrete testing standards for each layer (unit, integration, contract, end-to-end), the formalized security test plan promised by Vol. 6 Section 12, performance/load testing against Vol. 3's targets, the multi-tenancy and financial-integrity test suites that protect the platform's highest-severity risks, resilience/chaos testing for Vol. 5's integration failure modes, test data management, user acceptance criteria tied to Vol. 1's module scope, and the defect/release-gate process that plugs into Vol. 7's CI/CD pipeline.
+1.2 Testing Philosophy
+Given the modular-monolith-first decision (Vol. 2 Section 2.1) and the financial-integrity stakes (Vol. 1 Principle P4), this platform favors a test pyramid weighted toward fast, deterministic unit and integration tests, with a thin layer of end-to-end tests reserved for the value streams where cross-module correctness cannot be verified any other way (Section 6). Manual exploratory testing is retained deliberately for UI/UX judgment calls (Vol. 9) that automation cannot meaningfully assess.
+
+2. Test Strategy & Pyramid
+2.1 Pyramid Shape
+Test pyramid (approximate proportion of total test count)
+
+2.2 Ownership Model
+
+3. Unit Testing Standards
+3.1 Coverage Targets
+3.2 What Must Be Unit Tested
+Every CS-03 Money-type arithmetic path (Vol.3 Section 4.2) - explicit tests for rounding, currency mismatches, and negative-amount rejection.
+Every state transition in a domain state machine (e.g. Vol.2 Section 8.1 invoice lifecycle) - both valid and invalid transition attempts.
+Every validation rule that produces a namespaced error code (Vol.3 Section 4.3) - one test per error code, asserting the exact code is returned.
+Every branch of a business rule with a Vol.1 BC-xx-numbered acceptance criterion (Section 12 traces these).
+
+4. Integration Testing
+4.1 Scope
+Integration tests verify a module's interaction with its own database schema (Vol.4), its published/consumed domain events (Vol.2 Section 10), and its calls into other modules' public APIs (Vol.2 Section 11) - run against the ephemeral CI environment (Vol.7 Section 2.1) with real PostgreSQL, Kafka, and Redis instances (via containers), not mocks, since the highest-value bugs in this platform live at exactly these boundaries.
+4.2 Required Integration Test Scenarios (representative)
+
+5. Contract Testing
+5.1 API Contract Tests
+Every public API endpoint (Vol.3 Section 5, Vol.2 Section 11) has a contract test asserting its request/response schema matches its published OpenAPI definition (Vol.3 Section 4.2 CS-05) - run in CI on every change to either the endpoint implementation or the schema, catching drift before it reaches an external integrator (Vol.5 Section 7).
+5.2 Event Schema Contract Tests
+Every domain event (Vol.2 Section 10 catalog) has a schema-registry-backed contract test (Vol.3 Section 4.2 CS-06): a producer cannot publish a payload that violates the registered schema, and a new schema version must be backward-compatible (additive only) unless explicitly declared as a new major version. This is what makes the event-driven architecture in Vol. 2 Section 2.2 safe to evolve without breaking every downstream consumer simultaneously.
+5.3 Consumer-Driven Contract Verification
+For the highest-fan-out events (JournalPosted, InvoiceSent - Vol.2 Section 10), each consumer module publishes its own expectations of the event shape it depends on; the producer's CI pipeline runs all registered consumer contracts before merge, catching a breaking producer change even if the consumer's own repository/module hasn't been touched.
+
+6. End-to-End Testing
+E2E tests are scoped to the six value streams defined in Vol. 1 Section 7 - each value stream gets one or more E2E scenarios exercised through the real API surface against staging (Vol.7 Section 2.1), not through internal module calls.
+VS-05 (Hire-to-Pay/Payroll) is excluded from the Release 1 E2E suite per Vol. 1 Section 6's R3 scoping and will be added when Payroll (CTX-09) is built.
+
+7. Security Testing (Formalized from Volume 6)
+Volume 6 Section 12 specified which security tests must exist; this section is their concrete test-plan detail and CI wiring.
+
+8. Performance & Load Testing
+Verifies the Vol. 3 Section 12 performance targets under the Vol. 7 Section 7 scaling design, run against a staging environment sized to a known fraction of production capacity so results can be extrapolated.
+
+9. Multi-Tenancy & Financial Data Integrity Testing
+9.1 Multi-Tenancy Suite
+Beyond the cross-tenant leakage suite (Section 7), this includes cache-key isolation tests (Vol.3 Section 7.2 tenant-prefixed keys), tenant-context-propagation tests (Vol.3 Section 11.2 - verifying every async job and event consumer correctly carries tenantId, not just synchronous API requests), and tenant-deletion/offboarding tests (Vol.4 Section 10) verifying a deactivated tenant's data is inaccessible without being prematurely purged.
+9.2 Financial Integrity Suite
+Double-entry balance invariant: after every test scenario (unit, integration, or E2E) that posts to the ledger, assert total debits equal total credits for every affected journal entry and, in aggregate, for the tenant's full ledger.
+Append-only enforcement: attempt direct UPDATE/DELETE against ledger.journal_lines using the application's database role and assert it is rejected (Vol.4 Section 4.1 principle D2).
+Reversal correctness: for every voided/reversed transaction, assert the reversing entry exactly negates the original and that both remain queryable (never physically deleted).
+Idempotent replay: replay the same domain event twice through a consumer and assert no double-posting occurs (Vol.3 Section 8.2 idempotent-consumer requirement).
+Audit hash-chain integrity: run the periodic verification job (Vol.6 Section 9.2) against a seeded audit log and assert it detects an artificially tampered entry.
+
+10. Resilience & Chaos Testing
+Verifies the failure-handling patterns from Vol. 5 Section 8 and the disaster-recovery posture from Vol. 7 Section 9 actually work, rather than trusting the design on paper.
+
+11. Test Data Management
+
+12. User Acceptance Testing & Acceptance Criteria
+12.1 Acceptance Criteria Source
+Per Vol. 1 Section 12's extraction note, functional acceptance criteria are derived directly from the Vol. 1 Section 6 Module & Feature Scope Catalog: every MVP-scoped row becomes a numbered acceptance criterion that must pass UAT before Release 1 ships. This avoids maintaining acceptance criteria as a separate, driftable document.
+12.2 Sample Acceptance Criteria Derivation
+12.3 UAT Sign-off Process
+Each MVP acceptance criterion is verified against staging by a business stakeholder (or a designated proxy), not solely by the engineering team that built it.
+A criterion is only marked accepted with a recorded pass note (screenshot or recorded session) attached to the criterion ID, ensuring an auditable UAT record exists.
+Release 1 GA sign-off (Vol.7 Section 5.2 manual approval gate) requires 100% of MVP-tagged acceptance criteria accepted, with any exceptions explicitly waived in writing by the product owner.
+
+13. Defect Management & Release Gates
+13.1 Severity Classification
+13.2 Release Gate Checklist (feeds Vol. 7 Section 5.2 approval gate)
+All CI-blocking tests green (Section 2.2 layers, Section 7 security gates).
+Zero open S1 defects; all open S2 defects explicitly waived in writing.
+100% of MVP-tagged UAT acceptance criteria (Section 12) accepted.
+Performance/load test results (Section 8) meet or exceed Vol.3 Section 12 targets on the current build.
+Most recent resilience/chaos test results (Section 10) show no regressions from the prior release.
+Security scan results (Section 7) reviewed with no unresolved high/critical findings.
+
+14. Test Automation Tooling & CI Integration
+
+15. Traceability & Next Phase
+15.1 Traceability to Volumes 1-7
+15.2 Open Questions for Sign-off
+Confirm whether a dedicated QA function/hire exists or is planned, or whether E2E test ownership (Section 2.2) rotates within engineering for Release 1.
+Confirm the third-party penetration test vendor and timeline (Section 7) so it can be scheduled ahead of the targeted Release 1 GA date.
+Confirm risk tolerance for waiving S2 defects (Section 13.1) at release - some teams require zero open S2s, others allow written waivers; this should be a deliberate choice, not a default.
+15.3 Next Phase
+On approval, Phase 9 (final) begins: UI/UX Design Specification & API Design Document (Volume 9) - completing the nine-volume blueprint with the design system, screen-level specifications for the value streams (Vol.1 Section 7), and full endpoint-by-endpoint API contracts building on Vol.2 Section 11's resource-ownership map and Vol.3 Section 5's API conventions.
