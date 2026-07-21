@@ -354,76 +354,13 @@ app.get('/api/test-sprint6', async (req, res) => {
 
 // 6. DB Sync & Boot Strategy
 const dialect = process.env.DB_DIALECT || 'sqlite';
+const syncOptions = dialect === 'sqlite' ? { alter: true } : {};
 
-sequelize.sync(syncOptions).then(async () => {
-  console.log(`✅ Ledger Database Synced [${dialect}]`);
+sequelize.authenticate().then(async () => {
+  console.log(`✅ Ledger Database Connected [${dialect}]`);
 
-  // Auto-migrate missing columns to prevent Sequelize errors
-  try {
-    await sequelize.query('ALTER TABLE "AuditLogs" ADD COLUMN status VARCHAR(255) NOT NULL DEFAULT \'COMPLETED\';').catch(() => { });
-    console.log('✅ Added status column to AuditLogs');
-  } catch (e) {
-    if (e.message && !e.message.includes('duplicate column')) {
-      console.log('⚠️ Minor DB Migrations (Ignored):', e.message);
-    }
-  }
-
-  try {
-    const queries = [
-      'ALTER TABLE "Users" ADD COLUMN "pendingEmail" VARCHAR(255);',
-      'ALTER TABLE "Users" ADD COLUMN "emailVerificationToken" VARCHAR(255);',
-      'ALTER TABLE "Users" ADD COLUMN "emailVerificationExpiry" TIMESTAMP WITH TIME ZONE;',
-      'ALTER TABLE "Users" ADD COLUMN "isEmailVerified" BOOLEAN DEFAULT false;',
-      'ALTER TABLE "Users" ADD COLUMN "resetPasswordToken" VARCHAR(255);',
-      'ALTER TABLE "Users" ADD COLUMN "resetPasswordExpiry" TIMESTAMP WITH TIME ZONE;',
-      'ALTER TABLE "Users" ADD COLUMN "notificationPreferences" JSON;',
-      'ALTER TABLE "Users" ADD COLUMN "oauthOnly" BOOLEAN DEFAULT false;',
-      'ALTER TABLE "Users" ADD COLUMN "failedLoginAttempts" INTEGER DEFAULT 0;',
-      'ALTER TABLE "Users" ADD COLUMN "lockedUntil" TIMESTAMP WITH TIME ZONE;',
-      'ALTER TABLE "Users" ADD COLUMN "department" VARCHAR(255) DEFAULT \'Accounts\';',
-      'ALTER TABLE "Users" ADD COLUMN "status" VARCHAR(255) DEFAULT \'ACTIVE\';',
-      'ALTER TABLE "Users" ADD COLUMN "lastLoginAt" TIMESTAMP WITH TIME ZONE;',
-      'ALTER TABLE "Ledgers" ADD COLUMN "tdsApplicable" BOOLEAN DEFAULT false;',
-      'ALTER TABLE "SalesInvoiceItems" ADD COLUMN "gstRate" FLOAT DEFAULT 0;',
-      'ALTER TABLE "SalesOrderItems" ADD COLUMN "gstRate" FLOAT DEFAULT 0;',
-      'ALTER TABLE "SalesInvoices" ADD COLUMN "lastReminderDate" TIMESTAMP WITH TIME ZONE;',
-      'ALTER TABLE "SalesInvoices" ADD COLUMN "reminderCount" INTEGER DEFAULT 0;',
-      'ALTER TABLE "SalesInvoices" ADD COLUMN "lastReminderType" VARCHAR(255);',
-      'ALTER TABLE "UserCompanies" ADD COLUMN "customRoleId" INTEGER;',
-      'ALTER TABLE "AuditLogs" ADD COLUMN "hash" VARCHAR(255);',
-      'ALTER TABLE "AuditLogs" ADD COLUMN "previousHash" VARCHAR(255);',
-      'ALTER TABLE "Vouchers" ADD COLUMN "eventId" VARCHAR(255);',
-      'CREATE TABLE IF NOT EXISTS "MonthlyTaxSummaries" (' +
-      ' "id" VARCHAR(255) PRIMARY KEY,' +
-      ' "CompanyId" VARCHAR(255) NOT NULL,' +
-      ' "month" INTEGER NOT NULL,' +
-      ' "year" INTEGER NOT NULL,' +
-      ' "sales" DOUBLE PRECISION DEFAULT 0,' +
-      ' "purchase" DOUBLE PRECISION DEFAULT 0,' +
-      ' "outputGST" DOUBLE PRECISION DEFAULT 0,' +
-      ' "inputGST" DOUBLE PRECISION DEFAULT 0,' +
-      ' "tds" DOUBLE PRECISION DEFAULT 0,' +
-      ' "tcs" DOUBLE PRECISION DEFAULT 0,' +
-      ' "version" INTEGER DEFAULT 1,' +
-      ' "lastVoucherIncluded" VARCHAR(255),' +
-      ' "generatedBy" VARCHAR(255),' +
-      ' "generatedAt" TIMESTAMP WITH TIME ZONE,' +
-      ' "isLocked" BOOLEAN DEFAULT false,' +
-      ' "createdAt" TIMESTAMP WITH TIME ZONE,' +
-      ' "updatedAt" TIMESTAMP WITH TIME ZONE' +
-      ');'
-    ];
-    for (const q of queries) {
-      await sequelize.query(q).catch(e => {
-        // Ignore column already exists errors
-        if (!e.message.includes('already exists') && !e.message.includes('multiple assignments')) {
-          console.log('Migration note:', e.message);
-        }
-      });
-    }
-  } catch (err) {
-    console.error('Migration block error:', err.message);
-  }
+  // Note: sync({ alter: true }) and inline ALTER queries have been removed.
+  // Database schema management must now be handled via sequelize-cli migrations.
 
   // Load Background Jobs
   require('./jobs/inventoryAlerts');
