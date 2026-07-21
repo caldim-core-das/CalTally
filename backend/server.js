@@ -354,6 +354,7 @@ app.get('/api/test-sprint6', async (req, res) => {
 
 // 6. DB Sync & Boot Strategy
 const dialect = process.env.DB_DIALECT || 'sqlite';
+const syncOptions = dialect === 'sqlite' ? { alter: true } : {};
 
 sequelize.sync(syncOptions).then(async () => {
   console.log(`✅ Ledger Database Synced [${dialect}]`);
