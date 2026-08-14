@@ -11,8 +11,29 @@ const { sequelize } = require('./models');
 dotenv.config();
 
 const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:5173';
+const allowedOrigins = [
+  CLIENT_URL,
+  'http://localhost:5173',
+  'http://127.0.0.1:5173',
+  'http://localhost:5174',
+  'http://127.0.0.1:5174',
+  'http://localhost:3000',
+  'http://localhost:5000'
+].filter(Boolean);
+
 const corsOptions = {
-  origin: CLIENT_URL,
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true);
+    if (
+      allowedOrigins.includes(origin) ||
+      /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin) ||
+      origin.endsWith('.onrender.com') ||
+      origin.endsWith('.vercel.app')
+    ) {
+      return callback(null, true);
+    }
+    return callback(null, true);
+  },
   credentials: true,
   exposedHeaders: ['x-csrf-token']
 };
@@ -118,49 +139,53 @@ app.get('/api/debug-logs', async (req, res) => {
 const dialect = process.env.DB_DIALECT || 'sqlite';
 const syncOptions = dialect === 'sqlite' ? { alter: true } : {}; // Disabled alter for Postgres to avoid Enum cast crashes
 
-sequelize.sync(syncOptions).then(async () => {
-  console.log(`✅ Ledger Database Synced [${dialect}]`);
-  
-  // Auto-migrate missing columns to prevent Sequelize errors
+const initDB = async () => {
   try {
-    await sequelize.query('ALTER TABLE "AuditLogs" ADD COLUMN status VARCHAR(255) NOT NULL DEFAULT \'COMPLETED\';').catch(() => {});
-    console.log('✅ Added status column to AuditLogs');
-  } catch (e) {
-    if (e.message && !e.message.includes('duplicate column')) {
-      console.log('⚠️ Minor DB Migrations (Ignored):', e.message);
-    }
-  }
+    await sequelize.authenticate();
+    console.log(`✅ Database Connected [${dialect}]`);
 
-  try {
-    const queries = [
-      'ALTER TABLE "Users" ADD COLUMN "pendingEmail" VARCHAR(255);',
-      'ALTER TABLE "Users" ADD COLUMN "emailVerificationToken" VARCHAR(255);',
-      'ALTER TABLE "Users" ADD COLUMN "emailVerificationExpiry" TIMESTAMP WITH TIME ZONE;',
-      'ALTER TABLE "Users" ADD COLUMN "isEmailVerified" BOOLEAN DEFAULT false;',
-      'ALTER TABLE "Users" ADD COLUMN "resetPasswordToken" VARCHAR(255);',
-      'ALTER TABLE "Users" ADD COLUMN "resetPasswordExpiry" TIMESTAMP WITH TIME ZONE;',
-      'ALTER TABLE "Users" ADD COLUMN "notificationPreferences" JSON;',
-      'ALTER TABLE "Users" ADD COLUMN "oauthOnly" BOOLEAN DEFAULT false;',
-      'ALTER TABLE "Users" ADD COLUMN "failedLoginAttempts" INTEGER DEFAULT 0;',
-      'ALTER TABLE "Users" ADD COLUMN "lockedUntil" TIMESTAMP WITH TIME ZONE;',
-      'ALTER TABLE "Ledgers" ADD COLUMN "tdsApplicable" BOOLEAN DEFAULT false;',
-      'ALTER TABLE "SalesInvoiceItems" ADD COLUMN "gstRate" FLOAT DEFAULT 0;',
-      'ALTER TABLE "SalesOrderItems" ADD COLUMN "gstRate" FLOAT DEFAULT 0;'
-    ];
-    for (const q of queries) {
-      await sequelize.query(q).catch(e => {
-        // Ignore column already exists errors
-        if (!e.message.includes('already exists') && !e.message.includes('multiple assignments')) {
-           console.log('Migration note:', e.message);
-        }
-      });
+    await sequelize.sync(syncOptions);
+    console.log(`✅ Ledger Database Synced [${dialect}]`);
+    
+    // Auto-migrate missing columns to prevent Sequelize errors
+    try {
+      await sequelize.query('ALTER TABLE "AuditLogs" ADD COLUMN status VARCHAR(255) NOT NULL DEFAULT \'COMPLETED\';').catch(() => {});
+      console.log('✅ Added status column to AuditLogs');
+    } catch (e) {
+      if (e.message && !e.message.includes('duplicate column')) {
+        console.log('⚠️ Minor DB Migrations (Ignored):', e.message);
+      }
     }
-  } catch (err) {
-    console.error('Migration block error:', err.message);
-  }
 
-  // Load Background Jobs
-  require('./jobs/inventoryAlerts');
+    try {
+      const queries = [
+        'ALTER TABLE "Users" ADD COLUMN "pendingEmail" VARCHAR(255);',
+        'ALTER TABLE "Users" ADD COLUMN "emailVerificationToken" VARCHAR(255);',
+        'ALTER TABLE "Users" ADD COLUMN "emailVerificationExpiry" TIMESTAMP WITH TIME ZONE;',
+        'ALTER TABLE "Users" ADD COLUMN "isEmailVerified" BOOLEAN DEFAULT false;',
+        'ALTER TABLE "Users" ADD COLUMN "resetPasswordToken" VARCHAR(255);',
+        'ALTER TABLE "Users" ADD COLUMN "resetPasswordExpiry" TIMESTAMP WITH TIME ZONE;',
+        'ALTER TABLE "Users" ADD COLUMN "notificationPreferences" JSON;',
+        'ALTER TABLE "Users" ADD COLUMN "oauthOnly" BOOLEAN DEFAULT false;',
+        'ALTER TABLE "Users" ADD COLUMN "failedLoginAttempts" INTEGER DEFAULT 0;',
+        'ALTER TABLE "Users" ADD COLUMN "lockedUntil" TIMESTAMP WITH TIME ZONE;',
+        'ALTER TABLE "Ledgers" ADD COLUMN "tdsApplicable" BOOLEAN DEFAULT false;',
+        'ALTER TABLE "SalesInvoiceItems" ADD COLUMN "gstRate" FLOAT DEFAULT 0;',
+        'ALTER TABLE "SalesOrderItems" ADD COLUMN "gstRate" FLOAT DEFAULT 0;'
+      ];
+      for (const q of queries) {
+        await sequelize.query(q).catch(e => {
+          if (!e.message.includes('already exists') && !e.message.includes('multiple assignments')) {
+             console.log('Migration note:', e.message);
+          }
+        });
+      }
+    } catch (err) {
+      console.error('Migration block error:', err.message);
+    }
+
+    // Load Background Jobs
+    require('./jobs/inventoryAlerts');
 
     // Initialize jobs
     try {
@@ -169,11 +194,13 @@ sequelize.sync(syncOptions).then(async () => {
     } catch(err) {
       console.error('Failed to init report scheduler', err);
     }
+  } catch (err) {
+    console.error('❌ Critical Hub Entry Failure:', err.message);
+  }
+};
 
-    app.listen(PORT, () => {
-      console.log(`Server is running on port ${PORT}.`);
-    });
-}).catch(err => {
-  console.error('❌ Critical Hub Entry Failure:', err.message);
-  process.exit(1);
+app.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT}.`);
+  initDB();
 });
+
