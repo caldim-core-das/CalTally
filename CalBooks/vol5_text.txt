@@ -1,0 +1,91 @@
+
+ENTERPRISE ARCHITECTURE BLUEPRINT
+Cloud Accounting & Business Management Platform
+(Codename "Ledger" - Zoho Books-class product)
+VOLUME 5 OF 9
+INTEGRATION ARCHITECTURE
+Banking - Payments - Tax & E-filing - E-commerce - Public API & Webhooks
+
+
+Table of Contents
+
+1. Introduction & Scope
+1.1 Purpose
+This volume designs the platform's integrations with the external systems identified in Vol. 1's system context (Section 4 personas, BC-05 Banking, BC-06 Online Payments, BC-11 Tax Compliance, BC-19 Integration & Ecosystem) and the C4 Level 1 diagram (Vol. 2 Section 4): bank feed providers, payment gateways, tax/e-filing services, e-commerce channels, and the platform's own outbound public API and webhook surface for third-party integrators. Every integration in this volume is owned by the Integration Gateway bounded context (CTX-16) or a directly adjacent context (Banking CTX-05, Payments CTX-06, Tax CTX-10) per Vol. 2's context map, and every external call crosses through an anti-corruption layer per Vol. 2 Section 2.2.
+1.2 Why Integrations Get Their Own Volume
+Third-party financial integrations carry disproportionate operational risk relative to their apparent scope: they are the platform's least controllable dependency (rate limits, breaking API changes, downtime outside the platform's control), the most security-sensitive surface (credentials, tokenized payment data), and the hardest to test end-to-end before production. This volume exists to make every integration's failure mode, retry behavior, and data-ownership boundary explicit before implementation begins, rather than discovering them during an incident.
+
+2. Integration Architecture Principles
+
+3. Banking Integration
+3.1 Provider Strategy
+Direct bank-by-bank integration is not viable at MVP scale (thousands of individual bank connections). The platform integrates with a bank-data aggregator (Plaid/Yodlee/TrueLayer-class, region-dependent - see Section 11 vendor evaluation) that itself maintains the individual bank connections, exposing a single normalized API and webhook stream to the platform.
+3.2 Account Linking Flow
+Bank account linking (OAuth-style aggregator flow)
+
+User bank credentials never pass through the platform's own servers - this is a deliberate security and compliance boundary (formalized in Vol. 6) that also reduces the platform's liability surface.
+3.3 Transaction Sync
+3.4 Anti-Corruption Layer Responsibilities
+Normalize provider-specific transaction categories into the platform's own category taxonomy before they reach the Banking module.
+Normalize currency/amount representation (some providers return minor units, others decimal) into the platform's NUMERIC(19,4) convention (Vol. 4 Section 8).
+Translate provider-specific error codes into the platform's namespaced error codes (Vol. 3 Section 4.3).
+Shield the rest of the platform from provider API version changes - only the ACL adapter needs to change when the provider ships a breaking API update.
+
+4. Payment Gateway Integration
+4.1 Provider Strategy
+The platform integrates with a small set of tokenizing payment gateways (Stripe-class for card/ACH in US/EU markets, Razorpay-class for India, expandable per Section 11) via the Payments bounded context (CTX-06), which Vol. 2 Section 2.1 already scoped as an independently-deployable service from Release 1 given its inherent dependency on volatile third-party APIs.
+4.2 PCI Scope Reduction
+The platform never stores raw card numbers. All card capture happens via the gateway's hosted fields or client-side tokenization SDK, so card data goes directly from the customer's browser to the gateway, and the platform only ever handles an opaque payment token/method ID. This keeps the platform at PCI SAQ-A (Vol. 1 Section 10), the lowest self-assessment tier, rather than SAQ-D.
+4.3 Payment Link & Auto-Charge Flow
+Payment link generation and webhook confirmation
+
+4.4 Recurring / Auto-Charge
+For recurring invoices (Vol. 1 BC-02, Vol. 3 Section 9 scheduled job), the Payments service stores a reusable payment-method token (not the platform's own credential) and initiates a server-side charge on the recurrence date, with the same idempotency-key and webhook-confirmation pattern as Section 4.3. A failed auto-charge triggers a dunning workflow (Automation module, CTX-14) rather than silent failure.
+
+5. Tax & E-Filing Integration
+5.1 Build vs. Buy Decision
+5.2 Tax Provider Interface (Pluggable)
+Tax module - pluggable calculation interface
+
+5.3 E-Filing Integrations
+
+6. E-Commerce Channel Integration
+6.1 Supported Channels & Sync Direction
+6.2 Order Import Flow
+E-commerce order import to Sales Order/Invoice
+
+6.3 Conflict Handling
+If a channel order references a SKU not found in the platform's item master, the order is imported in a Needs Review state rather than silently dropped or auto-created as a new item.
+If stock is insufficient at import time, the order still imports (the sale already happened on the channel) but flags a backorder/oversell warning for the Inventory Manager (PER-06).
+Channel-side price/tax figures are treated as informational; the platform recalculates tax via the Tax module (Section 5) as the authoritative figure for financial posting.
+
+7. Public API & Webhook Platform (Outbound)
+This is the platform acting as the upstream integration provider for third-party developers and partner apps - the mirror image of Sections 3-6. It builds directly on Vol. 3 Section 5's API conventions.
+7.1 Outbound Webhook Delivery
+7.2 Public API Rate Limiting
+Rate limits are enforced at the API Gateway (Vol. 2 Section 5) using the Redis-backed counters described in Vol. 3 Section 7.1, tiered by edition (Vol. 1 Section 9): Standard/Professional get a shared default quota, Enterprise tenants get a higher or dedicated quota. Limit responses follow standard 429 + Retry-After conventions.
+
+8. Integration Resilience Patterns
+8.1 Transactional Outbox Pattern
+Outbox pattern - reliable event publishing
+
+This guarantees that a committed domain event (e.g. InvoiceSent) is never lost even if Kafka is briefly unreachable, and that no event is published for a database write that ultimately rolled back - both failure modes that a naive "publish then write" or "write then publish" approach would allow.
+8.2 Circuit Breaker for Outbound Calls
+8.3 Retry Policy Summary
+
+9. Integration Gateway Service Architecture (CTX-16)
+Component detail for the Integration Gateway, extending Vol. 2 Section 6's C4 Level 3 diagrams to this context, which Vol. 2 Section 2.1 already scoped as an independently-deployable service.
+C4 Level 3 - Integration Gateway components
+
+
+10. Third-Party Vendor Evaluation Matrix
+This is a starting evaluation frame, not a final vendor selection - final selection depends on target-market confirmation (Vol. 1 Section 13.2 open question on countries) and commercial negotiation outside this document's scope.
+
+11. Traceability & Next Phase
+11.1 Traceability to Volumes 1-4
+11.2 Open Questions for Sign-off
+Confirm target markets (Vol.1 Section 13.2 Q1) to finalize which bank aggregator and tax vendor candidates (Section 10) are actually in-region.
+Confirm whether a payment gateway aggregator/orchestration layer (to support multiple gateways per region without duplicating integration work) is worth the added complexity at MVP, or whether a single gateway per initial market is acceptable.
+Confirm risk tolerance for the Section 5.1 hybrid tax approach - is flat-rate MVP tax calculation acceptable to launch with, or does the first target market require multi-jurisdiction accuracy from day one?
+11.3 Next Phase
+On approval, Phase 6 begins: Security Architecture (Volume 6) - threat model, IAM design, encryption/credential-storage standards (referenced but not detailed in this volume's Section 9 Credential Store), and compliance control mapping (SOC2/GDPR/PCI) covering both the core platform and every integration surface defined here.

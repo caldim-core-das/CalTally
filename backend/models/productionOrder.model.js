@@ -30,7 +30,8 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.ENUM('Draft', 'Completed'),
       defaultValue: 'Draft'
     }
-  });
+  }, {
+    });
 
   return ProductionOrder;
 };

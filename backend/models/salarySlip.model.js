@@ -77,6 +77,7 @@ module.exports = (sequelize, DataTypes) => {
     timestamps: true,
     createdAt: 'created_date',
     updatedAt: 'updated_date',
+
     indexes: [
       {
         unique: true,

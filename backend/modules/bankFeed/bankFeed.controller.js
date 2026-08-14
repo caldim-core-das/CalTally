@@ -47,10 +47,30 @@ exports.createConsent = async (req, res, next) => {
 // Setu posts CONSENT_STATUS_UPDATE and SESSION_STATUS_UPDATE here
 exports.handleWebhook = async (req, res, next) => {
   try {
-    // Verify webhook authenticity (Setu signs the payload)
-    // Check Setu docs for exact signature header name
-    // const sig = req.headers['x-setu-signature'];
-    // Add signature verification here when Setu provides it
+    // Verify webhook authenticity (Setu signs the payload using HMAC-SHA256)
+    const webhookSecret = process.env.SETU_WEBHOOK_SECRET;
+    const signature = req.headers['x-setu-signature'];
+
+    if (webhookSecret && webhookSecret !== 'your_webhook_secret_here') {
+      if (!signature) {
+        return res.status(401).json({ error: 'Signature header x-setu-signature is missing.' });
+      }
+      
+      const computedHash = crypto
+        .createHmac('sha256', webhookSecret)
+        .update(req.rawBody || '')
+        .digest('hex');
+
+      const signatureBuf = Buffer.from(signature, 'utf8');
+      const computedBuf = Buffer.from(computedHash, 'utf8');
+
+      if (signatureBuf.length !== computedBuf.length || !crypto.timingSafeEqual(signatureBuf, computedBuf)) {
+        console.warn(`[SECURITY WARNING] Invalid signature received on Setu bank feed webhook.`);
+        return res.status(401).json({ error: 'Invalid webhook signature.' });
+      }
+    } else {
+      console.log('⚠️ [Setu Webhook Warning]: SETU_WEBHOOK_SECRET is not configured or is using default placeholder. Skipping signature verification.');
+    }
 
     const { type, consentId, data } = req.body;
 

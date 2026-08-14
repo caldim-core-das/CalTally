@@ -106,13 +106,40 @@ exports.tenantAccess = async (req, res, next) => {
       return res.status(403).json({ error: 'Access denied: You do not have access to this company' });
     }
 
-    // Set the workspace-level role for authorization
-    req.user.role = userCompanyRel.role || 'VIEWER';
+    // Set the workspace-level role for authorization, resolving custom role if applicable
+    let resolvedRole = userCompanyRel.role || 'VIEWER';
+    if (userCompanyRel.customRoleId) {
+      const { CustomRole } = require('../models');
+      const customRole = await CustomRole.findOne({
+        where: { id: userCompanyRel.customRoleId, CompanyId: companyIdToCheck, isActive: true }
+      });
+      if (customRole) {
+        resolvedRole = customRole.baseRole;
+      }
+    }
+    req.user.role = resolvedRole;
   } catch (err) {
     return next(err);
   }
 
   req.companyId = companyIdToCheck;
+  
+  // Populate CLS namespace for audit logs
+  const { getNamespace } = require('./cls.middleware');
+  const ns = getNamespace();
+  if (ns) {
+    ns.set('companyId', companyIdToCheck);
+    ns.set('userId', req.user?.id);
+  }
+
+  // Set the tenant ID for Postgres RLS for the current session
+  try {
+    const { sequelize } = require('../models');
+    await sequelize.query(`SET SESSION "app.current_tenant_id" = '${companyIdToCheck}'`);
+  } catch (err) {
+    console.error('[RLS] Failed to set tenant context:', err.message);
+  }
+
   next();
 };
 

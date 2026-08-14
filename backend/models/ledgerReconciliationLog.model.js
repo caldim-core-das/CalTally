@@ -30,7 +30,8 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.DATE,
       defaultValue: DataTypes.NOW
     }
-  });
+  }, {
+    });
 
   return LedgerReconciliationLog;
 };

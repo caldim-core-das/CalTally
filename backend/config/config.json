@@ -1,4 +1,9 @@
 {
+  "test": {
+    "dialect": "sqlite",
+    "storage": ":memory:",
+    "logging": false
+  },
   "development": {
     "use_env_variable": "DATABASE_URL",
     "dialect": "postgres",

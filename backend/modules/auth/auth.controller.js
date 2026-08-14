@@ -30,11 +30,20 @@ const getCompanyRole = async (userId, globalRole, companyId) => {
   if (globalRole === 'SUPER_ADMIN') return 'SUPER_ADMIN';
   if (!companyId) return globalRole === 'ADMIN' ? 'ADMIN' : 'VIEWER';
   try {
-    const { UserCompany } = require('../../models');
+    const { UserCompany, CustomRole } = require('../../models');
     const relation = await UserCompany.findOne({
       where: { userId, companyId }
     });
-    return relation ? relation.role : 'VIEWER';
+    if (!relation) return 'VIEWER';
+    if (relation.customRoleId) {
+      const customRole = await CustomRole.findOne({
+        where: { id: relation.customRoleId, CompanyId: companyId, isActive: true }
+      });
+      if (customRole) {
+        return customRole.baseRole;
+      }
+    }
+    return relation.role || 'VIEWER';
   } catch (err) {
     console.error('Error fetching company role:', err);
     return 'VIEWER';
@@ -155,9 +164,24 @@ exports.register = async (req, res) => {
       });
     }
 
-    // Prevent generic Sequelize validation error leaking to client
-    const existingUser = await User.findOne({ where: { email } });
+    const cleanEmail = email ? email.toLowerCase().trim() : '';
+    // Check if user already exists
+    const existingUser = await User.findOne({ where: { email: cleanEmail } });
     if (existingUser) {
+      if (existingUser.status === 'INVITED') {
+        // Invited user setting up their password for the first time
+        const hashedPassword = await bcrypt.hash(password, 10);
+        existingUser.password = hashedPassword;
+        if (name) existingUser.name = name;
+        existingUser.status = 'ACTIVE';
+        existingUser.isEmailVerified = true;
+        await existingUser.save();
+
+        return res.status(200).json({
+          message: 'Account activated successfully! You can now sign in.',
+          user: { id: existingUser.id, email: existingUser.email, name: existingUser.name, role: existingUser.role }
+        });
+      }
       return res.status(400).json({ error: 'This email is already registered. Please sign in.' });
     }
 
@@ -343,27 +367,28 @@ exports.login = async (req, res) => {
     const ip = req.ip || req.headers['x-forwarded-for'];
     const userAgent = req.headers['user-agent'];
 
+    const cleanEmail = email ? email.toLowerCase().trim() : '';
     const user = await User.findOne({
-      where: { email },
+      where: { email: cleanEmail },
       include: [{ model: Company, through: { attributes: [] } }]
     });
 
     // Phase 0: unknown email → 401. No auto-register, no user creation.
     if (!user) {
-      await logAuthEvent('LOGIN_FAIL', { email, ip, userAgent, detail: 'Email not found' });
+      await logAuthEvent('LOGIN_FAIL', { email: cleanEmail, ip, userAgent, detail: 'Email not found' });
       return res.status(401).json({ error: 'Invalid credentials.' });
     }
 
     // Phase 1: block password login for OAuth-only accounts
     if (user.oauthOnly) {
-      await logAuthEvent('LOGIN_FAIL', { userId: user.id, email, ip, userAgent, detail: 'oauthOnly account attempted password login' });
+      await logAuthEvent('LOGIN_FAIL', { userId: user.id, email: cleanEmail, ip, userAgent, detail: 'oauthOnly account attempted password login' });
       return res.status(400).json({ error: 'This account uses Google Sign-In. Please log in with Google.' });
     }
 
     // Extra 3: check account lockout BEFORE running bcrypt (saves CPU on brute-force)
     if (user.lockedUntil && new Date() < user.lockedUntil) {
       const minutesLeft = Math.ceil((user.lockedUntil - new Date()) / 60000);
-      await logAuthEvent('LOGIN_FAIL', { userId: user.id, email, ip, userAgent, detail: 'Account locked' });
+      await logAuthEvent('LOGIN_FAIL', { userId: user.id, email: cleanEmail, ip, userAgent, detail: 'Account locked' });
       return res.status(423).json({
         error: `Account is temporarily locked. Try again in ${minutesLeft} minute(s).`
       });
@@ -380,16 +405,16 @@ exports.login = async (req, res) => {
       });
 
       if (shouldLock) {
-        await logAuthEvent('ACCOUNT_LOCKED', { userId: user.id, email, ip, userAgent, detail: `Locked after ${newAttempts} failed attempts` });
+        await logAuthEvent('ACCOUNT_LOCKED', { userId: user.id, email: cleanEmail, ip, userAgent, detail: `Locked after ${newAttempts} failed attempts` });
         return res.status(423).json({ error: 'Too many failed attempts. Account locked for 5 minutes.' });
       }
 
-      await logAuthEvent('LOGIN_FAIL', { userId: user.id, email, ip, userAgent, detail: `Wrong password (attempt ${newAttempts})` });
+      await logAuthEvent('LOGIN_FAIL', { userId: user.id, email: cleanEmail, ip, userAgent, detail: `Wrong password (attempt ${newAttempts})` });
       return res.status(401).json({ error: 'Invalid credentials.' });
     }
 
-    // Success — reset lockout counters
-    await user.update({ failedLoginAttempts: 0, lockedUntil: null });
+    // Success — reset lockout counters and record last login timestamp & session
+    await user.update({ failedLoginAttempts: 0, lockedUntil: null, lastLoginAt: new Date(), status: 'ACTIVE' });
 
     // Phase 3: MFA check
     const mfaRecord = await MfaSecret.findOne({ where: { userId: user.id, verified: true } });
@@ -463,7 +488,34 @@ async function _issueTokens(req, res, user, extraFields = {}) {
   const accessToken = signAccessToken(user, activeCoId, resolvedRole);
   const rawRefreshToken = await issueRefreshToken(user.id);
   const csrfToken = require('crypto').randomBytes(24).toString('hex');
-  
+
+  // Record user session for security tracking
+  try {
+    const { UserSession } = require('../../models');
+    
+    // Close older open sessions for this user so duplicate names don't remain ONLINE
+    await UserSession.update(
+      { status: 'OFFLINE', logoutTime: new Date() },
+      { where: { UserId: user.id, status: 'ONLINE' } }
+    );
+
+    await UserSession.create({
+      UserId: user.id,
+      CompanyId: activeCoId,
+      loginTime: new Date(),
+      ipAddress: req.ip || req.headers['x-forwarded-for'] || '127.0.0.1',
+      browser: req.headers['user-agent']?.includes('Edge') ? 'Edge' :
+               req.headers['user-agent']?.includes('Chrome') ? 'Chrome' :
+               req.headers['user-agent']?.includes('Safari') ? 'Safari' : 'Firefox',
+      device: req.headers['user-agent']?.includes('Mac') ? 'Mac' :
+              req.headers['user-agent']?.includes('iPhone') ? 'iPhone' :
+              req.headers['user-agent']?.includes('Android') ? 'Android' : 'Windows',
+      status: 'ONLINE'
+    });
+  } catch (e) {
+    console.error('Failed to log UserSession:', e.message);
+  }
+
   setRefreshCookie(res, rawRefreshToken);
   setAccessCookie(res, accessToken);
   setCsrfCookie(res, csrfToken);
@@ -549,6 +601,19 @@ exports.logout = async (req, res) => {
     const rawToken = req.cookies?.refreshToken;
     const ip = req.ip || req.headers['x-forwarded-for'];
     const userAgent = req.headers['user-agent'];
+
+    if (req.user?.id) {
+      try {
+        const { UserSession } = require('../../models');
+        await UserSession.update(
+          { status: 'OFFLINE', logoutTime: new Date() },
+          { where: { UserId: req.user.id, status: 'ONLINE' } }
+        );
+      } catch (e) {
+        console.error('Failed to update session status on logout:', e.message);
+      }
+    }
+
     if (rawToken) {
       const hashed = hashToken(rawToken);
       await RefreshToken.destroy({ where: { token: hashed } });

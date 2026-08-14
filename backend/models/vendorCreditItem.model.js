@@ -29,7 +29,8 @@ module.exports = (sequelize, DataTypes) => {
     itemId: DataTypes.UUID,
     accountId: DataTypes.UUID, // Link to Ledger (e.g., Purchase Returns or Expense Account)
     VendorCreditId: DataTypes.UUID
-  });
+  }, {
+    });
 
   VendorCreditItem.associate = (models) => {
     VendorCreditItem.belongsTo(models.VendorCredit, { foreignKey: 'VendorCreditId' });

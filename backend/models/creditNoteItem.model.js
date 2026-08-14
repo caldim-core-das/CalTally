@@ -29,7 +29,8 @@ module.exports = (sequelize, DataTypes) => {
     itemId: DataTypes.UUID,
     accountId: DataTypes.UUID, // Link to Ledger (e.g., Sales Returns)
     CreditNoteId: DataTypes.UUID
-  });
+  }, {
+    });
 
   CreditNoteItem.associate = (models) => {
     CreditNoteItem.belongsTo(models.CreditNote);

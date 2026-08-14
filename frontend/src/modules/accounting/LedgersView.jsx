@@ -92,7 +92,7 @@ const LedgersView = ({ showNew }) => {
             await fetchData();
         } catch (err) { 
             console.error(err); 
-            const msg = err.response?.data?.error || 'Initialization Failed. Try again or check server.';
+            const msg = err.response?.data?.error || err.message || 'Initialization Failed. Try again or check server.';
             setSeedStatus('error');
             setError(msg);
             setTimeout(() => { setSeedStatus(null); setError(null); }, 8000);
@@ -223,6 +223,9 @@ const LedgersView = ({ showNew }) => {
         
         try {
             const payload = { ...formData, CompanyId: currentCompanyId };
+            // Ensure openingBalance is a number, handling empty strings safely
+            payload.openingBalance = formData.openingBalance !== '' ? Number(formData.openingBalance) : 0;
+
             // Standardize empty parent_id to null
             if (!payload.parent_id || payload.parent_id === '') payload.parent_id = null;
 
@@ -704,7 +707,7 @@ const LedgersView = ({ showNew }) => {
 
                             <div className="space-y-6">
 
-                                {/* NAME INPUT */}
+                                {/* 1. NAME INPUT */}
                                 <div className="space-y-3">
                                     <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Ledger Name</label>
                                     <input 
@@ -717,18 +720,44 @@ const LedgersView = ({ showNew }) => {
                                     />
                                 </div>
 
-                                {/* DESCRIPTION BOX */}
+                                {/* 2. PARENT GROUP SELECTION (moved up — selecting group auto-sets Dr/Cr) */}
                                 <div className="space-y-3">
-                                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Description / Notes</label>
-                                    <textarea 
-                                        className="w-full p-4 bg-slate-50 border-none rounded-xl font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-600 transition-all min-h-[80px] font-sans"
-                                        placeholder="Add notes or details..."
-                                        value={formData.description || ''}
-                                        onChange={e => setFormData({ ...formData, description: e.target.value })}
-                                    />
+                                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Under (Select Parent Group)</label>
+                                    <select 
+                                        value={formData.parent_id || ''}
+                                        required
+                                        onChange={(e) => {
+                                            const selectedId = e.target.value;
+                                            const selectedGrp = flatGroupList.find(g => String(g.id) === String(selectedId));
+                                            const nature = selectedGrp ? selectedGrp.nature : formData.nature;
+                                            // Auto-set Dr/Cr based on accounting nature:
+                                            // Assets & Expenses → Dr (Debit balance)
+                                            // Liabilities & Income → Cr (Credit balance)
+                                            const autoBalanceType = ['Assets', 'Expenses'].includes(nature) ? 'Dr' : 'Cr';
+                                            setFormData({
+                                                ...formData, 
+                                                parent_id: selectedId,
+                                                nature,
+                                                openingBalanceType: autoBalanceType
+                                            });
+                                        }}
+                                        className="w-full p-4 bg-slate-50 border-none rounded-xl font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-600 transition-all appearance-none cursor-pointer bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20fill%3D%22none%22%20viewBox%3D%220%200%2020%2020%22%3E%3Cpath%20stroke%3D%22%231e61f0%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20stroke-width%3D%221.5%22%20d%3D%22m6%208%204%204%204-4%22%2F%3E%3C%2Fsvg%3E')] bg-[length:1.25rem_1.25rem] bg-[right_1rem_center] bg-no-repeat font-sans"
+                                    >
+                                        <option value="">-- Primary (Root Group) --</option>
+                                        {['Assets', 'Liabilities', 'Income', 'Expenses'].map(nature => (
+                                            <optgroup key={nature} label={`── ${nature.toUpperCase()} ──`}>
+                                                {flatGroupList
+                                                    .filter(g => g.nature?.toLowerCase() === nature.toLowerCase())
+                                                    .map(g => (
+                                                        <option key={g.id} value={g.id}>{g.name}</option>
+                                                    ))
+                                                }
+                                            </optgroup>
+                                        ))}
+                                    </select>
                                 </div>
 
-                                {/* OPENING BALANCE (ONLY FOR LEDGERS) */}
+                                {/* 3. OPENING BALANCE + DR/CR (ONLY FOR LEDGERS) */}
                                 {formData.type === 'Ledger' && (
                                     <div className="flex gap-4">
                                         <div className="flex-1 space-y-3">
@@ -759,35 +788,15 @@ const LedgersView = ({ showNew }) => {
                                     </div>
                                 )}
 
-                                {/* PARENT SELECTION */}
+                                {/* 4. DESCRIPTION BOX (moved to bottom) */}
                                 <div className="space-y-3">
-                                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Under (Select Parent Group)</label>
-                                    <select 
-                                        value={formData.parent_id || ''}
-                                        required
-                                        onChange={(e) => {
-                                            const selectedId = e.target.value;
-                                            const selectedGrp = flatGroupList.find(g => String(g.id) === String(selectedId));
-                                            setFormData({
-                                                ...formData, 
-                                                parent_id: selectedId,
-                                                nature: selectedGrp ? selectedGrp.nature : formData.nature
-                                            });
-                                        }}
-                                        className="w-full p-4 bg-slate-50 border-none rounded-xl font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-600 transition-all appearance-none cursor-pointer bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20fill%3D%22none%22%20viewBox%3D%220%200%2020%2020%22%3E%3Cpath%20stroke%3D%22%231e61f0%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20stroke-width%3D%221.5%22%20d%3D%22m6%208%204%204%204-4%22%2F%3E%3C%2Fsvg%3E')] bg-[length:1.25rem_1.25rem] bg-[right_1rem_center] bg-no-repeat font-sans"
-                                    >
-                                        <option value="">-- Primary (Root Group) --</option>
-                                        {['Assets', 'Liabilities', 'Income', 'Expenses'].map(nature => (
-                                            <optgroup key={nature} label={`── ${nature.toUpperCase()} ──`}>
-                                                {flatGroupList
-                                                    .filter(g => g.nature?.toLowerCase() === nature.toLowerCase())
-                                                    .map(g => (
-                                                        <option key={g.id} value={g.id}>{g.name}</option>
-                                                    ))
-                                                }
-                                            </optgroup>
-                                        ))}
-                                    </select>
+                                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Description / Notes</label>
+                                    <textarea 
+                                        className="w-full p-4 bg-slate-50 border-none rounded-xl font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-600 transition-all min-h-[80px] font-sans"
+                                        placeholder="Add notes or details..."
+                                        value={formData.description || ''}
+                                        onChange={e => setFormData({ ...formData, description: e.target.value })}
+                                    />
                                 </div>
 
                                 {/* NATURE (ONLY FOR GROUPS UNDER PRIMARY/ROOT) */}

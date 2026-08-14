@@ -30,6 +30,32 @@ class AuditService {
     status 
   }) {
     try {
+      // Find the last audit log for this tenant (CompanyId) to build the hash chain
+      const lastLog = await AuditLog.findOne({
+        where: { CompanyId: companyId || null },
+        order: [['createdAt', 'DESC']],
+        attributes: ['hash']
+      });
+      const previousHash = lastLog ? lastLog.hash : '0';
+
+      // Build a deterministic payload to hash
+      const payload = {
+        action: action || '',
+        tableName: tableName || '',
+        recordId: recordId?.toString() || '',
+        oldData: oldData ? JSON.stringify(oldData) : '',
+        newData: newData ? JSON.stringify(newData) : '',
+        CompanyId: companyId || '',
+        UserId: userId || '',
+        ipAddress: req?.ip || req?.headers['x-forwarded-for'] || '',
+        userAgent: req?.headers['user-agent'] || '',
+        status: status || 'COMPLETED',
+        previousHash
+      };
+
+      const crypto = require('crypto');
+      const currentHash = crypto.createHash('sha256').update(JSON.stringify(payload)).digest('hex');
+
       await AuditLog.create({
         action,
         tableName,
@@ -40,7 +66,9 @@ class AuditService {
         UserId: userId,
         ipAddress: req?.ip || req?.headers['x-forwarded-for'] || null,
         userAgent: req?.headers['user-agent'] || null,
-        status: status || 'COMPLETED'
+        status: status || 'COMPLETED',
+        hash: currentHash,
+        previousHash
       });
     } catch (err) {
       // We don't want to crash the main request if logging fails, but we should log the error

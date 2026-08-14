@@ -11,7 +11,8 @@ module.exports = (sequelize, DataTypes) => {
     ifscCode: { type: DataTypes.STRING, allowNull: true },
     bankName: { type: DataTypes.STRING, allowNull: true },
     isActive: { type: DataTypes.BOOLEAN, defaultValue: true }
-  });
+  }, {
+    });
 
   BankFeedAccount.associate = (models) => {
     BankFeedAccount.belongsTo(models.BankFeedConsent, { foreignKey: 'ConsentId' });

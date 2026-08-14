@@ -7,8 +7,16 @@ dotenv.config({ path: path.join(__dirname, '../.env') });
 
 let sequelize;
 
-// 1. Check for Production Connection String (Standard for Render/Vercel Postgres)
-if (process.env.DATABASE_URL) {
+// 1. Check for Test Environment (Force in-memory SQLite)
+if (process.env.NODE_ENV === 'test') {
+  sequelize = new Sequelize({
+    dialect: 'sqlite',
+    storage: ':memory:',
+    logging: false,
+  });
+}
+// 2. Check for Production Connection String (Standard for Render/Vercel Postgres)
+else if (process.env.DATABASE_URL) {
   let dbUrl = process.env.DATABASE_URL;
 
   // Fix Render internal URLs — convert to external hostname to bypass internal DNS issues.

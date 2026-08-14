@@ -21,7 +21,8 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.STRING, // e.g., 'Admin', 'Standard User'
       defaultValue: 'Standard User'
     }
-  });
+  }, {
+    });
 
   return ProjectUser;
 };

@@ -1,5 +1,6 @@
 const { PurchaseOrder, Ledger, Group, sequelize, Voucher, Transaction, VendorCredit, Item, Company } = require('../../models');
 const { Op } = require('sequelize');
+const eventBus = require('../../core/EventBus');
 
 exports.createVendor = async (req, res) => res.status(501).json({ error: 'Not implemented. Use ledgerAPI.' });
 exports.updateVendor = async (req, res) => res.status(501).json({ error: 'Not implemented. Use ledgerAPI.' });
@@ -651,10 +652,17 @@ exports.createBill = async (req, res, next) => {
                 taxRate: taxRate || 0,
                 tdsRate: tdsRate || 0,
                 tdsName: tdsName || '',
+                taxAmount: taxAmount || 0,
+                tdsAmount: tdsAmount || 0,
+                discountAmount: discountAmount || 0,
+                subtotal: (items && Array.isArray(items) && items.length > 0) ? items.reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0) : (total - (parseFloat(taxAmount) || 0) + (parseFloat(discountAmount) || 0) - (parseFloat(adjustment) || 0)),
                 discount: discount || 0,
                 adjustment: adjustment || 0,
                 dueDate: dueDate || '',
-                paymentTerms: paymentTerms || 'Due on Receipt'
+                paymentTerms: paymentTerms || 'Due on Receipt',
+                deliveryAddress: req.body.deliveryAddress || 'Organization',
+                deliveryAddressText: req.body.deliveryAddressText || '',
+                deliveryAddressData: req.body.deliveryAddressData || {}
             }),
             entries: journalEntries,
             userId: req.user?.id,
@@ -745,6 +753,10 @@ exports.createBill = async (req, res, next) => {
         }
 
         await t.commit();
+        
+        // Publish Domain Event for Vol 2
+        eventBus.publish('BILL_CREATED', { billId: voucher.id, companyId, totalAmount: total, status: voucher.status }, { userId: req.user?.id, tenantId: companyId });
+
         res.status(201).json(voucher);
     } catch (err) {
         await t.rollback();
@@ -884,10 +896,17 @@ exports.updateBill = async (req, res, next) => {
                 taxRate: taxRate || 0,
                 tdsRate: tdsRate || 0,
                 tdsName: tdsName || '',
+                taxAmount: taxAmount || 0,
+                tdsAmount: tdsAmount || 0,
+                discountAmount: discountAmount || 0,
+                subtotal: (items && Array.isArray(items) && items.length > 0) ? items.reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0) : (total - (parseFloat(taxAmount) || 0) + (parseFloat(discountAmount) || 0) - (parseFloat(adjustment) || 0)),
                 discount: discount || 0,
                 adjustment: adjustment || 0,
                 dueDate: dueDate || '',
-                paymentTerms: paymentTerms || 'Due on Receipt'
+                paymentTerms: paymentTerms || 'Due on Receipt',
+                deliveryAddress: req.body.deliveryAddress || 'Organization',
+                deliveryAddressText: req.body.deliveryAddressText || '',
+                deliveryAddressData: req.body.deliveryAddressData || {}
             }),
             entries: journalEntries,
             userId: req.user?.id,

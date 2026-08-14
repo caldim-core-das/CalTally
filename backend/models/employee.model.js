@@ -249,6 +249,7 @@ module.exports = (sequelize, DataTypes) => {
   }, {
     paranoid: true,
     timestamps: true,
+
     indexes: [
       {
         unique: true,

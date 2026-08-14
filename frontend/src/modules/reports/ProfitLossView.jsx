@@ -20,6 +20,7 @@ const ProfitLossView = () => {
   const [basis, setBasis] = useState('Accrual');
   const [viewType, setViewType] = useState('Detailed');
   const [dateRange, setDateRange] = useState('This Month');
+  const [customDates, setCustomDates] = useState({ from: '', to: '' });
   const [showMailModal, setShowMailModal] = useState(false);
   const [email, setEmail] = useState('');
   const [sendingMail, setSendingMail] = useState(false);
@@ -27,6 +28,9 @@ const ProfitLossView = () => {
   const { addNotification } = useNotificationStore();
 
   const getDates = (range) => {
+    if (range === 'Custom Range' && customDates.from && customDates.to) {
+      return { from: customDates.from, to: customDates.to };
+    }
     const now = new Date();
     let fromDate, toDate;
     if (range === 'This Month') {
@@ -70,7 +74,7 @@ const ProfitLossView = () => {
       setData(null);
     }
     setLoading(false);
-  }, [companyId, basis, dateRange]);
+  }, [companyId, basis, dateRange, customDates]);
 
   useEffect(() => { fetchReport(); }, [fetchReport]);
 
@@ -106,6 +110,7 @@ const ProfitLossView = () => {
   const handleDownloadPDF = () => {
     if (!data) return;
     const doc = new jsPDF();
+    const fmtPdf = (v) => v === 0 ? 'Rs. 0.00' : `Rs. ${Number(v || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
     const companyName = sessionStorage.getItem('companyName') || 'CalBooks Company';
     
     // Title
@@ -133,10 +138,9 @@ const ProfitLossView = () => {
     doc.text('Performance Summary', 14, 50);
     
     const summaryData = [
-      ['Total Revenue', fmt(data.totalIncome)],
-      ['Total Expenses', fmt(data.totalExpenses)],
-      ['Net Profit / Loss', fmt(data.netProfit)],
-      ['Profit Margin', `${profitMargin}%`]
+      ['Total Revenue', fmtPdf(data.totalIncome)],
+      ['Total Expenses', fmtPdf(data.totalExpenses)],
+      ['Net Profit / Loss', fmtPdf(data.netProfit)]
     ];
     
     autoTable(doc, {
@@ -159,15 +163,14 @@ const ProfitLossView = () => {
     
     const incomeRows = data.income.map(item => [
       item.name, 
-      fmt(item.amount), 
-      `${((item.amount / (data.totalIncome || 1)) * 100).toFixed(1)}%`
+      fmtPdf(item.amount)
     ]);
     
     autoTable(doc, {
       startY: yStart + 4,
-      head: [['Source Account', 'Amount', 'Contribution']],
+      head: [['Source Account', 'Amount']],
       body: incomeRows,
-      foot: [['Total Realized Income', fmt(data.totalIncome), '100%']],
+      foot: [['Total Realized Income', fmtPdf(data.totalIncome)]],
       theme: 'striped',
       headStyles: { fillColor: [16, 185, 129] }, // emerald-500
       footStyles: { fillColor: [236, 253, 245], textColor: [4, 120, 87], fontStyle: 'bold' },
@@ -184,15 +187,14 @@ const ProfitLossView = () => {
     
     const expenseRows = data.expenses.map(item => [
       item.name, 
-      fmt(item.amount), 
-      `${((item.amount / (data.totalExpenses || 1)) * 100).toFixed(1)}%`
+      fmtPdf(item.amount)
     ]);
     
     autoTable(doc, {
       startY: yStart + 4,
-      head: [['Expense Head', 'Amount', 'Absorption']],
+      head: [['Expense Head', 'Amount']],
       body: expenseRows,
-      foot: [['Total Operating Outflow', fmt(data.totalExpenses), '100%']],
+      foot: [['Total Operating Outflow', fmtPdf(data.totalExpenses)]],
       theme: 'striped',
       headStyles: { fillColor: [239, 68, 68] }, // rose-500
       footStyles: { fillColor: [255, 241, 242], textColor: [185, 28, 28], fontStyle: 'bold' },
@@ -231,10 +233,7 @@ const ProfitLossView = () => {
         </div>
         
         <div className="flex items-center gap-3">
-           <div className="flex items-center bg-slate-50 border border-slate-200 rounded-lg p-1">
-             <button onClick={() => setViewType('Summary')} className={`px-3 py-1.5 text-[11px] font-bold rounded transition-all ${viewType === 'Summary' ? 'bg-white text-[#1e61f0] shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>Summary</button>
-             <button onClick={() => setViewType('Detailed')} className={`px-3 py-1.5 text-[11px] font-bold rounded transition-all ${viewType === 'Detailed' ? 'bg-white text-[#1e61f0] shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>Detailed</button>
-           </div>
+
            <div className="w-px h-6 bg-slate-200 mx-2" />
            <button onClick={fetchReport} className="p-2 text-slate-400 hover:text-[#1e61f0] transition-colors">
              <RefreshCcw size={18} className={loading ? 'animate-spin' : ''}/>
@@ -269,6 +268,13 @@ const ProfitLossView = () => {
                   <option>Financial Year</option>
                   <option>Custom Range</option>
                </select>
+               {dateRange === 'Custom Range' && (
+                 <div className="flex items-center gap-2 ml-2 animate-in fade-in zoom-in-95">
+                   <input type="date" value={customDates.from} onChange={(e) => setCustomDates(p => ({ ...p, from: e.target.value }))} className="bg-slate-50 border border-slate-200 rounded px-2 py-1 text-[10px] font-bold text-slate-600 outline-none focus:border-[#1e61f0]" />
+                   <span className="text-[10px] text-slate-400 font-bold uppercase">to</span>
+                   <input type="date" value={customDates.to} onChange={(e) => setCustomDates(p => ({ ...p, to: e.target.value }))} className="bg-slate-50 border border-slate-200 rounded px-2 py-1 text-[10px] font-bold text-slate-600 outline-none focus:border-[#1e61f0]" />
+                 </div>
+               )}
             </div>
          </div>
          <div className="flex items-center gap-2">
@@ -290,14 +296,12 @@ const ProfitLossView = () => {
                value={fmt(data?.totalIncome)} 
                color="text-emerald-600"
                subLabel="Realized Income Trajectories"
-               trend="+12.5% vs Last Month"
              />
              <SummaryItem 
                label="Total Expenses" 
                value={fmt(data?.totalExpenses)} 
                color="text-rose-600"
                subLabel="Operating Outflows"
-               trend="-2.1% vs Last Month"
              />
              <div className="md:col-span-2 bg-white p-6 rounded-2xl border border-slate-200 flex items-center justify-between shadow-sm relative overflow-hidden group">
                 <div className="absolute right-0 top-0 w-24 h-24 bg-[#1e61f0]/5 rounded-full -mr-12 -mt-12 transition-transform group-hover:scale-150" />
@@ -311,8 +315,6 @@ const ProfitLossView = () => {
                         {fmt(data?.netProfit)}
                       </h3>
                       <div className="flex items-center gap-2 mt-1">
-                         <span className="text-[10px] font-bold text-slate-400 uppercase">Margin:</span>
-                         <span className={`text-[11px] font-black ${parseFloat(profitMargin) > 20 ? 'text-emerald-600' : 'text-[#1e61f0]'}`}>{profitMargin}%</span>
                       </div>
                    </div>
                 </div>
@@ -352,9 +354,8 @@ const ProfitLossView = () => {
                   <table className="w-full text-left border-collapse">
                     <thead className="bg-white text-[10px] font-bold uppercase tracking-widest text-slate-400 border-b border-slate-50">
                       <tr>
-                        <th className="px-8 py-3">Source Account</th>
+                        <th className="px-8 py-3 w-2/3">Source Account</th>
                         <th className="px-8 py-3 text-right">Amount (₹)</th>
-                        <th className="px-8 py-3 text-right">Contribution (%)</th>
                       </tr>
                     </thead>
                     <tbody className="text-[12px] text-slate-600">
@@ -371,21 +372,13 @@ const ProfitLossView = () => {
                           <td className="px-8 py-4 text-right font-black text-emerald-600">
                              {fmt(item.amount)}
                           </td>
-                          <td className="px-8 py-4 text-right">
-                             <div className="flex items-center justify-end gap-3">
-                                <span className="text-[11px] font-bold text-slate-400">{((item.amount / data.totalIncome) * 100).toFixed(1)}%</span>
-                                <div className="w-16 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                                   <div className="h-full bg-emerald-500" style={{ width: `${(item.amount / data.totalIncome) * 100}%` }} />
-                                </div>
-                             </div>
-                          </td>
                         </tr>
                       ))}
                     </tbody>
                     <tfoot className="bg-emerald-50/40 text-emerald-700 font-bold border-t border-emerald-100">
                       <tr>
                         <td className="px-8 py-4 text-[11px] uppercase tracking-widest font-black">Total Realized Income</td>
-                        <td className="px-8 py-4 text-right text-[16px] font-black" colSpan={2}>{fmt(data.totalIncome)}</td>
+                        <td className="px-8 py-4 text-right text-[16px] font-black"> {fmt(data.totalIncome)}</td>
                       </tr>
                     </tfoot>
                   </table>
@@ -413,9 +406,8 @@ const ProfitLossView = () => {
                   <table className="w-full text-left border-collapse">
                     <thead className="bg-white text-[10px] font-bold uppercase tracking-widest text-slate-400 border-b border-slate-50">
                       <tr>
-                        <th className="px-8 py-3">Expense Head</th>
+                        <th className="px-8 py-3 w-2/3">Expense Head</th>
                         <th className="px-8 py-3 text-right">Amount (₹)</th>
-                        <th className="px-8 py-3 text-right">Absorption (%)</th>
                       </tr>
                     </thead>
                     <tbody className="text-[12px] text-slate-600">
@@ -432,14 +424,6 @@ const ProfitLossView = () => {
                           <td className="px-8 py-4 text-right font-bold text-slate-900">
                              {fmt(item.amount)}
                           </td>
-                          <td className="px-8 py-4 text-right">
-                             <div className="flex items-center justify-end gap-3">
-                                <span className="text-[11px] font-bold text-slate-400">{((item.amount / (data.totalExpenses || 1)) * 100).toFixed(1)}%</span>
-                                <div className="w-16 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                                   <div className="h-full bg-rose-500" style={{ width: `${(item.amount / (data.totalExpenses || 1)) * 100}%` }} />
-                                </div>
-                             </div>
-                          </td>
                         </tr>
                       ))}
                       {data.expenses.length === 0 && (
@@ -451,7 +435,7 @@ const ProfitLossView = () => {
                     <tfoot className="bg-rose-50/40 text-rose-700 font-bold border-t border-rose-100">
                       <tr>
                         <td className="px-8 py-4 text-[11px] uppercase tracking-widest font-black">Total Operating Outflow</td>
-                        <td className="px-8 py-4 text-right text-[16px] font-black" colSpan={2}>{fmt(data.totalExpenses)}</td>
+                        <td className="px-8 py-4 text-right text-[16px] font-black">{fmt(data.totalExpenses)}</td>
                       </tr>
                     </tfoot>
                   </table>
@@ -513,11 +497,10 @@ const ProfitLossView = () => {
   );
 };
 
-const SummaryItem = ({ label, value, color, subLabel, trend }) => (
+const SummaryItem = ({ label, value, color, subLabel }) => (
   <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-1 group hover:border-[#1e61f0]/30 transition-all">
     <div className="flex items-center justify-between">
        <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">{label}</p>
-       {trend && <span className={`text-[9px] font-black px-1.5 py-0.5 rounded ${trend.startsWith('+') ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>{trend}</span>}
     </div>
     <h3 className={`text-[24px] font-black tracking-tight ${color}`}>{value}</h3>
     <p className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">{subLabel}</p>

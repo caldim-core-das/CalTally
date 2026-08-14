@@ -46,7 +46,7 @@ const sendMail = async (mailOptions) => {
   try {
     const tp = await initTransporter();
     
-    const defaultFrom = process.env.SMTP_FROM || '"Tally Accounting" <noreply@tallyreplica.com>';
+    const defaultFrom = process.env.SMTP_FROM || (process.env.SMTP_USER ? `"CalBooks ERP" <${process.env.SMTP_USER}>` : '"CalBooks ERP" <noreply@calbooks.com>');
     mailOptions.from = mailOptions.from || defaultFrom;
 
     const info = await tp.sendMail(mailOptions);
@@ -120,8 +120,38 @@ const sendPasswordResetEmail = async (user, token) => {
   return sendMail(mailOptions);
 };
 
+/**
+ * Send a workspace user invitation email.
+ */
+const sendUserInvitationEmail = async (inviterName, companyName, userEmail, role, department) => {
+  const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+  const joinLink = `${frontendUrl}/login`;
+
+  const mailOptions = {
+    to: userEmail,
+    subject: `You have been invited to join ${companyName} on CalBooks ERP`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px;">
+        <h2 style="color: #0f172a; margin-top: 0;">Workspace Invitation</h2>
+        <p>Hi,</p>
+        <p><strong>${inviterName}</strong> has invited you to join <strong>${companyName}</strong> on CalBooks ERP as an <strong>${role}</strong> (${department} Department).</p>
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${joinLink}" style="background-color: #2563eb; color: white; padding: 12px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">Accept & Join Workspace</a>
+        </div>
+        <p>If the button doesn't work, copy and paste this link into your browser:</p>
+        <p style="word-break: break-all; color: #2563eb;">${joinLink}</p>
+        <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 30px 0;" />
+        <p style="color: #64748b; font-size: 12px;">Sent from CalBooks ERP Users & Access Management Module.</p>
+      </div>
+    `,
+  };
+
+  return sendMail(mailOptions);
+};
+
 module.exports = {
   sendVerificationEmail,
   sendPasswordResetEmail,
+  sendUserInvitationEmail,
   sendMail
 };

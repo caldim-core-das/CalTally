@@ -1,0 +1,85 @@
+
+ENTERPRISE ARCHITECTURE BLUEPRINT
+Cloud Accounting & Business Management Platform
+(Codename "Ledger" - Zoho Books-class product)
+VOLUME 7 OF 9
+INFRASTRUCTURE & DEPLOYMENT ARCHITECTURE
+CI/CD - Environments - Scaling - Observability - Disaster Recovery
+
+
+Table of Contents
+
+1. Introduction & Scope
+1.1 Purpose
+This volume operationalizes every architectural decision made in Volumes 1 through 6: it selects the cloud provider and concrete managed services behind Volume 3's technology choices, defines environment topology and deployment architecture for Volume 2's containers, specifies the CI/CD pipeline (including the security and quality gates from Volume 6 Section 12 and the forthcoming Volume 8), and sets the scaling, observability, and disaster-recovery posture needed to actually run this platform in production.
+1.2 Constraints Inherited From Earlier Volumes
+Vol. 3 Section 12 performance targets (P95 latency, 1,000+ then 10,000+ concurrent tenants) size everything in Section 7 of this volume.
+Vol. 4 Section 7's PgBouncer session-mode-pooling caveat for RLS compatibility is a hard constraint on Section 4's connection architecture.
+Vol. 6 Section 7.2's network segmentation (Integration Gateway restricted egress) is a hard constraint on Section 2's network topology.
+Vol. 6 Section 12's pre-release security test gates must be wired into Section 5's CI/CD pipeline, not treated as a separate manual step.
+
+2. Environment Topology
+2.1 Environment Tiers
+2.2 Network Topology
+Network segmentation (implements Vol.6 Section 7.2)
+
+
+3. Cloud Provider & Managed Services
+3.1 Provider Decision
+3.2 Managed Service Mapping
+
+4. Deployment Architecture
+4.1 Orchestration Decision
+4.2 Deployment Units (maps to Vol. 2 Section 5 Container Diagram)
+4.3 Connection Pooling (PgBouncer)
+Per Vol. 4 Section 7's caveat, PgBouncer runs in session mode (not transaction-pooling mode) for any connection path where RLS session variables (Vol. 3 Section 11.2) must persist across statements within a request - deployed as a sidecar or a dedicated pooling tier between the application services and RDS, sized to stay within RDS's max-connection limits as the Fargate service scales horizontally.
+
+5. CI/CD Pipeline
+5.1 Pipeline Stages
+CI/CD pipeline (per pull request and per merge to main)
+
+5.2 Deployment Strategy
+
+6. Infrastructure as Code
+6.1 Tooling
+6.2 Repository Structure
+/infra folder (referenced from Vol.3 Section 3.2)
+
+
+7. Scaling Strategy
+Sized against the Vol. 3 Section 12 performance targets: 1,000+ concurrent tenants at Release 1, 10,000+ at Release 3.
+
+8. Observability
+8.1 Three Pillars
+8.2 Alerting (extends Vol. 6 Section 11)
+
+9. Disaster Recovery & Backup
+9.1 Recovery Targets
+9.2 Backup Strategy
+9.3 Multi-AZ / Multi-Region Posture
+Release 1 deploys Multi-AZ within a single AWS region (covers the RTO/RPO targets above against an availability-zone failure). Multi-region active-passive is a Release 3 consideration, driven by the same enterprise data-residency requirements flagged in Vol. 1 Section 13.2 and Vol. 4 Section 11.1's tenant-isolation escape hatch - both would likely be addressed together rather than as separate efforts.
+
+10. Incident Management & On-Call
+Extends Vol. 6 Section 11's security-specific monitoring hooks to general operational incident response.
+Post-incident, a blameless postmortem is required for every SEV-1 and SEV-2, feeding back into this volume's alerting thresholds (Section 8.2) and Volume 8's regression test suite where the incident reveals a testing gap.
+
+11. Cost Considerations (Summary)
+Detailed cost modeling is outside this architecture blueprint's scope, but the following architectural choices were made with cost-consciousness in mind and should inform budget planning:
+Fargate over self-managed Kubernetes (Section 4.1) trades some raw compute-cost efficiency for materially lower operational/engineering cost at Release 1 scale.
+Read replicas and OpenSearch (Section 7) are scaled to Reporting's actual query load rather than provisioned for peak-guess capacity, reviewed quarterly against real usage.
+The Release 3 multi-region option (Section 9.3) roughly doubles infrastructure cost for the tenants that need it - this is why it is scoped as an opt-in Enterprise capability (Vol.1 Section 9) rather than a platform-wide default.
+Cold-storage tiering for aged partitions (Vol.4 Section 6, Section 10) keeps long-tail compliance retention from inflating primary-database storage costs.
+
+12. Environment Promotion & Release Management
+Promotion flow
+
+Release cadence targets weekly deploys to staging and a controlled, on-demand production release once the canary health checks (Section 5.2) pass - not a fixed release train - so a critical fix does not have to wait for a scheduled window, while routine feature work batches naturally through the weekly staging cycle.
+
+13. Traceability & Next Phase
+13.1 Traceability to Volumes 1-6
+13.2 Open Questions for Sign-off
+Confirm AWS as the cloud provider (Section 3.1) so the managed-service mapping and Terraform modules (Section 6) can be finalized rather than kept provider-agnostic.
+Confirm whether a formal RTO/RPO commitment (Section 9.1) needs to appear in customer-facing SLAs, which would affect how aggressively Release 1 must invest in Multi-AZ resilience versus deferring some of it.
+Confirm on-call staffing model (Section 10) - whether the team has dedicated on-call capacity at launch or whether SEV-1 response in the early weeks relies on the founding engineering team directly.
+13.3 Next Phase
+On approval, Phase 8 begins: Testing & QA Specification (Volume 8) - the full test strategy (unit, integration, E2E, load, security) and CI gate definitions that this volume's pipeline (Section 5) assumes, followed by Phase 9: UI/UX Design Specification & API Design Document (Volume 9), which will complete the nine-volume blueprint.

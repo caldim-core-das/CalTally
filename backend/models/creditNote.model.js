@@ -64,7 +64,8 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.UUID,
       allowNull: true
     }
-  });
+  }, {
+    });
 
   CreditNote.associate = (models) => {
     CreditNote.hasMany(models.CreditNoteItem, { as: 'items', foreignKey: 'CreditNoteId' });

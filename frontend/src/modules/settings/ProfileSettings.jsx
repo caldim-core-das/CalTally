@@ -17,9 +17,9 @@ const ProfileSettings = () => {
 
   // User Profile details
   const [profile, setProfile] = useState({
-    name: 'Administrator',
-    email: 'admin@tally.com',
-    phone: '+91 98765 43210',
+    name: '',
+    email: '',
+    phone: '',
     profilePic: ''
   });
 
@@ -40,19 +40,29 @@ const ProfileSettings = () => {
       try {
         const userObj = JSON.parse(userStr);
         setProfile({
-          name: userObj.name || 'Administrator',
-          email: userObj.email || 'admin@tally.com',
-          phone: userObj.phone || '+91 98765 43210',
+          name: userObj.name || '',
+          email: userObj.email || '',
+          phone: userObj.phone || '',
           profilePic: userObj.profilePic || ''
         });
       } catch (e) {
         console.error(e);
       }
     }
-    // Fetch oauthOnly flag from backend to adjust the password UI
+    // Fetch live user profile from backend
     authAPI.getProfile()
-      .then(res => setIsOAuthUser(!!res.data.oauthOnly))
-      .catch(() => {}); // fail silently
+      .then(res => {
+        if (res.data) {
+          setProfile(prev => ({
+            ...prev,
+            name: res.data.name || prev.name,
+            email: res.data.email || prev.email,
+            phone: res.data.phone || prev.phone || ''
+          }));
+          setIsOAuthUser(!!res.data.oauthOnly);
+        }
+      })
+      .catch(() => {});
   }, []);
 
   const handleProfileChange = (key, val) => {

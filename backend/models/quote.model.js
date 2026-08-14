@@ -53,7 +53,9 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.UUID,
       allowNull: true
     }
-  }, { paranoid: true });
+  }, {
+    paranoid: true,
+    });
 
   Quote.associate = (models) => {
     Quote.belongsTo(models.Company, { foreignKey: 'CompanyId' });

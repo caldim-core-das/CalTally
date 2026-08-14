@@ -30,7 +30,8 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.DECIMAL(15, 6),
       defaultValue: 1.000000
     }
-  });
+  }, {
+    });
 
   return Currency;
 };

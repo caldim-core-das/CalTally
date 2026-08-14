@@ -21,6 +21,7 @@ const CustomerOverviewSidebar = ({
   onEditAddress,
   onInvitePortal,
   onAddContact,
+  onEditContact,
   onSettingsClick,
   onEnablePortal
 }) => {
@@ -31,6 +32,8 @@ const CustomerOverviewSidebar = ({
     contactPersons: true,
     recordInfo: false
   });
+
+  const [openContactDropdown, setOpenContactDropdown] = useState(null);
 
   const toggleSection = (sectionName) => {
     setSections(prev => ({
@@ -127,15 +130,6 @@ const CustomerOverviewSidebar = ({
               </div>
             )}
 
-            {/* Invite to Portal Link */}
-            <div className="pt-2">
-              <button 
-                onClick={onInvitePortal}
-                className="text-[13px] font-semibold text-blue-600 hover:text-blue-700 hover:underline transition-all"
-              >
-                Invite to Portal
-              </button>
-            </div>
           </div>
         </div>
       </div>
@@ -285,16 +279,6 @@ const CustomerOverviewSidebar = ({
                 </span>
               </div>
 
-              {/* Portal Status */}
-              <div className="flex justify-between items-center text-[13.5px]">
-                <span className="text-slate-500 font-medium">Portal Status</span>
-                <div className="flex items-center gap-1.5 justify-end">
-                  <span className="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0"></span>
-                  <span className="text-red-500 font-semibold">
-                    {customer.portalStatus || 'Disabled'}
-                  </span>
-                </div>
-              </div>
 
               {/* Customer Language */}
               <div className="flex justify-between items-center text-[13.5px]">
@@ -315,7 +299,7 @@ const CustomerOverviewSidebar = ({
           onClick={() => toggleSection('contactPersons')}
           className="w-full px-5 py-4 flex items-center justify-between text-[12px] font-bold text-slate-800 tracking-[0.05em] hover:bg-slate-50/40 transition-colors cursor-pointer select-none"
         >
-          <span className="uppercase">CONTACT PERSONS</span>
+          <span className="uppercase">CONTACT PERSONS {customer.contacts?.length > 0 && `(${customer.contacts.length})`}</span>
           <div className="flex items-center gap-3.5" onClick={e => e.stopPropagation()}>
             <button 
               onClick={onAddContact}
@@ -340,11 +324,55 @@ const CustomerOverviewSidebar = ({
             {customer.contacts && customer.contacts.length > 0 ? (
               <div className="space-y-3">
                 {customer.contacts.map((contact, idx) => (
-                  <div key={idx} className="flex items-start gap-2.5 p-2 bg-slate-50/50 border border-slate-100 rounded-lg">
-                    <User size={14} className="text-slate-400 mt-0.5 shrink-0" />
-                    <div className="text-[13px]">
-                      <p className="font-semibold text-slate-800">{contact.name}</p>
-                      {contact.email && <p className="text-slate-500">{contact.email}</p>}
+                  <div key={idx} className="flex items-start justify-between p-3 bg-slate-50/40 border border-slate-100/80 rounded-xl group/contact relative">
+                    <div className="flex gap-3.5">
+                      <div className="w-10 h-10 rounded-lg bg-slate-200/70 flex items-center justify-center shrink-0">
+                        <User size={20} className="text-white" strokeWidth={3} />
+                      </div>
+                      <div className="text-[13px] space-y-1 mt-0.5">
+                        <p className="font-bold text-slate-800 text-[14px] leading-none mb-1.5">{contact.name}</p>
+                        {(contact.mobile || contact.workPhone) && (
+                          <div className="flex items-center gap-2 text-slate-600">
+                            <Phone size={13} className="shrink-0 text-slate-400" />
+                            <span>{contact.mobile || contact.workPhone}</span>
+                          </div>
+                        )}
+                        {contact.email && (
+                          <div className="flex items-center gap-2 text-slate-600">
+                            <Mail size={13} className="shrink-0 text-slate-400" />
+                            <span>{contact.email}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    
+                    <div className="relative">
+                      <button 
+                        onClick={() => setOpenContactDropdown(openContactDropdown === idx ? null : idx)}
+                        className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-200/50 rounded-md transition-all opacity-0 group-hover/contact:opacity-100"
+                      >
+                        <Settings size={16} />
+                      </button>
+                      
+                      {openContactDropdown === idx && (
+                        <div className="absolute right-0 top-full mt-1 w-28 bg-white border border-slate-100 rounded-lg shadow-xl shadow-slate-200/50 z-10 py-1 overflow-hidden animate-zoom-in">
+                          <button 
+                            onClick={() => { 
+                              setOpenContactDropdown(null); 
+                              if (onEditContact) onEditContact(contact, idx);
+                            }}
+                            className="w-full px-4 py-2 text-left text-[13px] font-medium text-slate-700 hover:bg-slate-50 transition-colors"
+                          >
+                            Edit
+                          </button>
+                          <button 
+                            onClick={() => { setOpenContactDropdown(null); }}
+                            className="w-full px-4 py-2 text-left text-[13px] font-medium text-red-600 hover:bg-red-50 transition-colors"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -356,7 +384,6 @@ const CustomerOverviewSidebar = ({
                     No contact persons found.
                   </p>
                 </div>
-
               </div>
             )}
           </div>

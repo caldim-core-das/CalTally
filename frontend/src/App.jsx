@@ -85,6 +85,10 @@ import PaymentGatewaysSettings from './modules/settings/PaymentGatewaysSettings'
 import SettingsDashboard from './modules/settings/SettingsDashboard';
 import SharedInvoiceView from './modules/sales/SharedInvoiceView';
 import GatewaySettlementView from './modules/banking/GatewaySettlementView';
+import CustomerPortal from './pages/portals/CustomerPortal';
+import VendorPortal from './pages/portals/VendorPortal';
+import ClosingWizard from './pages/financial-closing/ClosingWizard';
+import ReceivablesPayablesModule from './modules/receivables-payables/ReceivablesPayablesModule';
 
 import BulkUpdateView from './modules/accountant/BulkUpdateView';
 import CurrencyAdjustmentsView from './modules/accountant/CurrencyAdjustmentsView';
@@ -100,7 +104,7 @@ import {
   Package, ArrowLeftRight, Settings, Users, ShoppingBag,
   Receipt, Wallet, TrendingUp, Shield, LogOut,
   Bell, ChevronRight, ChevronDown, ChevronsLeft, ChevronsRight,
-  Building2, Activity, ShoppingCart, UserCheck, FileBarChart2,
+  Building2, Activity, ShoppingCart, UserCheck, FileBarChart2, Lock,
   PieChart, Landmark, Target, Clock, Undo2, Truck, Repeat, ClipboardList, FileStack, Plus,
   RefreshCw, PanelLeftClose, PanelLeftOpen, MessageSquare, Sliders, CreditCard, LifeBuoy, Bookmark
 } from 'lucide-react';
@@ -173,7 +177,9 @@ const NAV = [
     items: [
       { label: 'Cost Centers',      path: '/cost-centers', icon: Folder },
       { label: 'Budgets',           path: '/accountant/budgets', icon: Target },
-      { label: 'Fixed Assets',      path: '/fixed-assets', icon: Building2 }
+      { label: 'Fixed Assets',      path: '/fixed-assets', icon: Building2 },
+      { label: 'Receivables & Payables', path: '/receivables-payables', icon: Wallet },
+      { label: 'Closing Wizard',    path: '/financial-closing/wizard', icon: Lock }
     ]
   },
   {
@@ -193,8 +199,6 @@ const NAV = [
       { label: 'Cash Flow',          path: '/reports/cash-flow', icon: TrendingUp },
       { label: 'Inventory Report',   path: '/reports/inventory-report', icon: Package },
       { label: 'Audit Trails',       path: '/reports/audit', icon: Shield },
-      { label: 'Custom Reports',     path: '/reports/custom', icon: Sliders },
-      { label: 'Saved Reports',      path: '/reports/saved', icon: Bookmark },
     ]
   },
   {
@@ -225,6 +229,9 @@ const isPathActive = (itemPath, pathname, location) => {
     return true;
   }
   if (itemPath === '/payments-made' && (pathname.startsWith('/payments-made') || (pathname.startsWith('/bill-payments') && backTo !== 'vendors'))) {
+    return true;
+  }
+  if (itemPath === '/ledgers' && (pathname.startsWith('/ledgers') || pathname.startsWith('/ledger-statement'))) {
     return true;
   }
 
@@ -817,6 +824,7 @@ function AuthenticatedApp() {
       <Route path="/verify-email" element={<VerifyEmailPage />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/reset-password" element={<ResetPasswordPage />} />
+      <Route path="/financial-closing/wizard" element={shell(ClosingWizard)} />
 
       <Route path="/setup-company" element={
         <CompanyInfoView firstTime={true} onCompanyCreated={(id, name) => {
@@ -957,6 +965,7 @@ function AuthenticatedApp() {
       <Route path="/delivery-challans/view/:id" element={shell(DeliveryChallansView)} />
       <Route path="/payments"           element={shell(PaymentsReceivedView)} />
       <Route path="/payments/new"       element={shell(PaymentsReceivedView)} />
+      <Route path="/receivables-payables" element={shell(ReceivablesPayablesModule)} />
       <Route path="/tax-invoices"       element={shell(GSTInvoiceView)} />
 
       {/* Time Tracking */}
@@ -1012,6 +1021,8 @@ function AuthenticatedApp() {
       <Route path="/settings/payment-gateways" element={shell(PaymentGatewaysSettings)} />
       <Route path="/banking/gateways" element={shell(GatewaySettlementView)} />
       <Route path="/shared/invoice/:share_token" element={<SharedInvoiceView />} />
+      <Route path="/customer-portal" element={<CustomerPortal />} />
+      <Route path="/vendor-portal" element={<VendorPortal />} />
 
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>

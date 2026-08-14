@@ -1,0 +1,86 @@
+
+ENTERPRISE ARCHITECTURE BLUEPRINT
+Cloud Accounting & Business Management Platform
+(Codename "Ledger" - Zoho Books-class product)
+VOLUME 9 OF 9 - FINAL VOLUME
+UI/UX DESIGN SPECIFICATION & API DESIGN DOCUMENT
+Design System - Screen Specs - Endpoint Catalog - Webhooks - Error Codes - Blueprint Closure
+
+
+Table of Contents
+
+1. Introduction & Scope
+1.1 Purpose
+This is the ninth and final volume of the Enterprise Architecture Blueprint. It has two parts. Part A is the UI/UX Design Specification: the design system, information architecture, and screen-level specifications for the six value streams defined in Vol. 1 Section 7, built on the React/component-library decision from Vol. 3 Section 2.3. Part B is the API Design Document: the full endpoint catalog expanding Vol. 2 Section 11's resource-ownership map, request/response examples, the webhook payload catalog expanding Vol. 5 Section 7.1, the error code reference formalizing Vol. 3 Section 4.3, and versioning policy. Section 14 closes the entire blueprint with a full nine-volume traceability index.
+1.2 Why UI/UX and API Design Share One Volume
+The UI is explicitly a client of the same API every third-party integrator uses (Vol. 2 Principle, Vol. 3 Section 5) - there is no separate internal API. Documenting them together keeps that principle enforced by construction: every screen specification in Part A cites the exact endpoint(s) in Part B it calls, so the two documents cannot drift apart the way a UI spec and an API spec maintained separately often do.
+
+PART A: UI/UX DESIGN SPECIFICATION
+2. Design System Foundations
+2.1 Design Tokens
+2.2 Component Library
+Built on the Vol. 3 Section 2.3 decision (React + a headless UI kit such as Radix primitives). Core components: data table (with sort/filter/pagination matching Vol. 3 Section 5's cursor-pagination convention), form inputs with inline validation (surfacing the namespaced error codes from Section 11), status badge, money input (locale-aware, Vol. 1 BC-12), date range picker, modal/drawer, toast/notification, and the recurring approval-workflow widget (Vol. 1 BC-16).
+2.3 Design-to-Dev Handoff
+Every screen spec (Section 4) ships with a component inventory referencing this section's library - no ad hoc one-off components without an explicit exception noted.
+Design tokens (Section 2.1) are implemented as a shared theme file consumed by both the web app and portal app (Vol.3 Section 3.2 /libs/shared/ui-components), never hand-copied per screen.
+Accessibility annotations (Section 5) are part of the handoff artifact, not a separate post-hoc audit.
+
+3. Information Architecture
+3.1 Primary Navigation (Web App)
+Top-level navigation is organized by bounded context (Vol. 2 Section 3.2), matching how permissions are granted (Vol. 6 Section 3.3) so a user's nav only ever shows sections they can act on - there is no navigation item that leads to a permission-denied screen.
+3.2 Portal Navigation (Customer/Vendor)
+A deliberately minimal, separate navigation (Vol. 6 Section 3.1 portal auth) - customers see Invoices, Payments, and Messages; vendors see Purchase Orders, Bills, and Messages. Neither portal exposes any internal-staff navigation item, consistent with the portal's restricted API scope (Vol. 2 Section 11).
+
+4. Screen Specifications by Value Stream
+Each value stream from Vol. 1 Section 7 gets its key screens specified here at a wireframe-description level of detail (not pixel-perfect mockups, which belong to a dedicated design tool) - enough for engineering to build against and for the API cross-references (Part B) to be concrete.
+4.1 VS-01 Order-to-Cash Screens
+4.2 VS-02 Procure-to-Pay Screens
+4.3 VS-03 Record-to-Report & VS-06 Close-the-Books Screens
+
+5. Responsive & Accessibility Standards
+
+PART B: API DESIGN DOCUMENT
+6. API Conventions (Recap & Expansion of Vol. 3 Section 5)
+
+7. Endpoint Catalog by Bounded Context
+Expands Vol. 2 Section 11's resource-ownership table into concrete methods and paths. This is not exhaustive of every field but fixes the full surface area every module must implement.
+7.1 Identity & Tenant (CTX-01)
+7.2 Ledger (CTX-02)
+7.3 Receivables (CTX-03)
+7.4 Payables (CTX-04) & Inventory (CTX-07)
+7.5 Banking (CTX-05) & Payments (CTX-06)
+7.6 Reporting (CTX-11)
+
+8. Request/Response Examples
+8.1 Create Invoice
+POST /v1/invoices
+
+8.2 Record Payment
+POST /v1/invoices/inv_0042/payments
+
+
+9. Webhook Payload Catalog (Expands Vol. 5 Section 7.1)
+
+10. Error Code Reference (Formalizing Vol. 3 Section 4.3)
+
+11. API Versioning & Deprecation Policy
+A new major version (/v2) is introduced only for breaking changes; additive fields and new optional parameters never require a version bump (Vol.3 Section 5).
+A deprecated version is supported for a minimum of 12 months after its successor ships, with deprecation notices returned via a response header on every call.
+Webhook payload schemas (Section 9) follow the same additive-only rule as internal domain events (Vol.3 Section 4.2 CS-06); a breaking payload change ships as a new event name, not a mutated existing one, so existing integrator subscriptions never silently break.
+
+12. Developer Portal & SDK Strategy
+A public developer portal (documentation, API key management, webhook subscription management, Vol.5 Section 7.1) is a Release 2/3 capability. At Release 1, API documentation is published as a static OpenAPI-generated reference site, and API keys are issued manually by the platform team on request - sufficient for early integrator partners without building a self-service portal before there is integrator demand to justify it.
+
+13. Full Blueprint Closure: Nine-Volume Traceability Index
+This is the capstone index for the entire Enterprise Architecture Blueprint. It maps every volume to what it produced and what still depends on it, so the blueprint can be read as a single coherent system rather than nine separate documents.
+
+14. Blueprint Completion Summary & Recommended Next Steps
+14.1 What This Blueprint Delivers
+Nine volumes now define, at enterprise depth, everything a Zoho Books-class platform needs before development begins: what the business does and for whom (Vol.1), how that decomposes into software boundaries (Vol.2), what it is built with and how it is coded (Vol.3), how data is modeled and protected in the database (Vol.4), how it talks to the outside financial world (Vol.5), how it is secured (Vol.6), how it runs in production (Vol.7), how it is proven correct before every release (Vol.8), and what it looks like and how it is called (Vol.9).
+14.2 Recommended Next Steps
+Circulate all nine volumes for stakeholder sign-off, prioritizing the open questions flagged at the end of each volume (target market countries, cloud provider confirmation, QA staffing, SLA commitments) since several later decisions (Vol.5, Vol.7) are contingent on those answers.
+Stand up the monorepo (Vol.3 Section 3) and base infrastructure (Vol.7 Section 6 Terraform modules) as the first engineering sprint, before any feature module work begins, so every subsequent module is built against the correct scaffolding from day one.
+Sequence Release 1 (MVP) engineering work by the module priority already fixed in Vol.1 Section 6, respecting the layered dependency order in Vol.2 Section 7 (build Identity & Tenant and Ledger first, since every other module depends on them).
+Treat this blueprint as a living set of documents: when a real implementation decision deviates from what is written here, update the relevant volume rather than letting the documentation and the system silently drift apart - the whole value of this exercise depends on that discipline.
+14.3 Closing Note
+This concludes the nine-volume Enterprise Architecture Blueprint. Thank you for the opportunity to build this out at the depth you asked for - a genuine engineering foundation rather than a template SRS.

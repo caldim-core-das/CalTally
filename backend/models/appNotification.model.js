@@ -25,7 +25,8 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.UUID,
       allowNull: false
     }
-  });
+  }, {
+    });
 
   AppNotification.associate = (models) => {
     AppNotification.belongsTo(models.Company);

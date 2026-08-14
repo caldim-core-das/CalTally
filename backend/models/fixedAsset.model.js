@@ -54,7 +54,8 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.DECIMAL(5, 2),
       defaultValue: 10.0
     }
-  });
+  }, {
+    });
 
   return FixedAsset;
 };

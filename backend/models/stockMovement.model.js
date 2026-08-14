@@ -28,7 +28,8 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: false,
       defaultValue: DataTypes.NOW
     }
-  });
+  }, {
+    });
 
   // Hooks to sync Item currentStock
   const updateItemStock = async (stockMovement, options) => {

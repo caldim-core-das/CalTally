@@ -7,8 +7,11 @@ import { reportsAPI, inventoryAPI } from '../../services/api';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
+import ProductRegistersModule from './product-registers/ProductRegistersModule';
+
 const InventoryReportView = () => {
   const navigate = useNavigate();
+  const [activeSubReport, setActiveSubReport] = useState('summary');
   const [items, setItems] = useState([]);
   const [summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -160,8 +163,27 @@ const InventoryReportView = () => {
       <header className="bg-white border-b border-slate-200 px-8 py-4 flex items-center justify-between sticky top-0 z-40 no-print shrink-0">
         <div className="flex items-center gap-6">
           <div className="flex flex-col">
-            <h1 className="text-[18px] font-bold text-slate-900 tracking-tight leading-none">Inventory Valuation Summary</h1>
-            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1.5">Stock Level & Value Auditor</p>
+            <h1 className="text-[18px] font-bold text-slate-900 tracking-tight leading-none">Inventory & Product Registers</h1>
+            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1.5">Stock Valuation & Product Registers Module</p>
+          </div>
+
+          <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl">
+            <button
+              onClick={() => setActiveSubReport('summary')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                activeSubReport === 'summary' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-800'
+              }`}
+            >
+              Stock Summary
+            </button>
+            <button
+              onClick={() => setActiveSubReport('registers')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                activeSubReport === 'registers' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-500 hover:text-slate-800'
+              }`}
+            >
+              🛍 Product Registers
+            </button>
           </div>
         </div>
         
@@ -178,61 +200,66 @@ const InventoryReportView = () => {
         </div>
       </header>
 
-      {/* ── TOOLBAR ────────────────────────────────────────────────── */}
-      <div className="bg-white border-b border-slate-100 px-8 py-3 flex items-center justify-between no-print shrink-0">
-         <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-               <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Filter status:</span>
-               <select 
-                 value={filterStatus}
-                 onChange={(e) => setFilterStatus(e.target.value)}
-                 className="bg-transparent text-[11px] font-bold text-slate-700 uppercase outline-none cursor-pointer hover:text-[#1e61f0]"
-               >
-                  <option value="All">All Items</option>
-                  <option value="In Stock">In Stock</option>
-                  <option value="Low Stock">Low Stock</option>
-                  <option value="Out of Stock">Out of Stock</option>
-               </select>
-            </div>
-            
-            <div className="flex items-center gap-2 border-l border-slate-200 pl-4">
-               <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Category:</span>
-               <select 
-                 value={selectedCategory}
-                 onChange={handleCategoryChange}
-                 className="bg-transparent text-[11px] font-bold text-slate-700 uppercase outline-none cursor-pointer hover:text-[#1e61f0]"
-               >
-                  <option value="">All Categories</option>
-                  {categories.map(c => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
-                  ))}
-               </select>
-            </div>
+      {/* ── TOOLBAR (Only shown on Stock Valuation Summary tab) ─────── */}
+      {activeSubReport === 'summary' && (
+        <div className="bg-white border-b border-slate-100 px-8 py-3 flex items-center justify-between no-print shrink-0">
+           <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                 <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Filter status:</span>
+                 <select 
+                   value={filterStatus}
+                   onChange={(e) => setFilterStatus(e.target.value)}
+                   className="bg-transparent text-[11px] font-bold text-slate-700 uppercase outline-none cursor-pointer hover:text-[#1e61f0]"
+                 >
+                    <option value="All">All Items</option>
+                    <option value="In Stock">In Stock</option>
+                    <option value="Low Stock">Low Stock</option>
+                    <option value="Out of Stock">Out of Stock</option>
+                 </select>
+              </div>
+              
+              <div className="flex items-center gap-2 border-l border-slate-200 pl-4">
+                 <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Category:</span>
+                 <select 
+                   value={selectedCategory}
+                   onChange={handleCategoryChange}
+                   className="bg-transparent text-[11px] font-bold text-slate-700 uppercase outline-none cursor-pointer hover:text-[#1e61f0]"
+                 >
+                    <option value="">All Categories</option>
+                    {categories.map(c => (
+                      <option key={c.id} value={c.id}>{c.name}</option>
+                    ))}
+                 </select>
+              </div>
 
-            <div className="flex items-center gap-2 border-l border-slate-200 pl-4">
-               <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Godown:</span>
-               <select 
-                 value={selectedGodown}
-                 onChange={handleGodownChange}
-                 className="bg-transparent text-[11px] font-bold text-slate-700 uppercase outline-none cursor-pointer hover:text-[#1e61f0]"
-               >
-                  <option value="">All Godowns</option>
-                  {godowns.map(g => (
-                    <option key={g.id} value={g.id}>{g.name}</option>
-                  ))}
-               </select>
-            </div>
-         </div>
-         <div className="flex items-center gap-2">
-            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Total Inventory Value: </span>
-            <span className="text-[12px] font-black text-[#1e61f0]">{fmt(summary?.totalValue)}</span>
-         </div>
-      </div>
+              <div className="flex items-center gap-2 border-l border-slate-200 pl-4">
+                 <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Godown:</span>
+                 <select 
+                   value={selectedGodown}
+                   onChange={handleGodownChange}
+                   className="bg-transparent text-[11px] font-bold text-slate-700 uppercase outline-none cursor-pointer hover:text-[#1e61f0]"
+                 >
+                    <option value="">All Godowns</option>
+                    {godowns.map(g => (
+                      <option key={g.id} value={g.id}>{g.name}</option>
+                    ))}
+                 </select>
+              </div>
+           </div>
+           <div className="flex items-center gap-2">
+              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Total Inventory Value: </span>
+              <span className="text-[12px] font-black text-[#1e61f0]">{fmt(summary?.totalValue)}</span>
+           </div>
+        </div>
+      )}
 
       <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
         <div className="max-w-[1400px] mx-auto space-y-8">
-          
-          {/* ══ VALUATION SUMMARY CARDS ════════════════════════════════ */}
+          {activeSubReport === 'registers' ? (
+            <ProductRegistersModule />
+          ) : (
+            <>
+              {/* ══ VALUATION SUMMARY CARDS ════════════════════════════════ */}
           {summary && (
             <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                <div className="p-4 rounded-xl border border-slate-200 bg-white shadow-sm flex items-center justify-between">
@@ -318,6 +345,8 @@ const InventoryReportView = () => {
              </table>
           </div>
 
+            </>
+          )}
         </div>
       </div>
     </div>

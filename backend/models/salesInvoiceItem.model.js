@@ -34,7 +34,8 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: true,
       defaultValue: 0
     }
-  });
+  }, {
+    });
 
   SalesInvoiceItem.associate = (models) => {
     SalesInvoiceItem.belongsTo(models.SalesInvoice);

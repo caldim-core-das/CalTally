@@ -58,7 +58,8 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.JSON, // Stores { itemId: customRate }
       allowNull: true
     }
-  });
+  }, {
+    });
 
   return PriceList;
 };

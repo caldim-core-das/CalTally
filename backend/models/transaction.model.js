@@ -55,7 +55,15 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: true
     }
   }, {
-    paranoid: true
+    paranoid: true,
+    hooks: {
+      beforeUpdate: (instance) => {
+        throw new Error('INTEGRITY ERROR: Ledgers are append-only. Direct updates to journal lines are strictly prohibited.');
+      },
+      beforeDestroy: (instance) => {
+        throw new Error('INTEGRITY ERROR: Ledgers are append-only. Direct deletions of journal lines are strictly prohibited.');
+      }
+    }
   });
 
   return Transaction;

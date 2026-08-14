@@ -1,0 +1,93 @@
+
+ENTERPRISE ARCHITECTURE BLUEPRINT
+Cloud Accounting & Business Management Platform
+(Codename "Ledger" - Zoho Books-class product)
+VOLUME 6 OF 9
+SECURITY ARCHITECTURE
+Threat Model - IAM & RBAC - Encryption - Secrets - Audit Trail - Compliance
+
+
+Table of Contents
+
+1. Introduction & Scope
+1.1 Purpose
+This volume formalizes the security posture implied but not fully specified in earlier volumes: the threat model, identity and access management design, encryption and secrets management standards, API/network security, defense-in-depth for multi-tenant isolation, audit-trail tamper-evidence, and the mapping from all of the above to concrete compliance frameworks (SOC 2, GDPR, PCI, and HIPAA where contingently applicable per Vol. 1 Section 10).
+1.2 Security Principles Inherited From Earlier Volumes
+Vol. 1 Principle P4 (auditability): every financial mutation is append-only and traceable - Section 9 of this volume defines how that trail is made tamper-evident.
+Vol. 3 Section 11 (shared schema + RLS): this volume's Section 8 treats RLS as one layer of defense-in-depth, not the only control.
+Vol. 5 Principle I3 (webhook signature verification) and Section 4.2 (PCI SAQ-A via tokenization): this volume's Section 5-6 generalize those patterns platform-wide.
+Vol. 2 Section 5 API Gateway as the single ingress point: this volume's Section 7 defines what runs at that boundary.
+
+2. Threat Model
+Threats are organized using STRIDE (Spoofing, Tampering, Repudiation, Information Disclosure, Denial of Service, Elevation of Privilege) against the highest-value assets identified across Vol. 1-5: tenant data isolation, financial transaction integrity, and stored credentials/tokens.
+2.1 Asset Inventory
+2.2 STRIDE Analysis by Flow
+
+3. Identity & Access Management
+3.1 Authentication Model
+3.2 JWT Claim Structure
+JWT claims (access token)
+
+The tenantId claim is what Vol. 3 Section 11.2's tenant-context middleware uses to set the RLS session variable - it is set only by CTX-01 at token issuance and is never accepted from a client-supplied header or parameter (Vol. 3 Section 5 tenant-scoping convention).
+3.3 Role Model (Base Roles)
+
+4. Authorization Model
+4.1 Permission Structure
+Permissions are expressed as module:action pairs (e.g. receivables:write, ledger:read), matching the bounded-context/API-resource ownership fixed in Vol. 2 Section 11. Every API endpoint declares its required permission(s) at the controller level (Vol. 3 Section 4), and the Gateway/middleware layer rejects any request whose JWT permissions do not include it - authorization is enforced centrally, not re-implemented per module.
+4.2 Custom Roles (Vol. 1 BC-17) - Ceiling Rule
+Tenant administrators may define custom roles (Enterprise edition, Vol. 1 Section 9) by composing permissions, but a custom role can never grant a permission the composing admin does not themselves hold, and no custom role can exceed the permission ceiling of the closest base role it resembles. This prevents the privilege-escalation threat identified in Section 2.2 where a misconfigured custom role could otherwise grant unintended access.
+4.3 Resource-Level Authorization
+Role-based permissions grant module-level access; resource-level checks (e.g. "can this Sales Staff user view this specific customer's invoices" under a tenant that restricts by sales territory) are a Release 2/3 capability layered on top of the base RBAC model, implemented as an additional policy check in the domain service layer (Vol. 2 Section 6.1 component pattern), not by modifying the JWT/role model itself.
+
+5. Data Protection & Encryption
+5.1 Encryption in Transit
+TLS 1.2+ enforced on every external-facing endpoint (web app, API gateway, portal, public API) - no plaintext HTTP, including internal health-check endpoints exposed beyond the deployment network.
+Internal service-to-service traffic (post-extraction services, Vol.2 Section 2.1) uses TLS as well, moving toward mTLS as the service count grows (Vol.7 to finalize the service-mesh decision).
+5.2 Encryption at Rest
+
+6. Secrets & Credential Management
+6.1 Key Management
+A managed Key Management Service (cloud-provider KMS, per Vol. 3 Section 2.1's eventual cloud-provider confirmation) holds the master keys for the envelope-encryption pattern in Section 5.2. Application code never handles a master key directly - it calls the KMS to wrap/unwrap DEKs, and master key rotation is a KMS-native operation that does not require re-encrypting all data at rest.
+6.2 Secrets Store (formalizing Vol. 5 Section 9's Credential Store)
+6.3 Secrets Hygiene Rules
+Secrets are never written to application logs (Vol.3 Section 6) - log statements are code-reviewed and CI-scanned for accidental secret interpolation.
+Secrets are never committed to the monorepo (Vol.3 Section 3.1) - a pre-commit and CI secret-scanning gate blocks any match against common credential patterns.
+Every credential has a defined owner and rotation cadence, tracked in an internal secrets inventory (Vol.7 operational runbook).
+
+7. API & Network Security
+7.1 API Gateway Security Controls
+7.2 Network Segmentation
+The database, cache, and event bus (Vol. 3 Section 2) are not directly reachable from outside the private network - only the API Gateway and background workers can reach them. The Integration Gateway service, which makes outbound calls to third parties (Vol. 5), sits in a segment with restricted outbound rules (allowlisted destination domains only) to limit blast radius if it is ever compromised. Concrete VPC/subnet design is finalized in Volume 7.
+
+8. Multi-Tenant Isolation: Defense in Depth
+Vol. 4 Section 7 established PostgreSQL RLS as the primary tenant-isolation control. This section adds the layers around it, since a single control point is a single point of failure for the platform's highest-severity risk (cross-tenant data disclosure, Section 2.1).
+
+9. Audit Logging & Tamper-Evidence
+Formalizes Vol. 1 BC-20's audit trail requirement and Vol. 1 Principle P4's auditability principle into a concrete design.
+9.1 What Is Audited
+Every financial-entity state change (invoice sent/voided, journal posted, bill approved) - already captured as domain events (Vol.2 Section 10) and additionally written to a dedicated append-only audit_log table.
+Every authentication event (login success/failure, MFA challenge, password reset, role change) - security-relevant even where no financial entity changed.
+Every permission/role configuration change (Section 4.2) - who granted what to whom, and when.
+Every access to a decrypted secret (Section 6.2) - logged with the requesting service identity, not just the tenant.
+9.2 Tamper-Evidence Mechanism
+Audit log entry - hash-chained for tamper evidence
+
+Each audit entry includes a hash of the previous entry, forming a per-tenant hash chain; any retroactive edit or deletion of a past entry breaks the chain and is detectable by a periodic integrity-verification job. This does not require exotic infrastructure (e.g. a blockchain) - the hash chain plus the append-only database constraint (Vol.4 Section 2, D2/D6) is sufficient tamper-evidence for the compliance bar this platform targets (Section 10).
+
+10. Compliance Control Mapping
+Maps this volume's controls to the compliance scope Vol. 1 Section 10 defined, so a future SOC 2 readiness assessment or customer security questionnaire can be answered by reference rather than re-derivation.
+
+11. Security Monitoring & Incident Response (Summary)
+Full operational runbooks belong to Volume 7; this section fixes the architectural hooks Volume 7's monitoring stack must consume.
+
+12. Security Testing Requirements
+Volume 8 (Testing & QA) owns the full test strategy; this volume specifies the security-specific tests that must exist before Release 1 ships.
+
+13. Traceability & Next Phase
+13.1 Traceability to Volumes 1-5
+13.2 Open Questions for Sign-off
+Confirm whether a formal SOC 2 Type II audit is a near-term business requirement (affects how rigorously Section 10's controls must be evidenced from Release 1 versus retrofitted later).
+Confirm KMS/secrets-manager vendor preference once the cloud provider (Vol.3 Section 13.2 Q1) is confirmed.
+Confirm resource-level authorization (Section 4.3) is acceptable as an R2/R3 capability rather than an MVP requirement.
+13.3 Next Phase
+On approval, Phase 7 begins: Infrastructure & Deployment Architecture (Volume 7) - CI/CD pipeline, environment topology, disaster recovery, observability, and the concrete sizing/scaling plan that operationalizes every architectural decision made in Volumes 1 through 6.

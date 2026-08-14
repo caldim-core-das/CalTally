@@ -3,6 +3,7 @@ const {
   SalesInvoice, SalesInvoiceItem, sequelize 
 } = require('../../models');
 const AccountingService = require('../../services/AccountingService');
+const eventBus = require('../../core/EventBus');
 
 exports.createOrder = async (req, res, next) => {
   const t = await sequelize.transaction();
@@ -203,12 +204,17 @@ exports.createInvoice = async (req, res, next) => {
         items,
         type: 'Sales',
         userId: req.user?.id,
-        projectId
+        projectId,
+        tcsAmount
       }, t);
       await invoice.update({ VoucherId: accountingResult.voucher.id, status: 'Confirmed' }, { transaction: t });
     }
 
     await t.commit();
+    
+    // Publish Domain Event
+    eventBus.publish('INVOICE_CREATED', { invoiceId: invoice.id, companyId, totalAmount, status: invoice.status }, { userId: req.user?.id, tenantId: companyId });
+    
     res.status(201).json(invoice);
   } catch (err) {
     if (t) await t.rollback();
@@ -330,7 +336,8 @@ exports.updateInvoice = async (req, res, next) => {
         items: items || [],
         type: 'Sales',
         userId: req.user?.id,
-        projectId: projectId || invoice.ProjectId
+        projectId: projectId || invoice.ProjectId,
+        tcsAmount: tcsAmount !== undefined ? tcsAmount : invoice.tcsAmount
       }, t);
       await invoice.update({ VoucherId: accountingResult.voucher.id, status: 'Confirmed' }, { transaction: t });
     }

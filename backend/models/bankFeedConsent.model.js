@@ -12,7 +12,8 @@ module.exports = (sequelize, DataTypes) => {
     dataRange: { type: DataTypes.JSONB, allowNull: true },
     expiresAt: { type: DataTypes.DATE, allowNull: true },
     lastFetchedAt: { type: DataTypes.DATE, allowNull: true }
-  });
+  }, {
+    });
 
   BankFeedConsent.associate = (models) => {
     BankFeedConsent.hasMany(models.BankFeedAccount, { foreignKey: 'ConsentId' });

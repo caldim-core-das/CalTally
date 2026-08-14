@@ -20,7 +20,8 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.INTEGER,
       allowNull: true
     }
-  });
+  }, {
+    });
 
   return UserCompany;
 };
