@@ -1243,3 +1243,194 @@ Error
     at async model.save (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2547:7)
     at async Ledger.create (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1362:12)
     at async exports.seedDefaultLedgers (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\modules\company\company.controller.js:77:7)
+2026-08-17T05:16:45.102Z - [Create User] column "hash" does not exist
+Error
+    at Query.run (C:\Users\USER\Tally_accounting\backend\node_modules\sequelize\lib\dialects\postgres\query.js:50:25)
+    at C:\Users\USER\Tally_accounting\backend\node_modules\sequelize\lib\sequelize.js:315:28
+    at async PostgresQueryInterface.insert (C:\Users\USER\Tally_accounting\backend\node_modules\sequelize\lib\dialects\abstract\query-interface.js:308:21)
+    at async model.save (C:\Users\USER\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2490:35)
+    at async AuditLog.create (C:\Users\USER\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1362:12)
+    at async User.<anonymous> (C:\Users\USER\Tally_accounting\backend\models\index.js:543:7)
+    at async User.runHooks (C:\Users\USER\Tally_accounting\backend\node_modules\sequelize\lib\hooks.js:96:7)
+    at async model.save (C:\Users\USER\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2547:7)
+    at async User.create (C:\Users\USER\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1362:12)
+    at async exports.register (C:\Users\USER\Tally_accounting\backend\modules\auth\auth.controller.js:194:18)
+2026-08-17T05:16:51.122Z - [Update User] column "hash" does not exist
+Error
+    at Query.run (C:\Users\USER\Tally_accounting\backend\node_modules\sequelize\lib\dialects\postgres\query.js:50:25)
+    at C:\Users\USER\Tally_accounting\backend\node_modules\sequelize\lib\sequelize.js:315:28
+    at async PostgresQueryInterface.insert (C:\Users\USER\Tally_accounting\backend\node_modules\sequelize\lib\dialects\abstract\query-interface.js:308:21)
+    at async model.save (C:\Users\USER\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2490:35)
+    at async AuditLog.create (C:\Users\USER\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1362:12)
+    at async User.<anonymous> (C:\Users\USER\Tally_accounting\backend\models\index.js:584:7)
+    at async User.runHooks (C:\Users\USER\Tally_accounting\backend\node_modules\sequelize\lib\hooks.js:96:7)
+    at async model.save (C:\Users\USER\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2547:7)
+    at async model.update (C:\Users\USER\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2598:12)
+    at async exports.login (C:\Users\USER\Tally_accounting\backend\modules\auth\auth.controller.js:417:5)
+2026-08-17T05:17:23.466Z - [Create Company] column "hash" does not exist
+Error
+    at Query.run (C:\Users\USER\Tally_accounting\backend\node_modules\sequelize\lib\dialects\postgres\query.js:50:25)
+    at C:\Users\USER\Tally_accounting\backend\node_modules\sequelize\lib\sequelize.js:315:28
+    at async PostgresQueryInterface.insert (C:\Users\USER\Tally_accounting\backend\node_modules\sequelize\lib\dialects\abstract\query-interface.js:308:21)
+    at async model.save (C:\Users\USER\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2490:35)
+    at async AuditLog.create (C:\Users\USER\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1362:12)
+    at async Company.<anonymous> (C:\Users\USER\Tally_accounting\backend\models\index.js:543:7)
+    at async Company.runHooks (C:\Users\USER\Tally_accounting\backend\node_modules\sequelize\lib\hooks.js:96:7)
+    at async model.save (C:\Users\USER\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2547:7)
+    at async Company.create (C:\Users\USER\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1362:12)
+    at async exports.createCompany (C:\Users\USER\Tally_accounting\backend\modules\company\company.controller.js:115:21)
+2026-08-17T05:17:26.625Z - [Update User] column "hash" does not exist
+Error
+    at Query.run (C:\Users\USER\Tally_accounting\backend\node_modules\sequelize\lib\dialects\postgres\query.js:50:25)
+    at C:\Users\USER\Tally_accounting\backend\node_modules\sequelize\lib\sequelize.js:315:28
+    at async PostgresQueryInterface.insert (C:\Users\USER\Tally_accounting\backend\node_modules\sequelize\lib\dialects\abstract\query-interface.js:308:21)
+    at async model.save (C:\Users\USER\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2490:35)
+    at async AuditLog.create (C:\Users\USER\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1362:12)
+    at async User.<anonymous> (C:\Users\USER\Tally_accounting\backend\models\index.js:584:7)
+    at async User.runHooks (C:\Users\USER\Tally_accounting\backend\node_modules\sequelize\lib\hooks.js:96:7)
+    at async model.save (C:\Users\USER\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2547:7)
+    at async exports.createCompany (C:\Users\USER\Tally_accounting\backend\modules\company\company.controller.js:155:9)
+2026-08-17T05:17:37.893Z - [Create Ledger] column "hash" does not exist
+Error
+    at Query.run (C:\Users\USER\Tally_accounting\backend\node_modules\sequelize\lib\dialects\postgres\query.js:50:25)
+    at C:\Users\USER\Tally_accounting\backend\node_modules\sequelize\lib\sequelize.js:315:28
+    at async PostgresQueryInterface.insert (C:\Users\USER\Tally_accounting\backend\node_modules\sequelize\lib\dialects\abstract\query-interface.js:308:21)
+    at async model.save (C:\Users\USER\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2490:35)
+    at async AuditLog.create (C:\Users\USER\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1362:12)
+    at async Ledger.<anonymous> (C:\Users\USER\Tally_accounting\backend\models\index.js:543:7)
+    at async Ledger.runHooks (C:\Users\USER\Tally_accounting\backend\node_modules\sequelize\lib\hooks.js:96:7)
+    at async model.save (C:\Users\USER\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2547:7)
+    at async Ledger.create (C:\Users\USER\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1362:12)
+    at async exports.seedDefaultLedgers (C:\Users\USER\Tally_accounting\backend\modules\company\company.controller.js:77:7)
+2026-08-17T05:17:39.928Z - [Create Ledger] column "hash" does not exist
+Error
+    at Query.run (C:\Users\USER\Tally_accounting\backend\node_modules\sequelize\lib\dialects\postgres\query.js:50:25)
+    at C:\Users\USER\Tally_accounting\backend\node_modules\sequelize\lib\sequelize.js:315:28
+    at async PostgresQueryInterface.insert (C:\Users\USER\Tally_accounting\backend\node_modules\sequelize\lib\dialects\abstract\query-interface.js:308:21)
+    at async model.save (C:\Users\USER\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2490:35)
+    at async AuditLog.create (C:\Users\USER\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1362:12)
+    at async Ledger.<anonymous> (C:\Users\USER\Tally_accounting\backend\models\index.js:543:7)
+    at async Ledger.runHooks (C:\Users\USER\Tally_accounting\backend\node_modules\sequelize\lib\hooks.js:96:7)
+    at async model.save (C:\Users\USER\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2547:7)
+    at async Ledger.create (C:\Users\USER\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1362:12)
+    at async exports.seedDefaultLedgers (C:\Users\USER\Tally_accounting\backend\modules\company\company.controller.js:77:7)
+2026-08-17T05:17:41.982Z - [Create Ledger] column "hash" does not exist
+Error
+    at Query.run (C:\Users\USER\Tally_accounting\backend\node_modules\sequelize\lib\dialects\postgres\query.js:50:25)
+    at C:\Users\USER\Tally_accounting\backend\node_modules\sequelize\lib\sequelize.js:315:28
+    at async PostgresQueryInterface.insert (C:\Users\USER\Tally_accounting\backend\node_modules\sequelize\lib\dialects\abstract\query-interface.js:308:21)
+    at async model.save (C:\Users\USER\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2490:35)
+    at async AuditLog.create (C:\Users\USER\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1362:12)
+    at async Ledger.<anonymous> (C:\Users\USER\Tally_accounting\backend\models\index.js:543:7)
+    at async Ledger.runHooks (C:\Users\USER\Tally_accounting\backend\node_modules\sequelize\lib\hooks.js:96:7)
+    at async model.save (C:\Users\USER\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2547:7)
+    at async Ledger.create (C:\Users\USER\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1362:12)
+    at async exports.seedDefaultLedgers (C:\Users\USER\Tally_accounting\backend\modules\company\company.controller.js:77:7)
+2026-08-17T05:17:44.035Z - [Create Ledger] column "hash" does not exist
+Error
+    at Query.run (C:\Users\USER\Tally_accounting\backend\node_modules\sequelize\lib\dialects\postgres\query.js:50:25)
+    at C:\Users\USER\Tally_accounting\backend\node_modules\sequelize\lib\sequelize.js:315:28
+    at async PostgresQueryInterface.insert (C:\Users\USER\Tally_accounting\backend\node_modules\sequelize\lib\dialects\abstract\query-interface.js:308:21)
+    at async model.save (C:\Users\USER\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2490:35)
+    at async AuditLog.create (C:\Users\USER\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1362:12)
+    at async Ledger.<anonymous> (C:\Users\USER\Tally_accounting\backend\models\index.js:543:7)
+    at async Ledger.runHooks (C:\Users\USER\Tally_accounting\backend\node_modules\sequelize\lib\hooks.js:96:7)
+    at async model.save (C:\Users\USER\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2547:7)
+    at async Ledger.create (C:\Users\USER\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1362:12)
+    at async exports.seedDefaultLedgers (C:\Users\USER\Tally_accounting\backend\modules\company\company.controller.js:77:7)
+2026-08-17T05:17:46.087Z - [Create Ledger] column "hash" does not exist
+Error
+    at Query.run (C:\Users\USER\Tally_accounting\backend\node_modules\sequelize\lib\dialects\postgres\query.js:50:25)
+    at C:\Users\USER\Tally_accounting\backend\node_modules\sequelize\lib\sequelize.js:315:28
+    at async PostgresQueryInterface.insert (C:\Users\USER\Tally_accounting\backend\node_modules\sequelize\lib\dialects\abstract\query-interface.js:308:21)
+    at async model.save (C:\Users\USER\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2490:35)
+    at async AuditLog.create (C:\Users\USER\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1362:12)
+    at async Ledger.<anonymous> (C:\Users\USER\Tally_accounting\backend\models\index.js:543:7)
+    at async Ledger.runHooks (C:\Users\USER\Tally_accounting\backend\node_modules\sequelize\lib\hooks.js:96:7)
+    at async model.save (C:\Users\USER\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2547:7)
+    at async Ledger.create (C:\Users\USER\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1362:12)
+    at async exports.seedDefaultLedgers (C:\Users\USER\Tally_accounting\backend\modules\company\company.controller.js:77:7)
+2026-08-17T05:17:48.138Z - [Create Ledger] column "hash" does not exist
+Error
+    at Query.run (C:\Users\USER\Tally_accounting\backend\node_modules\sequelize\lib\dialects\postgres\query.js:50:25)
+    at C:\Users\USER\Tally_accounting\backend\node_modules\sequelize\lib\sequelize.js:315:28
+    at async PostgresQueryInterface.insert (C:\Users\USER\Tally_accounting\backend\node_modules\sequelize\lib\dialects\abstract\query-interface.js:308:21)
+    at async model.save (C:\Users\USER\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2490:35)
+    at async AuditLog.create (C:\Users\USER\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1362:12)
+    at async Ledger.<anonymous> (C:\Users\USER\Tally_accounting\backend\models\index.js:543:7)
+    at async Ledger.runHooks (C:\Users\USER\Tally_accounting\backend\node_modules\sequelize\lib\hooks.js:96:7)
+    at async model.save (C:\Users\USER\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2547:7)
+    at async Ledger.create (C:\Users\USER\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1362:12)
+    at async exports.seedDefaultLedgers (C:\Users\USER\Tally_accounting\backend\modules\company\company.controller.js:77:7)
+2026-08-17T05:17:50.191Z - [Create Ledger] column "hash" does not exist
+Error
+    at Query.run (C:\Users\USER\Tally_accounting\backend\node_modules\sequelize\lib\dialects\postgres\query.js:50:25)
+    at C:\Users\USER\Tally_accounting\backend\node_modules\sequelize\lib\sequelize.js:315:28
+    at async PostgresQueryInterface.insert (C:\Users\USER\Tally_accounting\backend\node_modules\sequelize\lib\dialects\abstract\query-interface.js:308:21)
+    at async model.save (C:\Users\USER\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2490:35)
+    at async AuditLog.create (C:\Users\USER\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1362:12)
+    at async Ledger.<anonymous> (C:\Users\USER\Tally_accounting\backend\models\index.js:543:7)
+    at async Ledger.runHooks (C:\Users\USER\Tally_accounting\backend\node_modules\sequelize\lib\hooks.js:96:7)
+    at async model.save (C:\Users\USER\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2547:7)
+    at async Ledger.create (C:\Users\USER\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1362:12)
+    at async exports.seedDefaultLedgers (C:\Users\USER\Tally_accounting\backend\modules\company\company.controller.js:77:7)
+2026-08-17T05:17:52.293Z - [Create Ledger] column "hash" does not exist
+Error
+    at Query.run (C:\Users\USER\Tally_accounting\backend\node_modules\sequelize\lib\dialects\postgres\query.js:50:25)
+    at C:\Users\USER\Tally_accounting\backend\node_modules\sequelize\lib\sequelize.js:315:28
+    at async PostgresQueryInterface.insert (C:\Users\USER\Tally_accounting\backend\node_modules\sequelize\lib\dialects\abstract\query-interface.js:308:21)
+    at async model.save (C:\Users\USER\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2490:35)
+    at async AuditLog.create (C:\Users\USER\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1362:12)
+    at async Ledger.<anonymous> (C:\Users\USER\Tally_accounting\backend\models\index.js:543:7)
+    at async Ledger.runHooks (C:\Users\USER\Tally_accounting\backend\node_modules\sequelize\lib\hooks.js:96:7)
+    at async model.save (C:\Users\USER\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2547:7)
+    at async Ledger.create (C:\Users\USER\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1362:12)
+    at async exports.seedDefaultLedgers (C:\Users\USER\Tally_accounting\backend\modules\company\company.controller.js:77:7)
+2026-08-17T05:17:54.344Z - [Create Ledger] column "hash" does not exist
+Error
+    at Query.run (C:\Users\USER\Tally_accounting\backend\node_modules\sequelize\lib\dialects\postgres\query.js:50:25)
+    at C:\Users\USER\Tally_accounting\backend\node_modules\sequelize\lib\sequelize.js:315:28
+    at async PostgresQueryInterface.insert (C:\Users\USER\Tally_accounting\backend\node_modules\sequelize\lib\dialects\abstract\query-interface.js:308:21)
+    at async model.save (C:\Users\USER\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2490:35)
+    at async AuditLog.create (C:\Users\USER\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1362:12)
+    at async Ledger.<anonymous> (C:\Users\USER\Tally_accounting\backend\models\index.js:543:7)
+    at async Ledger.runHooks (C:\Users\USER\Tally_accounting\backend\node_modules\sequelize\lib\hooks.js:96:7)
+    at async model.save (C:\Users\USER\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2547:7)
+    at async Ledger.create (C:\Users\USER\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1362:12)
+    at async exports.seedDefaultLedgers (C:\Users\USER\Tally_accounting\backend\modules\company\company.controller.js:77:7)
+2026-08-17T05:17:56.398Z - [Create Ledger] column "hash" does not exist
+Error
+    at Query.run (C:\Users\USER\Tally_accounting\backend\node_modules\sequelize\lib\dialects\postgres\query.js:50:25)
+    at C:\Users\USER\Tally_accounting\backend\node_modules\sequelize\lib\sequelize.js:315:28
+    at async PostgresQueryInterface.insert (C:\Users\USER\Tally_accounting\backend\node_modules\sequelize\lib\dialects\abstract\query-interface.js:308:21)
+    at async model.save (C:\Users\USER\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2490:35)
+    at async AuditLog.create (C:\Users\USER\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1362:12)
+    at async Ledger.<anonymous> (C:\Users\USER\Tally_accounting\backend\models\index.js:543:7)
+    at async Ledger.runHooks (C:\Users\USER\Tally_accounting\backend\node_modules\sequelize\lib\hooks.js:96:7)
+    at async model.save (C:\Users\USER\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2547:7)
+    at async Ledger.create (C:\Users\USER\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1362:12)
+    at async exports.seedDefaultLedgers (C:\Users\USER\Tally_accounting\backend\modules\company\company.controller.js:77:7)
+2026-08-17T05:19:16.837Z - [Create Item] column "hash" does not exist
+Error
+    at Query.run (C:\Users\USER\Tally_accounting\backend\node_modules\sequelize\lib\dialects\postgres\query.js:50:25)
+    at C:\Users\USER\Tally_accounting\backend\node_modules\sequelize\lib\sequelize.js:315:28
+    at async PostgresQueryInterface.insert (C:\Users\USER\Tally_accounting\backend\node_modules\sequelize\lib\dialects\abstract\query-interface.js:308:21)
+    at async model.save (C:\Users\USER\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2490:35)
+    at async AuditLog.create (C:\Users\USER\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1362:12)
+    at async Item.<anonymous> (C:\Users\USER\Tally_accounting\backend\models\index.js:543:7)
+    at async Item.runHooks (C:\Users\USER\Tally_accounting\backend\node_modules\sequelize\lib\hooks.js:96:7)
+    at async model.save (C:\Users\USER\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2547:7)
+    at async Item.create (C:\Users\USER\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1362:12)
+    at async exports.createItem (C:\Users\USER\Tally_accounting\backend\modules\inventory\inventory.controller.js:38:18)
+2026-08-17T05:19:53.150Z - [Create Ledger] column "hash" does not exist
+Error
+    at Query.run (C:\Users\USER\Tally_accounting\backend\node_modules\sequelize\lib\dialects\postgres\query.js:50:25)
+    at C:\Users\USER\Tally_accounting\backend\node_modules\sequelize\lib\sequelize.js:315:28
+    at async PostgresQueryInterface.insert (C:\Users\USER\Tally_accounting\backend\node_modules\sequelize\lib\dialects\abstract\query-interface.js:308:21)
+    at async model.save (C:\Users\USER\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2490:35)
+    at async AuditLog.create (C:\Users\USER\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1362:12)
+    at async Ledger.<anonymous> (C:\Users\USER\Tally_accounting\backend\models\index.js:543:7)
+    at async Ledger.runHooks (C:\Users\USER\Tally_accounting\backend\node_modules\sequelize\lib\hooks.js:96:7)
+    at async model.save (C:\Users\USER\Tally_accounting\backend\node_modules\sequelize\lib\model.js:2547:7)
+    at async Ledger.create (C:\Users\USER\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1362:12)
+    at async exports.createLedger (C:\Users\USER\Tally_accounting\backend\modules\accounting\ledger.controller.js:128:20)
